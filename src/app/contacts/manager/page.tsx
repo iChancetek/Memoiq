@@ -39,7 +39,7 @@ export default function ContactManagerRoute() {
     <div className="container mx-auto max-w-3xl">
       <Card>
         <CardHeader>
-          <CardTitle>AI-Powered Contact Manager</CardTitle>
+          <CardTitle>AI-Powered Contacts Manager</CardTitle>
           <CardDescription>
             Get a high-level analysis of your contacts and identify key follow-up opportunities to maintain relationships.
           </CardDescription>

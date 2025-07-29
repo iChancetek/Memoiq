@@ -59,7 +59,7 @@ export function MainLayout({children}: {children: React.ReactNode}) {
       case '/contacts':
         return 'Contacts';
       case '/contacts/manager':
-        return 'Contact Manager';
+        return 'Contacts Manager';
       default:
         return 'MemoIQ';
     }
@@ -193,11 +193,11 @@ export function MainLayout({children}: {children: React.ReactNode}) {
               <SidebarMenuButton
                 asChild
                 isActive={pathname === '/contacts/manager'}
-                tooltip="Contact Manager"
+                tooltip="Contacts Manager"
               >
                 <Link href="/contacts/manager">
                   <Briefcase />
-                  <span>Contact Manager</span>
+                  <span>Contacts Manager</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
