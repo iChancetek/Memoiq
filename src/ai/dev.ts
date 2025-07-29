@@ -7,3 +7,4 @@ import '@/ai/flows/parse-task-string.ts';
 import '@/ai/flows/schedule-appointment.ts';
 import '@/ai/flows/get-contact-insights.ts';
 import '@/ai/flows/get-tasks-analysis.ts';
+import '@/ai/flows/get-calendar-analysis.ts';
