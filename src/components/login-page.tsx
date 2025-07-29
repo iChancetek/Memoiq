@@ -28,11 +28,11 @@ export function LoginPage({ isCard = true }: LoginPageProps) {
   const content = (
       <>
         <Button variant="outline" className="w-full" onClick={loginWithGoogle} disabled={loading}>
-            Google
+            Sign In with Google
         </Button>
-        <div className="relative my-6">
+        <div className="relative my-4">
             <Separator />
-            <span className="absolute left-1/2 -translate-x-1/2 -top-3 bg-card px-2 text-sm text-muted-foreground">OR CONTINUE WITH</span>
+            <span className="absolute left-1/2 -translate-x-1/2 -top-3 bg-card px-2 text-xs text-muted-foreground">OR CONTINUE WITH EMAIL</span>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid gap-2">
@@ -68,7 +68,7 @@ export function LoginPage({ isCard = true }: LoginPageProps) {
                         className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
                         onClick={() => setShowPassword(!showPassword)}
                     >
-                        {showPassword ? <EyeOff /> : <Eye />}
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
                 </div>
             </div>

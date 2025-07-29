@@ -27,11 +27,11 @@ export function SignupPage({ isCard = true }: SignupPageProps) {
   const content = (
       <>
         <Button variant="outline" className="w-full" onClick={loginWithGoogle} disabled={loading}>
-            Google
+            Sign Up with Google
         </Button>
-        <div className="relative my-6">
+        <div className="relative my-4">
             <Separator />
-            <span className="absolute left-1/2 -translate-x-1/2 -top-3 bg-card px-2 text-sm text-muted-foreground">OR CONTINUE WITH</span>
+            <span className="absolute left-1/2 -translate-x-1/2 -top-3 bg-card px-2 text-xs text-muted-foreground">OR CONTINUE WITH EMAIL</span>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-2">
