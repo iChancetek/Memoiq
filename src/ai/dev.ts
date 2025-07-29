@@ -9,3 +9,4 @@ import '@/ai/flows/get-contact-insights.ts';
 import '@/ai/flows/get-tasks-analysis.ts';
 import '@/ai/flows/get-calendar-analysis.ts';
 import '@/ai/flows/get-appointment-analysis.ts';
+import '@/ai/flows/get-companion-response.ts';

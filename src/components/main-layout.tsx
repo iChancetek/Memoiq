@@ -25,6 +25,7 @@ import {
   Contact,
   CalendarPlus,
   Briefcase,
+  Smile,
 } from 'lucide-react';
 import {QuickAdd} from '@/components/quick-add';
 import {Button} from './ui/button';
@@ -54,6 +55,8 @@ export function MainLayout({children}: {children: React.ReactNode}) {
         return 'Contacts';
       case '/contacts/manager':
         return 'Contacts Manager';
+      case '/ai-companion':
+        return 'AI Companion';
       default:
         return 'MemoIQ';
     }
@@ -139,6 +142,18 @@ export function MainLayout({children}: {children: React.ReactNode}) {
                 <Link href="/contacts">
                   <Contact />
                   <span>Contacts</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname.startsWith('/ai-companion')}
+                tooltip="AI Companion"
+              >
+                <Link href="/ai-companion">
+                  <Smile />
+                  <span>AI Companion</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
