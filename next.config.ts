@@ -26,4 +26,8 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: process.env.FIREBASE_STORAGE_BUCKET,
     NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: process.env.FIREBASE_MESSAGING_SENDER_ID,
     NEXT_PUBLIC_FIREBASE_APP_ID: process.env.FIREBASE_APP_ID,
-    GEMINI_API
+    GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+  },
+};
+
+export default nextConfig;
