@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import {Button} from '@/components/ui/button';
 import {
   Sheet,
@@ -8,26 +9,33 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
+  SheetClose
 } from '@/components/ui/sheet';
 import {Input} from '@/components/ui/input';
 import {Label} from '@/components/ui/label';
 import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs';
 import {Plus} from 'lucide-react';
-import type {Task} from '@/lib/data';
+import { useTasks } from '@/contexts/task-context';
+import { useToast } from '@/hooks/use-toast';
 
-interface QuickAddProps {
-  onAddTask: (task: Omit<Task, 'id' | 'completed'>) => void;
-}
+export function QuickAdd() {
+  const { addTask } = useTasks();
+  const { toast } = useToast();
+  const closeRef = React.useRef<HTMLButtonElement>(null);
 
-export function QuickAdd({onAddTask}: QuickAddProps) {
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const title = formData.get('title') as string;
     const dueDate = formData.get('dueDate') as string;
     if (title && dueDate) {
-      onAddTask({title, dueDate});
-      // Here you might want to close the sheet and show a toast
+      addTask({title, dueDate});
+      toast({
+        title: "Task Added",
+        description: `"${title}" has been added to your list.`,
+      });
+      closeRef.current?.click();
+      (event.target as HTMLFormElement).reset();
     }
   };
 
@@ -77,6 +85,7 @@ export function QuickAdd({onAddTask}: QuickAddProps) {
             </form>
           </TabsContent>
         </Tabs>
+        <SheetClose ref={closeRef} className="hidden" />
       </SheetContent>
     </Sheet>
   );

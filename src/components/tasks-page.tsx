@@ -20,7 +20,7 @@ import {Checkbox} from '@/components/ui/checkbox';
 import {Input} from '@/components/ui/input';
 import {Button} from '@/components/ui/button';
 import {PlusCircle, Sparkles, Loader2, ListPlus, User} from 'lucide-react';
-import {mockTasks, mockContacts, type Task, type Contact} from '@/lib/data';
+import {mockContacts, type Task, type Contact} from '@/lib/data';
 import {useToast} from '@/hooks/use-toast';
 import {parseTaskString} from '@/ai/flows/parse-task-string';
 import { Badge } from '@/components/ui/badge';
@@ -30,9 +30,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useTasks } from '@/contexts/task-context';
 
 export function TasksPage() {
-  const [tasks, setTasks] = React.useState<Task[]>(mockTasks);
+  const { tasks, setTasks, toggleTask, toggleSubtask } = useTasks();
   const [newTaskTitle, setNewTaskTitle] = React.useState('');
   const [isParsing, setIsParsing] = React.useState(false);
   const {toast} = useToast();
@@ -80,28 +81,6 @@ export function TasksPage() {
         setIsParsing(false);
     }
   };
-
-  const toggleTask = (taskId: number) => {
-    setTasks(
-      tasks.map(task =>
-        task.id === taskId ? {...task, completed: !task.completed} : task
-      )
-    );
-  };
-  
-  const toggleSubtask = (taskId: number, subtaskId: number) => {
-    setTasks(tasks.map(task => {
-        if (task.id === taskId) {
-            return {
-                ...task,
-                subtasks: task.subtasks?.map(sub => 
-                    sub.id === subtaskId ? { ...sub, completed: !sub.completed } : sub
-                )
-            }
-        }
-        return task;
-    }));
-  }
 
   return (
     <TooltipProvider>

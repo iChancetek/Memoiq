@@ -30,12 +30,6 @@ import {QuickAdd} from '@/components/quick-add';
 import {Button} from './ui/button';
 import Link from 'next/link';
 
-// Dummy QuickAdd function for demonstration
-const handleAddTask = (task: {title: string; dueDate: string}) => {
-  console.log('Adding task:', task);
-  // In a real app, you'd update state or call an API here
-};
-
 export function MainLayout({children}: {children: React.ReactNode}) {
   const pathname = usePathname();
   const getPageTitle = () => {
@@ -47,7 +41,7 @@ export function MainLayout({children}: {children: React.ReactNode}) {
       case '/tasks':
         return 'Task Management';
       case '/tasks/manager':
-        return 'Task Manager';
+        return 'Tasks Manager';
       case '/calendar':
         return 'Calendar';
       case '/calendar/manager':
@@ -157,11 +151,11 @@ export function MainLayout({children}: {children: React.ReactNode}) {
               <SidebarMenuButton
                 asChild
                 isActive={pathname === '/tasks/manager'}
-                tooltip="Task Manager"
+                tooltip="Tasks Manager"
               >
                 <Link href="/tasks/manager">
                   <Briefcase />
-                  <span>Task Manager</span>
+                  <span>Tasks Manager</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -226,7 +220,7 @@ export function MainLayout({children}: {children: React.ReactNode}) {
               <h2 className="text-lg font-semibold">{getPageTitle()}</h2>
             </div>
           </div>
-          <QuickAdd onAddTask={handleAddTask} />
+          <QuickAdd />
         </header>
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">
           {children}
