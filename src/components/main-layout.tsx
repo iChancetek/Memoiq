@@ -96,8 +96,10 @@ export function MainLayout({children}: {children: React.ReactNode}) {
         if (!hasBeenGreeted) {
              getWelcomeGreeting({ displayName: user.displayName.split(' ')[0] })
             .then(greeting => {
-                const audio = new Audio(greeting.audioDataUri);
-                audio.play();
+                if (greeting.audioDataUri) {
+                    const audio = new Audio(greeting.audioDataUri);
+                    audio.play().catch(console.error);
+                }
                 toast({
                     title: "Welcome Back!",
                     description: greeting.text

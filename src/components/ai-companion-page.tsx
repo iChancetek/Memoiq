@@ -63,7 +63,10 @@ export function AICompanionPage() {
       if (response.audioDataUri) {
         const newAudio = new Audio(response.audioDataUri);
         setAudio(newAudio);
-        newAudio.play();
+        newAudio.play().catch(err => {
+          console.error("Audio playback failed:", err);
+          // Don't show a toast for this, as it can be annoying if it happens often.
+        });
         newAudio.onended = () => setAudio(null);
       }
 
