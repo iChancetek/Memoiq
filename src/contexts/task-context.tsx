@@ -40,8 +40,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     if (user) {
       setLoading(true);
       const q = query(
-        collection(db, 'tasks'),
-        where('userId', '==', user.uid),
+        collection(db, 'users', user.uid, 'tasks'),
         orderBy('createdAt', 'desc')
       );
       const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -64,7 +63,7 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
 
   const addTask = async (task: Omit<Task, 'id' | 'userId' | 'completed' | 'createdAt'| 'subtasks' | 'contactIds'>) => {
     if (!user) throw new Error("User not authenticated");
-    await addDoc(collection(db, 'tasks'), {
+    await addDoc(collection(db, 'users', user.uid, 'tasks'), {
       ...task,
       userId: user.uid,
       completed: false,
@@ -75,12 +74,14 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateTask = async (taskId: string, updates: Partial<Task>) => {
-    const taskRef = doc(db, 'tasks', taskId);
+    if (!user) return;
+    const taskRef = doc(db, 'users', user.uid, 'tasks', taskId);
     await updateDoc(taskRef, updates);
   };
   
   const deleteTask = async (taskId: string) => {
-    const taskRef = doc(db, 'tasks', taskId);
+    if (!user) return;
+    const taskRef = doc(db, 'users', user.uid, 'tasks', taskId);
     await deleteDoc(taskRef);
   }
 

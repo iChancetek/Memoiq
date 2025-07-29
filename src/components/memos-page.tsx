@@ -16,7 +16,7 @@ import {MemoRecorder} from '@/components/memo-recorder';
 import type {Memo} from '@/lib/data';
 import {useToast} from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
-import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp, orderBy } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, query, onSnapshot, serverTimestamp, orderBy } from 'firebase/firestore';
 import { firebaseApp } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
 
@@ -34,8 +34,7 @@ export function MemosPage() {
     if (user) {
       setLoading(true);
       const q = query(
-        collection(db, 'memos'),
-        where('userId', '==', user.uid),
+        collection(db, 'users', user.uid, 'memos'),
         orderBy('createdAt', 'desc')
       );
       const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -63,7 +62,7 @@ export function MemosPage() {
         return;
     }
     try {
-        await addDoc(collection(db, 'memos'), {
+        await addDoc(collection(db, 'users', user.uid, 'memos'), {
             ...newMemo,
             userId: user.uid,
             createdAt: serverTimestamp(),
@@ -121,7 +120,7 @@ export function MemosPage() {
                 <Card key={memo.id} className="flex flex-col">
                     <CardHeader>
                     <CardTitle className="truncate">{memo.title}</CardTitle>
-                    <CardDescription>{memo.date}</CardDescription>
+                    <CardDescription>{new Date(memo.date).toLocaleDateString()}</CardDescription>
                     </CardHeader>
                     <CardContent className="flex-grow">
                     <p className="text-sm text-muted-foreground line-clamp-4">
