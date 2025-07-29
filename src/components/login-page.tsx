@@ -27,6 +27,13 @@ export function LoginPage({ isCard = true }: LoginPageProps) {
   
   const content = (
       <>
+        <Button variant="outline" className="w-full" onClick={loginWithGoogle} disabled={loading}>
+            Google
+        </Button>
+        <div className="relative my-6">
+            <Separator />
+            <span className="absolute left-1/2 -translate-x-1/2 -top-3 bg-card px-2 text-sm text-muted-foreground">OR CONTINUE WITH</span>
+        </div>
         <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid gap-2">
             <Label htmlFor="email">Email</Label>
@@ -70,13 +77,6 @@ export function LoginPage({ isCard = true }: LoginPageProps) {
             {loading ? <Loader2 className="animate-spin" /> : 'Sign In'}
             </Button>
         </form>
-        <div className="relative my-6">
-            <Separator />
-            <span className="absolute left-1/2 -translate-x-1/2 -top-3 bg-card px-2 text-sm text-muted-foreground">OR CONTINUE WITH</span>
-        </div>
-        <Button variant="outline" className="w-full" onClick={loginWithGoogle} disabled={loading}>
-            Google
-        </Button>
       </>
   );
 
