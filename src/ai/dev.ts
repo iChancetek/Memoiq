@@ -1,6 +1,9 @@
-import { config } from 'dotenv';
-config();
+'use server';
 
+import {config} from 'dotenv';
+config({ path: '.env.local' });
+
+// IMPORTANT: The dev entry point must be the first import.
 import '@/ai/flows/get-personalized-insights.ts';
 import '@/ai/flows/transcribe-and-summarize-memo.ts';
 import '@/ai/flows/parse-task-string.ts';
