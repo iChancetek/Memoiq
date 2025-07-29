@@ -66,7 +66,7 @@ const getCompanionResponseFlow = ai.defineFlow(
         responseModalities: ['AUDIO'],
         speechConfig: {
           voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Alloy' }, // An expressive, friendly voice
+            prebuiltVoiceConfig: { voiceName: 'Umbriel' }, // An expressive, friendly voice
           },
         },
       },
