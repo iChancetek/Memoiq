@@ -24,6 +24,7 @@ import {
   Calendar,
   Contact,
   CalendarPlus,
+  Briefcase,
 } from 'lucide-react';
 import {QuickAdd} from '@/components/quick-add';
 import {Button} from './ui/button';
@@ -45,12 +46,20 @@ export function MainLayout({children}: {children: React.ReactNode}) {
         return 'Voice Memos';
       case '/tasks':
         return 'Task Management';
+      case '/tasks/manager':
+        return 'Task Manager';
       case '/calendar':
         return 'Calendar';
+      case '/calendar/manager':
+        return 'Calendar Manager';
       case '/appointments':
         return 'Appointments';
+      case '/appointments/manager':
+        return 'Appointment Manager';
       case '/contacts':
         return 'Contacts';
+      case '/contacts/manager':
+        return 'Contact Manager';
       default:
         return 'MemoIQ';
     }
@@ -82,7 +91,7 @@ export function MainLayout({children}: {children: React.ReactNode}) {
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                isActive={pathname === '/memos'}
+                isActive={pathname.startsWith('/memos')}
                 tooltip="Memos"
               >
                 <Link href="/memos">
@@ -94,7 +103,7 @@ export function MainLayout({children}: {children: React.ReactNode}) {
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                isActive={pathname === '/tasks'}
+                isActive={pathname.startsWith('/tasks')}
                 tooltip="Tasks"
               >
                 <Link href="/tasks">
@@ -106,7 +115,7 @@ export function MainLayout({children}: {children: React.ReactNode}) {
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                isActive={pathname === '/calendar'}
+                isActive={pathname.startsWith('/calendar')}
                 tooltip="Calendar"
               >
                 <Link href="/calendar">
@@ -118,7 +127,7 @@ export function MainLayout({children}: {children: React.ReactNode}) {
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                isActive={pathname === '/appointments'}
+                isActive={pathname.startsWith('/appointments')}
                 tooltip="Appointments"
               >
                 <Link href="/appointments">
@@ -130,7 +139,7 @@ export function MainLayout({children}: {children: React.ReactNode}) {
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                isActive={pathname === '/contacts'}
+                isActive={pathname.startsWith('/contacts')}
                 tooltip="Contacts"
               >
                 <Link href="/contacts">
@@ -139,6 +148,60 @@ export function MainLayout({children}: {children: React.ReactNode}) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
+          
+            <SidebarMenuItem className="mt-4">
+               <span className="px-2 text-xs font-semibold text-muted-foreground">Managers</span>
+            </SidebarMenuItem>
+
+             <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === '/tasks/manager'}
+                tooltip="Task Manager"
+              >
+                <Link href="/tasks/manager">
+                  <Briefcase />
+                  <span>Task Manager</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+             <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === '/calendar/manager'}
+                tooltip="Calendar Manager"
+              >
+                <Link href="/calendar/manager">
+                  <Briefcase />
+                  <span>Calendar Manager</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+             <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === '/appointments/manager'}
+                tooltip="Appointment Manager"
+              >
+                <Link href="/appointments/manager">
+                  <Briefcase />
+                  <span>Appointment Manager</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+             <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === '/contacts/manager'}
+                tooltip="Contact Manager"
+              >
+                <Link href="/contacts/manager">
+                  <Briefcase />
+                  <span>Contact Manager</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
