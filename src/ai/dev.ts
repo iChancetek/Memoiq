@@ -3,3 +3,4 @@ config();
 
 import '@/ai/flows/get-personalized-insights.ts';
 import '@/ai/flows/transcribe-and-summarize-memo.ts';
+import '@/ai/flows/parse-task-string.ts';

@@ -5,11 +5,18 @@ export type Memo = {
   date: string;
 };
 
+export type Subtask = {
+  id: number;
+  title: string;
+  completed: boolean;
+}
+
 export type Task = {
   id: number;
   title:string;
   completed: boolean;
   dueDate: string;
+  subtasks?: Subtask[];
 };
 
 export type CalendarEvent = {
@@ -26,7 +33,17 @@ export const mockMemos: Memo[] = [
 ];
 
 export const mockTasks: Task[] = [
-    { id: 1, title: "Draft proposal for Project Apollo", completed: false, dueDate: "2024-08-20" },
+    { 
+      id: 1, 
+      title: "Draft proposal for Project Apollo", 
+      completed: false, 
+      dueDate: "2024-08-20",
+      subtasks: [
+        { id: 101, title: "Research competitors", completed: true },
+        { id: 102, title: "Outline proposal structure", completed: false },
+        { id: 103, title: "Write first draft", completed: false },
+      ] 
+    },
     { id: 2, title: "Follow up with design team on mockups", completed: true, dueDate: "2024-08-18" },
     { id: 3, title: "Prepare slides for weekly sync", completed: false, dueDate: "2024-08-19" },
     { id: 4, title: "Review and approve budget for Q4", completed: false, dueDate: "2024-08-22" },
