@@ -21,6 +21,9 @@ import {
   CheckSquare,
   Settings,
   LayoutDashboard,
+  Calendar,
+  Contact,
+  CalendarPlus,
 } from 'lucide-react';
 import {QuickAdd} from '@/components/quick-add';
 import {Button} from './ui/button';
@@ -42,6 +45,12 @@ export function MainLayout({children}: {children: React.ReactNode}) {
         return 'Voice Memos';
       case '/tasks':
         return 'Task Management';
+      case '/calendar':
+        return 'Calendar';
+      case '/appointments':
+        return 'Appointments';
+      case '/contacts':
+        return 'Contacts';
       default:
         return 'MemoIQ';
     }
@@ -91,6 +100,42 @@ export function MainLayout({children}: {children: React.ReactNode}) {
                 <Link href="/tasks">
                   <CheckSquare />
                   <span>Tasks</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === '/calendar'}
+                tooltip="Calendar"
+              >
+                <Link href="/calendar">
+                  <Calendar />
+                  <span>Calendar</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === '/appointments'}
+                tooltip="Appointments"
+              >
+                <Link href="/appointments">
+                  <CalendarPlus />
+                  <span>Appointments</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === '/contacts'}
+                tooltip="Contacts"
+              >
+                <Link href="/contacts">
+                  <Contact />
+                  <span>Contacts</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
