@@ -22,9 +22,6 @@ export function AuthPage() {
           <p className="mt-2 text-muted-foreground">
             With iSkylar, Your Friendly Companion.
           </p>
-          <div className="mt-8 hidden md:block">
-            <img src="https://placehold.co/400x300.png" data-ai-hint="abstract illustration" alt="MemoIQ Illustration" className="rounded-lg shadow-lg" />
-          </div>
         </div>
         <Card className="w-full max-w-md mx-auto">
             <CardHeader>
