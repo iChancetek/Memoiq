@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input';
 import { CalendarPlus, CheckCircle, XCircle, Sparkles, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { scheduleAppointment } from '@/ai/flows/schedule-appointment';
-import { mockCalendarEvents, mockTasks } from '@/lib/data';
+import { mockCalendarEvents, mockTasks, mockContacts } from '@/lib/data';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export function AppointmentsPage() {
@@ -34,6 +34,7 @@ export function AppointmentsPage() {
         request,
         calendarEvents: JSON.stringify(mockCalendarEvents),
         tasks: JSON.stringify(mockTasks),
+        contacts: JSON.stringify(mockContacts),
       });
       setResult(response);
     } catch (error) {

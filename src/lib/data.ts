@@ -17,6 +17,7 @@ export type Task = {
   completed: boolean;
   dueDate: string;
   subtasks?: Subtask[];
+  contactIds?: number[];
 };
 
 export type CalendarEvent = {
@@ -56,7 +57,7 @@ export const mockTasks: Task[] = [
     },
     { id: 2, title: "Follow up with design team on mockups", completed: true, dueDate: "2024-08-18" },
     { id: 3, title: "Prepare slides for weekly sync", completed: false, dueDate: "2024-08-19" },
-    { id: 4, title: "Review and approve budget for Q4", completed: false, dueDate: "2024-08-22" },
+    { id: 4, title: "Review and approve budget for Q4", completed: false, dueDate: "2024-08-22", contactIds: [3] },
 ];
 
 export const mockCalendarEvents: CalendarEvent[] = [
