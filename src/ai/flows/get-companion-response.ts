@@ -1,6 +1,6 @@
 'use server';
 /**
- * @fileOverview Generates empathetic responses and provides text-to-speech audio for the AI Companion, iSkylar.
+ * @fileOverview Generates empathetic responses for the AI Companion, iSkylar.
  *
  * - getCompanionResponse - A function that creates a conversational response from iSkylar.
  * - GetCompanionResponseInput - The input type for the getCompanionResponse function.
@@ -9,7 +9,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import wav from 'wav';
 
 const GetCompanionResponseInputSchema = z.object({
   message: z.string().describe('The user\'s message to iSkylar.'),
@@ -22,7 +21,7 @@ export type GetCompanionResponseInput = z.infer<typeof GetCompanionResponseInput
 
 const GetCompanionResponseOutputSchema = z.object({
   text: z.string().describe('The text response from iSkylar.'),
-  audioDataUri: z.string().describe('The text-to-speech audio of the response as a base64-encoded data URI.'),
+  audioDataUri: z.string().describe('The text-to-speech audio of the response as a base64-encoded data URI. This is currently non-functional and will be an empty string.'),
 });
 export type GetCompanionResponseOutput = z.infer<typeof GetCompanionResponseOutputSchema>;
 
@@ -60,31 +59,8 @@ const getCompanionResponseFlow = ai.defineFlow(
     const {output: textOutput} = await companionPrompt(input);
     const responseText = textOutput!.text;
 
-    // Generate the audio response
-    const {media} = await ai.generate({
-      model: 'googleai/gemini-2.5-flash-preview-tts',
-      config: {
-        responseModalities: ['AUDIO'],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Umbriel' }, // An expressive, friendly voice
-          },
-        },
-      },
-      prompt: responseText,
-    });
-    
-    if (!media) {
-      throw new Error('No audio media returned from TTS model.');
-    }
-
-    const audioBuffer = Buffer.from(
-      media.url.substring(media.url.indexOf(',') + 1),
-      'base64'
-    );
-    
-    const wavData = await toWav(audioBuffer);
-    const audioDataUri = 'data:audio/wav;base64,' + wavData;
+    // Audio generation is currently disabled to fix system instability.
+    const audioDataUri = '';
 
     return {
       text: responseText,
@@ -92,31 +68,3 @@ const getCompanionResponseFlow = ai.defineFlow(
     };
   }
 );
-
-
-async function toWav(
-  pcmData: Buffer,
-  channels = 1,
-  rate = 24000,
-  sampleWidth = 2
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const writer = new wav.Writer({
-      channels,
-      sampleRate: rate,
-      bitDepth: sampleWidth * 8,
-    });
-
-    const bufs: any[] = [];
-    writer.on('error', reject);
-    writer.on('data', function (d) {
-      bufs.push(d);
-    });
-    writer.on('end', function () {
-      resolve(Buffer.concat(bufs).toString('base64'));
-    });
-
-    writer.write(pcmData);
-    writer.end();
-  });
-}

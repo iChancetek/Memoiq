@@ -9,7 +9,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import wav from 'wav';
 
 const GetWelcomeGreetingInputSchema = z.object({
   displayName: z.string().describe("The user's first name or display name."),
@@ -18,7 +17,7 @@ export type GetWelcomeGreetingInput = z.infer<typeof GetWelcomeGreetingInputSche
 
 const GetWelcomeGreetingOutputSchema = z.object({
   text: z.string().describe('The welcome message text.'),
-  audioDataUri: z.string().describe('The text-to-speech audio of the greeting as a base64-encoded data URI.'),
+  audioDataUri: z.string().describe('The text-to-speech audio of the greeting as a base64-encoded data URI. This is currently non-functional and will be an empty string.'),
 });
 export type GetWelcomeGreetingOutput = z.infer<typeof GetWelcomeGreetingOutputSchema>;
 
@@ -37,31 +36,8 @@ const getWelcomeGreetingFlow = ai.defineFlow(
   async ({ displayName }) => {
     const greetingText = `Welcome back, ${displayName}. Let's get started with your day.`;
 
-    const {media} = await ai.generate({
-      model: 'googleai/gemini-2.5-flash-preview-tts',
-      config: {
-        responseModalities: ['AUDIO'],
-        speechConfig: {
-          voiceConfig: {
-            // Using a friendly, natural female voice as requested.
-            prebuiltVoiceConfig: { voiceName: 'Umbriel' },
-          },
-        },
-      },
-      prompt: greetingText,
-    });
-    
-    if (!media) {
-      throw new Error('No audio media returned from TTS model for the greeting.');
-    }
-
-    const audioBuffer = Buffer.from(
-      media.url.substring(media.url.indexOf(',') + 1),
-      'base64'
-    );
-    
-    const wavData = await toWav(audioBuffer);
-    const audioDataUri = 'data:audio/wav;base64,' + wavData;
+    // Audio generation is currently disabled to fix system instability.
+    const audioDataUri = '';
 
     return {
       text: greetingText,
@@ -69,30 +45,3 @@ const getWelcomeGreetingFlow = ai.defineFlow(
     };
   }
 );
-
-async function toWav(
-  pcmData: Buffer,
-  channels = 1,
-  rate = 24000,
-  sampleWidth = 2
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const writer = new wav.Writer({
-      channels,
-      sampleRate: rate,
-      bitDepth: sampleWidth * 8,
-    });
-
-    const bufs: any[] = [];
-    writer.on('error', reject);
-    writer.on('data', function (d) {
-      bufs.push(d);
-    });
-    writer.on('end', function () {
-      resolve(Buffer.concat(bufs).toString('base64'));
-    });
-
-    writer.write(pcmData);
-    writer.end();
-  });
-}
