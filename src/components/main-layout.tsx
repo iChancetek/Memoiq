@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import {usePathname} from 'next/navigation';
+import {usePathname, useRouter} from 'next/navigation';
 import {
   SidebarProvider,
   Sidebar,
@@ -26,13 +26,31 @@ import {
   CalendarPlus,
   Briefcase,
   Smile,
+  LogOut,
+  User,
 } from 'lucide-react';
 import {QuickAdd} from '@/components/quick-add';
 import {Button} from './ui/button';
 import Link from 'next/link';
+import { useAuth } from '@/contexts/auth-context';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { getWelcomeGreeting } from '@/ai/flows/get-welcome-greeting';
+import { useToast } from '@/hooks/use-toast';
 
 export function MainLayout({children}: {children: React.ReactNode}) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout, loading: authLoading } = useAuth();
+  const { toast } = useToast();
+  
   const getPageTitle = () => {
     switch (pathname) {
       case '/':
@@ -57,10 +75,47 @@ export function MainLayout({children}: {children: React.ReactNode}) {
         return 'Contacts Manager';
       case '/ai-companion':
         return 'AI Companion';
+      case '/settings':
+        return 'Settings';
       default:
         return 'MemoIQ';
     }
   };
+  
+  React.useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/auth');
+    }
+  }, [user, authLoading, router]);
+
+  React.useEffect(() => {
+    if (user && user.displayName) {
+        // This is a simplified greeting trigger.
+        // In a real app, this would be tied to the login event.
+        const hasBeenGreeted = sessionStorage.getItem('greeted');
+        if (!hasBeenGreeted) {
+             getWelcomeGreeting({ displayName: user.displayName.split(' ')[0] })
+            .then(greeting => {
+                const audio = new Audio(greeting.audioDataUri);
+                audio.play();
+                toast({
+                    title: "Welcome Back!",
+                    description: greeting.text
+                });
+                sessionStorage.setItem('greeted', 'true');
+            })
+            .catch(console.error);
+        }
+    }
+  }, [user, toast]);
+
+  if (!user) {
+    return null; // Or a loading spinner
+  }
+
+  const getInitials = (name: string) => {
+    return name.split(' ').map(n => n[0]).join('');
+  }
 
   return (
     <SidebarProvider>
@@ -216,8 +271,8 @@ export function MainLayout({children}: {children: React.ReactNode}) {
         <SidebarFooter>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton tooltip="Settings" asChild>
-                <Link href="#">
+              <SidebarMenuButton tooltip="Settings" asChild isActive={pathname === '/settings'}>
+                <Link href="/settings">
                   <Settings />
                   <span>Settings</span>
                 </Link>
@@ -235,7 +290,31 @@ export function MainLayout({children}: {children: React.ReactNode}) {
               <h2 className="text-lg font-semibold">{getPageTitle()}</h2>
             </div>
           </div>
-          <QuickAdd />
+          <div className="flex items-center gap-4">
+             <QuickAdd />
+             <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="flex items-center gap-2">
+                       <Avatar className="h-7 w-7">
+                         <AvatarImage src={user.photoURL ?? ''} />
+                         <AvatarFallback>{getInitials(user.displayName ?? 'U')}</AvatarFallback>
+                       </Avatar>
+                        <span className="hidden sm:inline">{user.displayName}</span>
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                       <Link href="/settings"><User className="mr-2" />Profile</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={logout}>
+                        <LogOut className="mr-2"/>
+                        Logout
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+             </DropdownMenu>
+          </div>
         </header>
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">
           {children}
