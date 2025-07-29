@@ -6,21 +6,22 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Sparkles, AlertTriangle, CheckCircle, CalendarDays } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getCalendarAnalysis } from '@/ai/flows/get-calendar-analysis';
-import { mockTasks, mockCalendarEvents } from '@/lib/data';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useTasks } from '@/contexts/task-context';
 
 export function CalendarManagerPage() {
   const [loading, setLoading] = React.useState(false);
   const [analysis, setAnalysis] = React.useState<any>(null);
   const { toast } = useToast();
+  const { tasks } = useTasks();
 
   const handleAnalyzeCalendar = async () => {
     setLoading(true);
     setAnalysis(null);
     try {
       const response = await getCalendarAnalysis({
-        tasks: JSON.stringify(mockTasks),
-        calendarEvents: JSON.stringify(mockCalendarEvents),
+        tasks: JSON.stringify(tasks),
+        calendarEvents: JSON.stringify([]), // To be replaced with live data
         currentDate: new Date().toISOString().split('T')[0],
       });
       setAnalysis(response);
@@ -46,7 +47,7 @@ export function CalendarManagerPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={handleAnalyzeCalendar} disabled={loading} className="w-full">
+          <Button onClick={handleAnalyzeCalendar} disabled={loading || tasks.length === 0} className="w-full">
             {loading ? <Loader2 className="animate-spin mr-2" /> : <Sparkles className="mr-2" />}
             {loading ? 'Analyzing...' : 'Generate Calendar Analysis'}
           </Button>

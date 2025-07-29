@@ -17,28 +17,33 @@ import {
   MessageSquare,
   Sparkles,
 } from 'lucide-react';
-import {
-  mockCalendarEvents,
-  mockMemos,
-  mockTasks,
-  mockDataString,
-} from '@/lib/data';
 import {getPersonalizedInsights} from '@/ai/flows/get-personalized-insights';
 import {useToast} from '@/hooks/use-toast';
+import { useTasks } from '@/contexts/task-context';
+import { Skeleton } from './ui/skeleton';
+
+// Mock data will be replaced with live data from contexts/services later
+const mockMemos = [
+  { id: 1, title: "Project Phoenix Kick-off", summary: "Initial meeting notes, outlined key milestones and stakeholders." },
+];
+const mockCalendarEvents = [
+    { id: 1, title: "Team Stand-up", time: "9:00 AM", location: "Virtual" },
+];
 
 function IskylarInsightsCard() {
   const [insights, setInsights] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const {toast} = useToast();
+  const { tasks } = useTasks();
 
   const handleGetInsights = async () => {
     setLoading(true);
     setInsights('');
     try {
       const result = await getPersonalizedInsights({
-        memos: mockDataString.memos,
-        tasks: mockDataString.tasks,
-        calendarEvents: mockDataString.calendarEvents,
+        memos: JSON.stringify(mockMemos.map(m => `${m.title}: ${m.summary}`)),
+        tasks: JSON.stringify(tasks.map(t => `${t.title} (Due: ${t.dueDate})`)),
+        calendarEvents: JSON.stringify(mockCalendarEvents.map(e => `${e.title} at ${e.time}`)),
       });
       setInsights(result.insights);
     } catch (error) {
@@ -88,6 +93,8 @@ function IskylarInsightsCard() {
 }
 
 export function DashboardPage() {
+  const { tasks, loading: tasksLoading } = useTasks();
+
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
       <IskylarInsightsCard />
@@ -150,30 +157,38 @@ export function DashboardPage() {
           <CardDescription>A quick look at your pending tasks.</CardDescription>
         </CardHeader>
         <CardContent>
-          <ul className="space-y-2">
-            {mockTasks.slice(0, 4).map(task => (
-              <li
-                key={task.id}
-                className={`flex items-center gap-3 rounded-md p-2 ${
-                  task.completed ? 'opacity-50' : ''
-                }`}
-              >
-                <div
-                  className={`h-5 w-5 rounded-sm border-2 ${
-                    task.completed ? 'bg-primary border-primary' : 'border-primary/50'
-                  }`}
-                />
-                <span
-                  className={`flex-grow ${
-                    task.completed ? 'line-through text-muted-foreground' : ''
+          {tasksLoading ? (
+            <div className="space-y-2">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {tasks.slice(0, 4).map(task => (
+                <li
+                  key={task.id}
+                  className={`flex items-center gap-3 rounded-md p-2 ${
+                    task.completed ? 'opacity-50' : ''
                   }`}
                 >
-                  {task.title}
-                </span>
-                <span className="text-xs text-muted-foreground">{task.dueDate}</span>
-              </li>
-            ))}
-          </ul>
+                  <div
+                    className={`h-5 w-5 rounded-sm border-2 ${
+                      task.completed ? 'bg-primary border-primary' : 'border-primary/50'
+                    }`}
+                  />
+                  <span
+                    className={`flex-grow ${
+                      task.completed ? 'line-through text-muted-foreground' : ''
+                    }`}
+                  >
+                    {task.title}
+                  </span>
+                  <span className="text-xs text-muted-foreground">{task.dueDate}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </CardContent>
       </Card>
     </div>

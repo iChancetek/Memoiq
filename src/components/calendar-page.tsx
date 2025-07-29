@@ -10,33 +10,31 @@ import {
 } from '@/components/ui/card';
 import {Calendar} from '@/components/ui/calendar';
 import {Badge} from '@/components/ui/badge';
-import {mockTasks, mockCalendarEvents} from '@/lib/data';
 import {addDays, format, isSameDay, parseISO} from 'date-fns';
+import { useTasks } from '@/contexts/task-context';
+
+// Mock data will be replaced later
+const mockCalendarEvents: any[] = [];
 
 export function CalendarPage() {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
+  const { tasks } = useTasks();
 
   const eventsForSelectedDate = React.useMemo(() => {
     if (!date) return [];
-    const tasks = mockTasks.filter(task =>
+    const dayTasks = tasks.filter(task =>
       isSameDay(parseISO(task.dueDate), date)
     );
     const calendarEvents = mockCalendarEvents.filter(event => {
       // This is a simplified logic. In a real app, event dates would be stored properly.
-      // For now, let's pretend some events are today.
-      if (event.id === 1 || event.id === 2 || event.id === 3) {
-        return isSameDay(new Date(), date);
-      }
-      return false;
+      return isSameDay(new Date(), date);
     });
-    return [...tasks, ...calendarEvents];
-  }, [date]);
+    return [...dayTasks, ...calendarEvents];
+  }, [date, tasks]);
 
   const modifiers = {
-    // Highlight days with tasks
-    withTask: mockTasks.map(task => parseISO(task.dueDate)),
-    // Highlight days with events (mocking today for events)
-    withEvent: [new Date()],
+    withTask: tasks.map(task => parseISO(task.dueDate)),
+    withEvent: [new Date()], // Mocking today for events
   };
 
   const modifiersClassNames = {

@@ -1,6 +1,5 @@
 'use client';
-import *
-as React from 'react';
+import * as React from 'react';
 import {
   DialogHeader,
   DialogTitle,
@@ -16,7 +15,7 @@ import type {Memo} from '@/lib/data';
 import {Input} from './ui/input';
 
 interface MemoRecorderProps {
-  onSave: (memo: Omit<Memo, 'id'>) => void;
+  onSave: (memo: Omit<Memo, 'id' | 'userId' | 'createdAt'>) => void;
   onFinish: () => void;
 }
 
@@ -95,6 +94,7 @@ export function MemoRecorder({onSave, onFinish}: MemoRecorderProps) {
       onSave({
         title,
         summary,
+        transcription,
         date: new Date().toLocaleDateString('en-CA'),
       });
       onFinish();

@@ -20,7 +20,7 @@ import {Checkbox} from '@/components/ui/checkbox';
 import {Input} from '@/components/ui/input';
 import {Button} from '@/components/ui/button';
 import {PlusCircle, Sparkles, Loader2, ListPlus, User} from 'lucide-react';
-import {mockContacts, type Task, type Contact} from '@/lib/data';
+import { type Task, type Contact } from '@/lib/data';
 import {useToast} from '@/hooks/use-toast';
 import {parseTaskString} from '@/ai/flows/parse-task-string';
 import { Badge } from '@/components/ui/badge';
@@ -31,15 +31,18 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useTasks } from '@/contexts/task-context';
+import { Skeleton } from './ui/skeleton';
 
 export function TasksPage() {
-  const { tasks, setTasks, toggleTask, toggleSubtask } = useTasks();
+  const { tasks, toggleTask, toggleSubtask, updateTask, loading: tasksLoading } = useTasks();
   const [newTaskTitle, setNewTaskTitle] = React.useState('');
   const [isParsing, setIsParsing] = React.useState(false);
   const {toast} = useToast();
 
+  // This will be replaced with live contact data in a future step.
+  const mockContacts: Contact[] = [];
   const contactsMap = React.useMemo(() => {
-    const map = new Map<number, Contact>();
+    const map = new Map<string, Contact>();
     mockContacts.forEach(contact => map.set(contact.id, contact));
     return map;
   }, []);
@@ -55,20 +58,20 @@ export function TasksPage() {
         contacts: JSON.stringify(mockContacts),
         context: `Existing tasks: ${JSON.stringify(tasks.map(t => t.title))}`
       });
-
-      const newTask: Task = {
-        id: Date.now(),
+      
+      // The addTask function in the context now handles creating the full task object
+      // @ts-ignore
+      await updateTask({
         title: result.title,
-        completed: false,
         dueDate: result.dueDate,
-        subtasks: result.subtasks.map((sub, i) => ({ id: Date.now() + i + 1, title: sub, completed: false })),
+        subtasks: result.subtasks.map((sub, i) => ({ id: `${Date.now()}-${i}`, title: sub, completed: false })),
         contactIds: result.contactIds,
-      };
-      setTasks(prevTasks => [newTask, ...prevTasks]);
+      });
+
       setNewTaskTitle('');
       toast({
         title: 'Task Added',
-        description: `"${newTask.title}" has been added to your list.`,
+        description: `"${result.title}" has been added to your list.`,
       });
     } catch (error) {
        console.error("Failed to parse task:", error);
@@ -100,7 +103,7 @@ export function TasksPage() {
               className="flex-grow"
               disabled={isParsing}
             />
-            <Button type="submit" size="icon" aria-label="Add task" disabled={isParsing}>
+            <Button type="submit" size="icon" aria-label="Add task" disabled={isParsing || tasksLoading}>
               {isParsing ? <Loader2 className="animate-spin" /> : <Sparkles />}
             </Button>
           </form>
@@ -116,7 +119,16 @@ export function TasksPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {tasks.map(task => (
+                {tasksLoading ? (
+                  Array.from({ length: 3 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell><Skeleton className="h-5 w-5 rounded" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-full" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : tasks.map(task => (
                   <React.Fragment key={task.id}>
                     <TableRow
                       className={task.completed ? 'bg-muted/50' : ''}
@@ -190,7 +202,7 @@ export function TasksPage() {
               </TableBody>
             </Table>
           </div>
-          {tasks.length === 0 && (
+          {!tasksLoading && tasks.length === 0 && (
             <div className="mt-6 py-12 text-center text-muted-foreground">
               <ListPlus className="mx-auto h-12 w-12" />
               <h3 className="mt-4 text-lg font-semibold">You have no tasks</h3>

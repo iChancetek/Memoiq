@@ -1,57 +1,110 @@
 'use client';
 
 import * as React from 'react';
-import { mockTasks, type Task } from '@/lib/data';
+import { type Task, type Subtask } from '@/lib/data';
+import { useAuth } from './auth-context';
+import {
+  getFirestore,
+  collection,
+  query,
+  where,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  doc,
+  serverTimestamp,
+  orderBy,
+  deleteDoc,
+} from 'firebase/firestore';
+import { firebaseApp } from '@/lib/firebase';
 
 interface TaskContextType {
   tasks: Task[];
-  setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
-  addTask: (task: Omit<Task, 'id' | 'completed' | 'subtasks' | 'contactIds'>) => void;
-  toggleTask: (taskId: number) => void;
-  toggleSubtask: (taskId: number, subtaskId: number) => void;
+  addTask: (task: Omit<Task, 'id' | 'userId' | 'completed' | 'createdAt' | 'subtasks' | 'contactIds'>) => Promise<void>;
+  updateTask: (taskId: string, updates: Partial<Task>) => Promise<void>;
+  deleteTask: (taskId: string) => Promise<void>;
+  toggleTask: (taskId: string) => void;
+  toggleSubtask: (taskId: string, subtaskId: string) => void;
+  loading: boolean;
 }
 
 const TaskContext = React.createContext<TaskContextType | undefined>(undefined);
+const db = getFirestore(firebaseApp);
 
 export function TaskProvider({ children }: { children: React.ReactNode }) {
-  const [tasks, setTasks] = React.useState<Task[]>(mockTasks);
+  const { user } = useAuth();
+  const [tasks, setTasks] = React.useState<Task[]>([]);
+  const [loading, setLoading] = React.useState(true);
 
-  const addTask = (task: Omit<Task, 'id' | 'completed' | 'subtasks' | 'contactIds'>) => {
-    const newTask: Task = {
-      id: Date.now(),
-      title: task.title,
+  React.useEffect(() => {
+    if (user) {
+      setLoading(true);
+      const q = query(
+        collection(db, 'tasks'),
+        where('userId', '==', user.uid),
+        orderBy('createdAt', 'desc')
+      );
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const userTasks = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+        })) as Task[];
+        setTasks(userTasks);
+        setLoading(false);
+      }, (error) => {
+        console.error("Error fetching tasks:", error);
+        setLoading(false);
+      });
+      return () => unsubscribe();
+    } else {
+      setTasks([]);
+      setLoading(false);
+    }
+  }, [user]);
+
+  const addTask = async (task: Omit<Task, 'id' | 'userId' | 'completed' | 'createdAt'| 'subtasks' | 'contactIds'>) => {
+    if (!user) throw new Error("User not authenticated");
+    await addDoc(collection(db, 'tasks'), {
+      ...task,
+      userId: user.uid,
       completed: false,
-      dueDate: task.dueDate,
       subtasks: [],
       contactIds: [],
-    };
-    setTasks(prevTasks => [newTask, ...prevTasks]);
+      createdAt: serverTimestamp(),
+    });
   };
 
-  const toggleTask = (taskId: number) => {
-    setTasks(
-      tasks.map(task =>
-        task.id === taskId ? { ...task, completed: !task.completed } : task
-      )
-    );
+  const updateTask = async (taskId: string, updates: Partial<Task>) => {
+    const taskRef = doc(db, 'tasks', taskId);
+    await updateDoc(taskRef, updates);
   };
   
-  const toggleSubtask = (taskId: number, subtaskId: number) => {
-    setTasks(tasks.map(task => {
-        if (task.id === taskId) {
-            return {
-                ...task,
-                subtasks: task.subtasks?.map(sub => 
-                    sub.id === subtaskId ? { ...sub, completed: !sub.completed } : sub
-                )
-            }
-        }
-        return task;
-    }));
+  const deleteTask = async (taskId: string) => {
+    const taskRef = doc(db, 'tasks', taskId);
+    await deleteDoc(taskRef);
+  }
+
+  const toggleTask = (taskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (task) {
+      updateTask(taskId, { completed: !task.completed });
+    }
+  };
+  
+  const toggleSubtask = (taskId: string, subtaskId: string) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (task && task.subtasks) {
+      const newSubtasks = task.subtasks.map(sub =>
+        sub.id === subtaskId ? { ...sub, completed: !sub.completed } : sub
+      );
+      updateTask(taskId, { subtasks: newSubtasks });
+    }
   };
 
+  const value = { tasks, addTask, updateTask, deleteTask, toggleTask, toggleSubtask, loading };
+
   return (
-    <TaskContext.Provider value={{ tasks, setTasks, addTask, toggleTask, toggleSubtask }}>
+    <TaskContext.Provider value={value}>
       {children}
     </TaskContext.Provider>
   );

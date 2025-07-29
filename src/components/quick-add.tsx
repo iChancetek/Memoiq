@@ -23,13 +23,13 @@ export function QuickAdd() {
   const { toast } = useToast();
   const closeRef = React.useRef<HTMLButtonElement>(null);
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const title = formData.get('title') as string;
     const dueDate = formData.get('dueDate') as string;
     if (title && dueDate) {
-      addTask({title, dueDate});
+      await addTask({title, dueDate});
       toast({
         title: "Task Added",
         description: `"${title}" has been added to your list.`,

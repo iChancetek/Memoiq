@@ -6,16 +6,23 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Loader2, Sparkles, User, Mail, Building, CalendarClock, Bot } from 'lucide-react';
 import { getContactInsights } from '@/ai/flows/get-contact-insights';
-import { mockContacts, type Contact } from '@/lib/data';
+import { type Contact } from '@/lib/data';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
+import { Skeleton } from './ui/skeleton';
 
 export function ContactsPage() {
-  const [contacts, setContacts] = React.useState<Contact[]>(mockContacts);
+  const [contacts, setContacts] = React.useState<Contact[]>([]);
+  const [loading, setLoading] = React.useState(true);
   const [loadingInsights, setLoadingInsights] = React.useState(false);
   const [insights, setInsights] = React.useState<string | null>(null);
   const { toast } = useToast();
+
+  React.useEffect(() => {
+      // This will be replaced by a live data fetch from Firestore
+      setLoading(false);
+  }, []);
 
   const handleGetInsights = async () => {
     setLoadingInsights(true);
@@ -55,7 +62,7 @@ export function ContactsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-           <Button onClick={handleGetInsights} disabled={loadingInsights} className="w-full">
+           <Button onClick={handleGetInsights} disabled={loadingInsights || contacts.length === 0} className="w-full">
             {loadingInsights ? <Loader2 className="animate-spin mr-2" /> : <Sparkles className="mr-2" />}
             {loadingInsights ? 'Analyzing...' : 'Generate Follow-up Suggestions'}
           </Button>
@@ -72,7 +79,14 @@ export function ContactsPage() {
       </Card>
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        {contacts.map(contact => (
+        {loading ? (
+           Array.from({ length: 2 }).map((_, i) => (
+             <Card key={i}>
+                <CardHeader><Skeleton className="h-12 w-full" /></CardHeader>
+                <CardContent><Skeleton className="h-24 w-full" /></CardContent>
+             </Card>
+           ))
+        ) : contacts.map(contact => (
           <Card key={contact.id}>
             <CardHeader className="flex flex-row items-center gap-4">
                <Avatar className="h-12 w-12">

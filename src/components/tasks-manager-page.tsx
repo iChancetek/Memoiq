@@ -6,20 +6,21 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Sparkles, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getTasksAnalysis } from '@/ai/flows/get-tasks-analysis';
-import { mockTasks } from '@/lib/data';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useTasks } from '@/contexts/task-context';
 
 export function TasksManagerPage() {
   const [loading, setLoading] = React.useState(false);
   const [analysis, setAnalysis] = React.useState<any>(null);
   const { toast } = useToast();
+  const { tasks } = useTasks();
 
   const handleAnalyzeTasks = async () => {
     setLoading(true);
     setAnalysis(null);
     try {
       const response = await getTasksAnalysis({
-        tasks: JSON.stringify(mockTasks),
+        tasks: JSON.stringify(tasks),
         currentDate: new Date().toISOString().split('T')[0],
       });
       setAnalysis(response);
@@ -45,7 +46,7 @@ export function TasksManagerPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={handleAnalyzeTasks} disabled={loading} className="w-full">
+          <Button onClick={handleAnalyzeTasks} disabled={loading || tasks.length === 0} className="w-full">
             {loading ? <Loader2 className="animate-spin mr-2" /> : <Sparkles className="mr-2" />}
             {loading ? 'Analyzing...' : 'Generate Task Analysis'}
           </Button>
