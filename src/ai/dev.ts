@@ -1,8 +1,5 @@
 'use server';
 
-import {config} from 'dotenv';
-config({ path: '.env.local' });
-
 // IMPORTANT: The dev entry point must be the first import.
 import '@/ai/genkit'; // This will initialize genkit with the environment variables
 import '@/ai/flows/get-personalized-insights.ts';
