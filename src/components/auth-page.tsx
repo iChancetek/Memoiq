@@ -6,8 +6,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { LoginPage } from './login-page';
 import { SignupPage } from './signup-page';
 import { Logo } from './logo';
+import { Button } from './ui/button';
+import { useAuth } from '@/contexts/auth-context';
+import { Separator } from './ui/separator';
 
 export function AuthPage() {
+  const { loginWithGoogle, loading } = useAuth();
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <div className="grid w-full max-w-4xl grid-cols-1 md:grid-cols-2 gap-8">
@@ -26,9 +31,16 @@ export function AuthPage() {
         <Card className="w-full max-w-md mx-auto">
             <CardHeader>
                 <CardTitle className="text-2xl">Get Started</CardTitle>
-                <CardDescription>Choose how you want to sign in to your workspace.</CardDescription>
+                <CardDescription>Sign in with Google or use your email to continue.</CardDescription>
             </CardHeader>
             <CardContent>
+                 <Button variant="outline" className="w-full" onClick={loginWithGoogle} disabled={loading}>
+                    Sign In with Google
+                </Button>
+                <div className="relative my-4">
+                    <Separator />
+                    <span className="absolute left-1/2 -translate-x-1/2 -top-3 bg-card px-2 text-xs text-muted-foreground">OR</span>
+                </div>
                  <Tabs defaultValue="login" className="w-full">
                     <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger value="login">Login</TabsTrigger>

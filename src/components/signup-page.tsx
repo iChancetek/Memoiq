@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/auth-context';
 import { Loader2 } from 'lucide-react';
-import { Separator } from './ui/separator';
 
 interface SignupPageProps {
     isCard?: boolean;
@@ -17,7 +16,7 @@ export function SignupPage({ isCard = true }: SignupPageProps) {
   const [displayName, setDisplayName] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
-  const { signup, loginWithGoogle, loading, error } = useAuth();
+  const { signup, loading, error } = useAuth();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,14 +25,7 @@ export function SignupPage({ isCard = true }: SignupPageProps) {
   
   const content = (
       <>
-        <Button variant="outline" className="w-full" onClick={loginWithGoogle} disabled={loading}>
-            Sign Up with Google
-        </Button>
-        <div className="relative my-4">
-            <Separator />
-            <span className="absolute left-1/2 -translate-x-1/2 -top-3 bg-card px-2 text-xs text-muted-foreground">OR CONTINUE WITH EMAIL</span>
-        </div>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
           <div className="grid gap-2">
             <Label htmlFor="displayName">Display Name</Label>
             <Input
