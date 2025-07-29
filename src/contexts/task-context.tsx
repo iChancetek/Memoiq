@@ -7,7 +7,6 @@ import {
   getFirestore,
   collection,
   query,
-  where,
   onSnapshot,
   addDoc,
   updateDoc,
@@ -20,7 +19,7 @@ import { firebaseApp } from '@/lib/firebase';
 
 interface TaskContextType {
   tasks: Task[];
-  addTask: (task: Omit<Task, 'id' | 'userId' | 'completed' | 'createdAt' | 'subtasks' | 'contactIds'>) => Promise<void>;
+  addTask: (task: Omit<Task, 'id' | 'userId' | 'completed' | 'createdAt'>) => Promise<void>;
   updateTask: (taskId: string, updates: Partial<Task>) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
   toggleTask: (taskId: string) => void;
@@ -61,14 +60,16 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
-  const addTask = async (task: Omit<Task, 'id' | 'userId' | 'completed' | 'createdAt'| 'subtasks' | 'contactIds'>) => {
+  const addTask = async (task: Omit<Task, 'id' | 'userId' | 'completed' | 'createdAt'>) => {
     if (!user) throw new Error("User not authenticated");
+    const { title, dueDate, subtasks, contactIds } = task;
     await addDoc(collection(db, 'users', user.uid, 'tasks'), {
-      ...task,
+      title,
+      dueDate,
+      subtasks: subtasks || [],
+      contactIds: contactIds || [],
       userId: user.uid,
       completed: false,
-      subtasks: [],
-      contactIds: [],
       createdAt: serverTimestamp(),
     });
   };

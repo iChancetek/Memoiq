@@ -34,7 +34,7 @@ import { useTasks } from '@/contexts/task-context';
 import { Skeleton } from './ui/skeleton';
 
 export function TasksPage() {
-  const { tasks, toggleTask, toggleSubtask, updateTask, loading: tasksLoading } = useTasks();
+  const { tasks, toggleTask, toggleSubtask, addTask, loading: tasksLoading } = useTasks();
   const [newTaskTitle, setNewTaskTitle] = React.useState('');
   const [isParsing, setIsParsing] = React.useState(false);
   const {toast} = useToast();
@@ -59,13 +59,11 @@ export function TasksPage() {
         context: `Existing tasks: ${JSON.stringify(tasks.map(t => t.title))}`
       });
       
-      // The addTask function in the context now handles creating the full task object
-      // @ts-ignore
-      await updateTask({
+      await addTask({
         title: result.title,
         dueDate: result.dueDate,
         subtasks: result.subtasks.map((sub, i) => ({ id: `${Date.now()}-${i}`, title: sub, completed: false })),
-        contactIds: result.contactIds,
+        contactIds: result.contactIds.map(String),
       });
 
       setNewTaskTitle('');
