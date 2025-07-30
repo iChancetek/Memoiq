@@ -91,7 +91,8 @@ export function ScribeProvider({ children }: { children: React.ReactNode }) {
     // 3. Get transcription and initial translation (to English) from AI
     const aiResult = await scribeTranscribeAndTranslate({
         audioDataUri,
-        targetLanguage: 'en'
+        targetLanguage: 'en',
+        existingTranscription: '',
     });
     
     // 4. Save metadata to Firestore
@@ -101,7 +102,7 @@ export function ScribeProvider({ children }: { children: React.ReactNode }) {
       audioUrl,
       storagePath,
       transcription_en: aiResult.transcription,
-      transcription_es: '',
+      transcription_es: '', // Spanish translation is done on demand
       createdAt: serverTimestamp(),
     });
   };
