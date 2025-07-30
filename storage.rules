@@ -1,7 +1,10 @@
+
 rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
+    // Allow users to read and write to their own 'scribe-audio' folder.
+    // The {userId} wildcard in the path is matched against the authenticated user's ID.
     match /scribe-audio/{userId}/{allPaths=**} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
