@@ -31,8 +31,8 @@ export type CalendarEvent = {
   id: string; // Firestore document ID
   userId: string;
   title: string;
-  startTime: Timestamp;
-  endTime: Timestamp;
+  startTime: Date;
+  endTime: Date;
   location: string;
   createdAt: Timestamp;
 };

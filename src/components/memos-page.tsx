@@ -16,41 +16,61 @@ import {MemoRecorder} from '@/components/memo-recorder';
 import type {Memo} from '@/lib/data';
 import {useToast} from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
-import { getFirestore, collection, addDoc, query, onSnapshot, serverTimestamp, orderBy } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, query, onSnapshot, serverTimestamp, orderBy, Timestamp } from 'firebase/firestore';
 import { firebaseApp } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
 
 
 const db = getFirestore(firebaseApp);
 
+// Create a context to provide memos throughout the app
+const MemoContext = React.createContext<{ memos: Memo[]; loading: boolean }>({ memos: [], loading: true });
+
+export function MemoProvider({ children }: { children: React.ReactNode }) {
+    const { user } = useAuth();
+    const [memos, setMemos] = React.useState<Memo[]>([]);
+    const [loading, setLoading] = React.useState(true);
+
+    React.useEffect(() => {
+        if (user) {
+        setLoading(true);
+        const q = query(
+            collection(db, 'users', user.uid, 'memos'),
+            orderBy('createdAt', 'desc')
+        );
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const userMemos = snapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    createdAt: (data.createdAt as Timestamp)?.toDate()
+                }
+            }) as Memo[];
+            setMemos(userMemos);
+            setLoading(false);
+        });
+        return () => unsubscribe();
+        } else {
+            setMemos([]);
+            setLoading(false);
+        }
+    }, [user]);
+
+    return (
+        <MemoContext.Provider value={{ memos, loading }}>
+            {children}
+        </MemoContext.Provider>
+    );
+}
+
+export const useMemos = () => React.useContext(MemoContext);
+
 export function MemosPage() {
-  const [memos, setMemos] = React.useState<Memo[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const { memos, loading } = useMemos();
   const [isRecording, setIsRecording] = React.useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
-
-  React.useEffect(() => {
-    if (user) {
-      setLoading(true);
-      const q = query(
-        collection(db, 'users', user.uid, 'memos'),
-        orderBy('createdAt', 'desc')
-      );
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const userMemos = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-        })) as Memo[];
-        setMemos(userMemos);
-        setLoading(false);
-      });
-      return () => unsubscribe();
-    } else {
-        setMemos([]);
-        setLoading(false);
-    }
-  }, [user]);
 
   const addMemo = async (newMemo: Omit<Memo, 'id' | 'userId' | 'createdAt'>) => {
     if (!user) {

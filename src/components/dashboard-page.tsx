@@ -26,13 +26,9 @@ import { useTasks } from '@/contexts/task-context';
 import { Skeleton } from './ui/skeleton';
 import { useAuth } from '@/contexts/auth-context';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-
-const mockMemos = [
-  { id: 1, title: "Project Phoenix Kick-off", summary: "Initial meeting notes, outlined key milestones and stakeholders." },
-];
-const mockCalendarEvents = [
-    { id: 1, title: "Team Stand-up", time: "9:00 AM", location: "Virtual" },
-];
+import { useCalendar } from '@/contexts/calendar-context';
+import { useMemos } from '@/contexts/memo-context';
+import { format } from 'date-fns';
 
 function IskylarBriefingCard() {
   const [briefing, setBriefing] = React.useState({ text: '', audioUri: '' });
@@ -42,6 +38,8 @@ function IskylarBriefingCard() {
   const {toast} = useToast();
   const { user } = useAuth();
   const { tasks } = useTasks();
+  const { events } = useCalendar();
+  const { memos } = useMemos();
 
   const handleGetBriefing = React.useCallback(async () => {
     if (!user) return;
@@ -56,9 +54,9 @@ function IskylarBriefingCard() {
 
       const briefingPromise = getDailyBriefing({
         displayName: user.displayName || 'User',
-        memos: JSON.stringify(mockMemos.map(m => `${m.title}: ${m.summary}`)),
+        memos: JSON.stringify(memos.map(m => `${m.title}: ${m.summary}`)),
         tasks: JSON.stringify(tasks.map(t => `${t.title} (Due: ${t.dueDate})`)),
-        calendarEvents: JSON.stringify(mockCalendarEvents.map(e => `${e.title} at ${e.time}`)),
+        calendarEvents: JSON.stringify(events.map(e => `${e.title} at ${format(e.startTime, 'p')}`)),
       });
 
       const [greeting, dailyBriefing] = await Promise.all([greetingPromise, briefingPromise]);
@@ -72,10 +70,11 @@ function IskylarBriefingCard() {
         title: 'Error',
         description: 'Failed to get insights from iSkylar.',
       });
+      setBriefing({ text: 'I seem to be having trouble connecting right now. Please try again in a moment.', audioUri: '' });
     } finally {
       setLoading(false);
     }
-  }, [user, tasks, toast]);
+  }, [user, tasks, events, memos, toast]);
 
   React.useEffect(() => {
     if (user) {
@@ -87,7 +86,10 @@ function IskylarBriefingCard() {
     if (briefing.audioUri) {
         const audio = new Audio(briefing.audioUri);
         audioRef.current = audio;
-        audio.play().then(() => setIsPlaying(true)).catch(e => console.error("Audio auto-play failed", e));
+        audio.play().then(() => setIsPlaying(true)).catch(e => {
+            console.error("Audio auto-play failed, user interaction may be required.", e)
+            setIsPlaying(false);
+        });
         audio.onended = () => setIsPlaying(false);
     }
     
@@ -157,8 +159,48 @@ function IskylarBriefingCard() {
   );
 }
 
+function RecentMemosCard() {
+    const { memos, loading } = useMemos();
+
+    return (
+        <Card>
+            <CardHeader>
+            <div className="flex items-center gap-2">
+                <MessageSquare className="h-6 w-6 text-primary" />
+                <CardTitle>Recent Memos</CardTitle>
+            </div>
+            <CardDescription>Your latest transcribed thoughts.</CardDescription>
+            </CardHeader>
+            <CardContent>
+             {loading ? (
+                <div className="space-y-3">
+                    <Skeleton className="h-12 w-full" />
+                    <Skeleton className="h-12 w-full" />
+                </div>
+            ) : (
+                <ul className="space-y-3">
+                    {memos.slice(0, 3).map(memo => (
+                    <li key={memo.id} className="rounded-md border p-3">
+                        <p className="font-medium truncate">{memo.title}</p>
+                        <p className="text-sm text-muted-foreground truncate">
+                        {memo.summary}
+                        </p>
+                    </li>
+                    ))}
+                </ul>
+            )}
+            </CardContent>
+      </Card>
+    )
+}
+
 export function DashboardPage() {
   const { tasks, loading: tasksLoading } = useTasks();
+  const { events, loading: eventsLoading } = useCalendar();
+
+  const upcomingEvents = events
+    .filter(event => event.startTime >= new Date())
+    .slice(0, 3);
 
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -173,45 +215,34 @@ export function DashboardPage() {
           <CardDescription>Your schedule for today.</CardDescription>
         </CardHeader>
         <CardContent>
-          <ul className="space-y-4">
-            {mockCalendarEvents.map(event => (
-              <li key={event.id} className="flex items-start gap-4">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <CalendarDays className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="font-medium">{event.title}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {event.time} - {event.location}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ul>
+          {eventsLoading ? (
+             <div className="space-y-4">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+            </div>
+          ) : (
+            <ul className="space-y-4">
+                {upcomingEvents.length > 0 ? upcomingEvents.map(event => (
+                <li key={event.id} className="flex items-start gap-4">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <CalendarDays className="h-4 w-4" />
+                    </div>
+                    <div>
+                    <p className="font-medium">{event.title}</p>
+                    <p className="text-sm text-muted-foreground">
+                        {format(event.startTime, 'p')} - {event.location}
+                    </p>
+                    </div>
+                </li>
+                )) : (
+                    <p className="text-sm text-muted-foreground text-center pt-4">No upcoming events.</p>
+                )}
+            </ul>
+          )}
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <MessageSquare className="h-6 w-6 text-primary" />
-            <CardTitle>Recent Memos</CardTitle>
-          </div>
-          <CardDescription>Your latest transcribed thoughts.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ul className="space-y-3">
-            {mockMemos.slice(0, 3).map(memo => (
-              <li key={memo.id} className="rounded-md border p-3">
-                <p className="font-medium truncate">{memo.title}</p>
-                <p className="text-sm text-muted-foreground truncate">
-                  {memo.summary}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
+      <RecentMemosCard />
 
       <Card className="md:col-span-2 lg:col-span-3">
         <CardHeader>
@@ -258,4 +289,11 @@ export function DashboardPage() {
       </Card>
     </div>
   );
+}
+
+// Need a memo context to avoid prop drilling, similar to tasks and contacts
+const MemoContext = React.createContext<{ memos: Memo[]; loading: boolean; }>({ memos: [], loading: true });
+
+function useMemos() {
+    return React.useContext(MemoContext);
 }

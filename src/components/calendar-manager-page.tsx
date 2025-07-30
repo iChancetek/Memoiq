@@ -8,12 +8,14 @@ import { useToast } from '@/hooks/use-toast';
 import { getCalendarAnalysis } from '@/ai/flows/get-calendar-analysis';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useTasks } from '@/contexts/task-context';
+import { useCalendar } from '@/contexts/calendar-context';
 
 export function CalendarManagerPage() {
   const [loading, setLoading] = React.useState(false);
   const [analysis, setAnalysis] = React.useState<any>(null);
   const { toast } = useToast();
-  const { tasks } = useTasks();
+  const { tasks, loading: tasksLoading } = useTasks();
+  const { events, loading: eventsLoading } = useCalendar();
 
   const handleAnalyzeCalendar = async () => {
     setLoading(true);
@@ -21,7 +23,7 @@ export function CalendarManagerPage() {
     try {
       const response = await getCalendarAnalysis({
         tasks: JSON.stringify(tasks),
-        calendarEvents: JSON.stringify([]), // To be replaced with live data
+        calendarEvents: JSON.stringify(events),
         currentDate: new Date().toISOString().split('T')[0],
       });
       setAnalysis(response);
@@ -36,6 +38,8 @@ export function CalendarManagerPage() {
       setLoading(false);
     }
   };
+  
+  const hasData = tasks.length > 0 || events.length > 0;
 
   return (
     <div className="container mx-auto max-w-3xl">
@@ -47,7 +51,7 @@ export function CalendarManagerPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={handleAnalyzeCalendar} disabled={loading || tasks.length === 0} className="w-full">
+          <Button onClick={handleAnalyzeCalendar} disabled={loading || tasksLoading || eventsLoading || !hasData} className="w-full">
             {loading ? <Loader2 className="animate-spin mr-2" /> : <Sparkles className="mr-2" />}
             {loading ? 'Analyzing...' : 'Generate Calendar Analysis'}
           </Button>
