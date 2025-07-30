@@ -43,21 +43,15 @@ function IskylarBriefingCard() {
   const { user } = useAuth();
   const { tasks } = useTasks();
 
-  React.useEffect(() => {
-    if (user) {
-        handleGetBriefing();
-    }
-  }, [user, tasks]);
-
-  const handleGetBriefing = async () => {
+  const handleGetBriefing = React.useCallback(async () => {
     if (!user) return;
     setLoading(true);
 
     try {
       const currentHour = new Date().getHours();
-      const greetingPromise = getWelcomeGreeting({ 
-          displayName: user.displayName?.split(' ')[0] || 'there',
-          hour: currentHour
+      const greetingPromise = getWelcomeGreeting({
+        displayName: user.displayName?.split(' ')[0] || 'there',
+        hour: currentHour,
       });
 
       const briefingPromise = getDailyBriefing({
@@ -68,12 +62,9 @@ function IskylarBriefingCard() {
       });
 
       const [greeting, dailyBriefing] = await Promise.all([greetingPromise, briefingPromise]);
-      
-      const combinedText = `${greeting.text} ${dailyBriefing.briefingText}`;
-      
-      // For simplicity, we'll use the briefing audio. A more advanced version could combine them.
-      setBriefing({ text: combinedText, audioUri: dailyBriefing.briefingAudioDataUri });
 
+      const combinedText = `${greeting.text} ${dailyBriefing.briefingText}`;
+      setBriefing({ text: combinedText, audioUri: dailyBriefing.briefingAudioDataUri });
     } catch (error) {
       console.error('Error getting briefing:', error);
       toast({
@@ -84,16 +75,31 @@ function IskylarBriefingCard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, tasks, toast]);
 
-  const togglePlayback = () => {
-    if (!audioRef.current) {
-        if (briefing.audioUri) {
-            audioRef.current = new Audio(briefing.audioUri);
-            audioRef.current.onended = () => setIsPlaying(false);
+  React.useEffect(() => {
+    if (user) {
+      handleGetBriefing();
+    }
+  }, [user, handleGetBriefing]);
+
+  React.useEffect(() => {
+    if (briefing.audioUri) {
+        const audio = new Audio(briefing.audioUri);
+        audioRef.current = audio;
+        audio.play().then(() => setIsPlaying(true)).catch(e => console.error("Audio auto-play failed", e));
+        audio.onended = () => setIsPlaying(false);
+    }
+    
+    return () => {
+        if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current = null;
         }
     }
+  }, [briefing.audioUri]);
 
+  const togglePlayback = () => {
     if (audioRef.current) {
         if (isPlaying) {
             audioRef.current.pause();
@@ -103,16 +109,6 @@ function IskylarBriefingCard() {
         setIsPlaying(!isPlaying);
     }
   }
-  
-  // Cleanup audio on component unmount
-  React.useEffect(() => {
-    return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-    };
-  }, []);
 
   return (
     <Card className="col-span-1 md:col-span-2">
