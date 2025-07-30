@@ -37,7 +37,7 @@ const prompt = ai.definePrompt({
   name: 'personalizedInsightsPrompt',
   input: {schema: PersonalizedInsightsInputSchema},
   output: {schema: PersonalizedInsightsOutputSchema},
-  model: 'googleai/gemini-1.5-flash-preview-0514',
+  model: 'googleai/gemini-1.5-flash',
   prompt: `You are iSkylar, an AI assistant that provides personalized insights and reminders to users based on their memos, tasks, and calendar events.
 
   Analyze the following information and provide personalized insights and reminders to help the user stay organized and focused on their priorities.
