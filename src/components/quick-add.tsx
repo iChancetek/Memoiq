@@ -14,28 +14,55 @@ import {
 import {Input} from '@/components/ui/input';
 import {Label} from '@/components/ui/label';
 import {Tabs, TabsContent, TabsList, TabsTrigger} from '@/components/ui/tabs';
-import {Plus} from 'lucide-react';
+import {Plus, Sparkles, Loader2} from 'lucide-react';
 import { useTasks } from '@/contexts/task-context';
 import { useToast } from '@/hooks/use-toast';
+import { parseTaskString } from '@/ai/flows/parse-task-string';
 
 export function QuickAdd() {
-  const { addTask } = useTasks();
+  const { addTask, loading: tasksLoading } = useTasks();
+  const [isParsing, setIsParsing] = React.useState(false);
   const { toast } = useToast();
   const closeRef = React.useRef<HTMLButtonElement>(null);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    const title = formData.get('title') as string;
-    const dueDate = formData.get('dueDate') as string;
-    if (title && dueDate) {
-      await addTask({title, dueDate});
-      toast({
-        title: "Task Added",
-        description: `"${title}" has been added to your list.`,
-      });
-      closeRef.current?.click();
-      (event.target as HTMLFormElement).reset();
+    const taskString = formData.get('taskString') as string;
+    
+    if (taskString.trim()) {
+      setIsParsing(true);
+      try {
+        const result = await parseTaskString({
+          taskString: taskString,
+          contacts: JSON.stringify([]), // Will be replaced by live data
+          context: `Existing tasks: ${JSON.stringify(useTasks.getState().tasks.map(t => t.title))}`
+        });
+
+        await addTask({
+          title: result.title,
+          dueDate: result.dueDate,
+          subtasks: result.subtasks.map((sub, i) => ({ id: `${Date.now()}-${i}`, title: sub, completed: false })),
+          contactIds: result.contactIds.map(String),
+        });
+
+        toast({
+          title: "Task Added",
+          description: `"${result.title}" has been added to your list.`,
+        });
+        
+        closeRef.current?.click();
+        (event.target as HTMLFormElement).reset();
+      } catch (error) {
+         console.error("Failed to parse task:", error);
+         toast({
+           variant: "destructive",
+           title: "AI Error",
+           description: "Could not understand the task. Please try rephrasing.",
+         });
+      } finally {
+          setIsParsing(false);
+      }
     }
   };
 
@@ -67,20 +94,18 @@ export function QuickAdd() {
           <TabsContent value="task">
             <form onSubmit={handleSubmit} className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label htmlFor="title">Task Title</Label>
+                <Label htmlFor="taskString">Describe your task</Label>
                 <Input
-                  id="title"
-                  name="title"
-                  placeholder="e.g. Follow up with Acme Corp"
+                  id="taskString"
+                  name="taskString"
+                  placeholder="e.g. Follow up with Acme Corp next Friday"
                   required
+                  disabled={isParsing || tasksLoading}
                 />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="dueDate">Due Date</Label>
-                <Input id="dueDate" name="dueDate" type="date" required />
-              </div>
-              <Button type="submit" className="mt-4">
-                Add Task
+              <Button type="submit" className="mt-4" disabled={isParsing || tasksLoading}>
+                {isParsing ? <Loader2 className="animate-spin mr-2" /> : <Sparkles className="mr-2" />}
+                {isParsing ? 'Parsing...' : 'Add Task with AI'}
               </Button>
             </form>
           </TabsContent>

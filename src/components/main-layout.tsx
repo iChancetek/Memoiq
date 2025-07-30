@@ -42,14 +42,11 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
-import { getWelcomeGreeting } from '@/ai/flows/get-welcome-greeting';
-import { useToast } from '@/hooks/use-toast';
 
 export function MainLayout({children}: {children: React.ReactNode}) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout, loading: authLoading } = useAuth();
-  const { toast } = useToast();
   
   const getPageTitle = () => {
     switch (pathname) {
@@ -87,11 +84,6 @@ export function MainLayout({children}: {children: React.ReactNode}) {
       router.push('/auth');
     }
   }, [user, authLoading, router]);
-
-  React.useEffect(() => {
-    // This effect is now handled on the dashboard page for a more integrated experience
-    // The original toast-based greeting is removed to avoid duplication.
-  }, [user, toast]);
 
   if (!user) {
     return null; // Or a loading spinner
@@ -253,16 +245,7 @@ export function MainLayout({children}: {children: React.ReactNode}) {
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton tooltip="Settings" asChild isActive={pathname === '/settings'}>
-                <Link href="/settings">
-                  <Settings />
-                  <span>Settings</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
+            {/* Settings button removed from footer */}
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
@@ -274,24 +257,29 @@ export function MainLayout({children}: {children: React.ReactNode}) {
               <h2 className="text-lg font-semibold">{getPageTitle()}</h2>
             </div>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
              <QuickAdd />
+             <Button variant="ghost" size="icon" asChild>
+                <Link href="/settings">
+                    <Settings className="h-5 w-5" />
+                    <span className="sr-only">Settings</span>
+                </Link>
+             </Button>
              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="flex items-center gap-2">
-                       <Avatar className="h-7 w-7">
-                         <AvatarImage src={user.photoURL ?? ''} />
+                    <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                       <Avatar className="h-8 w-8">
+                         <AvatarImage src={user.photoURL ?? ''} alt={user.displayName ?? ''} />
                          <AvatarFallback>{getInitials(user.displayName ?? 'U')}</AvatarFallback>
                        </Avatar>
-                        <span className="hidden sm:inline">{user.displayName}</span>
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
-                    <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
+                    <DropdownMenuLabel>
+                        <p>{user.displayName}</p>
+                        <p className="text-xs font-normal text-muted-foreground">{user.email}</p>
+                    </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                       <Link href="/settings"><User className="mr-2" />Profile</Link>
-                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={logout}>
                         <LogOut className="mr-2"/>
                         Logout
