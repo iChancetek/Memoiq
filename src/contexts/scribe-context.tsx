@@ -100,8 +100,8 @@ export function ScribeProvider({ children }: { children: React.ReactNode }) {
       title: `Recording - ${new Date().toLocaleString()}`,
       audioUrl,
       storagePath,
-      transcription_en: aiResult.transcription, // Initially, both can be the same if source is English
-      transcription_es: '', // Will be filled on demand
+      transcription_en: aiResult.transcription,
+      transcription_es: '',
       createdAt: serverTimestamp(),
     });
   };
@@ -118,7 +118,9 @@ export function ScribeProvider({ children }: { children: React.ReactNode }) {
     if (!entry) return;
 
     // Delete audio from storage
-    await deleteFile(entry.storagePath);
+    if (entry.storagePath) {
+        await deleteFile(entry.storagePath);
+    }
     // Delete metadata from Firestore
     const entryRef = doc(db, 'users', user.uid, 'scribeEntries', entryId);
     await deleteDoc(entryRef);
@@ -130,15 +132,11 @@ export function ScribeProvider({ children }: { children: React.ReactNode }) {
       if (!entry) return;
 
       // Get translation from AI
-      const aiResult = await scribeTranscribeAndTranslate({
-          // We pass the existing audio URI again; the flow is smart enough
-          // but for optimization, we could have a translate-only flow.
-          // For now, this is simpler. We pass the already-transcribed text to the prompt.
-          audioDataUri: '', // This will be ignored if we just need translation
-          targetLanguage
+      const { translation } = await scribeTranscribeAndTranslate({
+          audioDataUri: '', // Not needed for translation only
+          existingTranscription: text,
+          targetLanguage,
       });
-
-      const { translation } = await translateScribeEntry(entryId, targetLanguage, text);
 
       // Update the entry in Firestore
       const fieldToUpdate = targetLanguage === 'es' ? 'transcription_es' : 'transcription_en';

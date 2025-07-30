@@ -14,8 +14,9 @@ const ScribeInputSchema = z.object({
   audioDataUri: z
     .string()
     .describe(
-      "An audio file, as a data URI that must include a MIME type and use Base64 encoding."
+      "An audio file, as a data URI that must include a MIME type and use Base64 encoding. Can be empty if only translation is needed and existing transcription is provided."
     ),
+  existingTranscription: z.string().optional().describe('An existing transcription to be translated.'),
   targetLanguage: z.enum(['en', 'es']).describe("The language to translate the transcription into."),
 });
 export type ScribeInput = z.infer<typeof ScribeInputSchema>;
@@ -56,14 +57,20 @@ const scribeFlow = ai.defineFlow(
     inputSchema: ScribeInputSchema,
     outputSchema: ScribeOutputSchema,
   },
-  async ({ audioDataUri, targetLanguage }) => {
-    // Step 1: Transcribe the audio
-    const { output: transcriptionOutput } = await transcribePrompt({ audioDataUri });
-    if (!transcriptionOutput) {
-        throw new Error('Transcription failed.');
-    }
-    const transcription = transcriptionOutput.transcription;
+  async ({ audioDataUri, targetLanguage, existingTranscription }) => {
+    let transcription = existingTranscription;
 
+    // Step 1: Transcribe the audio if no existing transcription is provided
+    if (!transcription && audioDataUri) {
+        const { output: transcriptionOutput } = await transcribePrompt({ audioDataUri });
+        if (!transcriptionOutput) {
+            throw new Error('Transcription failed.');
+        }
+        transcription = transcriptionOutput.transcription;
+    } else if (!transcription) {
+        throw new Error('Either audio or an existing transcription must be provided.');
+    }
+    
     // Step 2: Translate the transcription
     const { output: translationOutput } = await translatePrompt({ text: transcription, targetLanguage });
     if (!translationOutput) {
