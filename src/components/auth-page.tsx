@@ -21,56 +21,61 @@ export function AuthPage() {
   const { loginWithGoogle, loading } = useAuth();
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <div className="grid w-full max-w-4xl grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="flex flex-col justify-center text-center md:text-left">
-           <div className="flex items-center gap-3 justify-center md:justify-start mb-4">
-             <Logo className="h-12 w-12 text-primary" />
-             <h1 className="text-5xl font-bold">MemoIQ</h1>
-           </div>
-          <h2 className="text-3xl font-semibold tracking-tight">
-            Welcome to MemoIQ
-          </h2>
-          <p className="mt-2 text-muted-foreground">
-             With iSkylar — Your Friendly AI Companion.
-          </p>
-           <h3 className="mt-6 text-xl font-semibold tracking-tight">
-            Login to Unlock Your Intelligent Day.
-            </h3>
+    <div className="flex flex-col min-h-screen bg-background">
+      <div className="flex-grow flex items-center justify-center p-4">
+        <div className="grid w-full max-w-4xl grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="flex flex-col justify-center text-center md:text-left">
+            <div className="flex items-center gap-3 justify-center md:justify-start mb-4">
+                <Logo className="h-12 w-12 text-primary" />
+                <h1 className="text-5xl font-bold">MemoIQ</h1>
+            </div>
+            <h2 className="text-3xl font-semibold tracking-tight">
+                Welcome to MemoIQ
+            </h2>
             <p className="mt-2 text-muted-foreground">
-                Seamlessly manage your tasks, appointments, wellness routines, and daily insights — all in one place.
-                Powered by AI, personalized just for you.
+                With iSkylar — Your Friendly AI Companion.
             </p>
+            <h3 className="mt-6 text-xl font-semibold tracking-tight">
+                Login to Unlock Your Intelligent Day.
+                </h3>
+                <p className="mt-2 text-muted-foreground">
+                    Seamlessly manage your tasks, appointments, wellness routines, and daily insights — all in one place.
+                    Powered by AI, personalized just for you.
+                </p>
+            </div>
+            <Card className="w-full max-w-md mx-auto">
+                <CardHeader>
+                    <CardTitle className="text-2xl">Get Started</CardTitle>
+                    <CardDescription>Sign in with Google or use your email to continue.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Button variant="default" className="w-full" onClick={loginWithGoogle} disabled={loading}>
+                        <GoogleIcon className="mr-2 h-4 w-4 fill-current" />
+                        Sign In with Google
+                    </Button>
+                    <div className="relative my-4">
+                        <Separator />
+                        <span className="absolute left-1/2 -translate-x-1/2 -top-3 bg-card px-2 text-xs text-muted-foreground">OR</span>
+                    </div>
+                    <Tabs defaultValue="login" className="w-full">
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="login">Login</TabsTrigger>
+                            <TabsTrigger value="signup">Sign Up</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="login">
+                            <LoginPage isCard={false} />
+                        </TabsContent>
+                        <TabsContent value="signup">
+                            <SignupPage isCard={false} />
+                        </TabsContent>
+                    </Tabs>
+                </CardContent>
+            </Card>
         </div>
-        <Card className="w-full max-w-md mx-auto">
-            <CardHeader>
-                <CardTitle className="text-2xl">Get Started</CardTitle>
-                <CardDescription>Sign in with Google or use your email to continue.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                 <Button variant="default" className="w-full" onClick={loginWithGoogle} disabled={loading}>
-                    <GoogleIcon className="mr-2 h-4 w-4 fill-current" />
-                    Sign In with Google
-                </Button>
-                <div className="relative my-4">
-                    <Separator />
-                    <span className="absolute left-1/2 -translate-x-1/2 -top-3 bg-card px-2 text-xs text-muted-foreground">OR</span>
-                </div>
-                 <Tabs defaultValue="login" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="login">Login</TabsTrigger>
-                        <TabsTrigger value="signup">Sign Up</TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="login">
-                        <LoginPage isCard={false} />
-                    </TabsContent>
-                    <TabsContent value="signup">
-                        <SignupPage isCard={false} />
-                    </TabsContent>
-                </Tabs>
-            </CardContent>
-        </Card>
       </div>
+      <footer className="text-center p-4 text-xs text-muted-foreground">
+        Developed by iSynera LLC | ChanceTEK LLC
+      </footer>
     </div>
   );
 }
