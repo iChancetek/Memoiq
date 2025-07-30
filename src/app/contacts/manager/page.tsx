@@ -1,9 +1,10 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Sparkles, Users } from 'lucide-react';
+import { Loader2, Sparkles, Users, UserPlus } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getContactInsights } from '@/ai/flows/get-contact-insights';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -14,6 +15,9 @@ export default function ContactManagerRoute() {
   const [analysis, setAnalysis] = React.useState<any>(null);
   const { toast } = useToast();
   const { contacts, loading: contactsLoading } = useContacts();
+  
+  const hasData = contacts.length > 0;
+  const isDataLoading = contactsLoading;
 
   const handleAnalyzeContacts = async () => {
     setLoading(true);
@@ -46,10 +50,23 @@ export default function ContactManagerRoute() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={handleAnalyzeContacts} disabled={loading || contactsLoading || contacts.length === 0} className="w-full">
-            {loading ? <Loader2 className="animate-spin mr-2" /> : <Sparkles className="mr-2" />}
-            {loading ? 'Analyzing...' : 'Generate Contact Suggestions'}
+          <Button onClick={handleAnalyzeContacts} disabled={loading || isDataLoading || !hasData} className="w-full">
+            {loading || isDataLoading ? <Loader2 className="animate-spin mr-2" /> : <Sparkles className="mr-2" />}
+            {loading ? 'Analyzing...' : (isDataLoading ? 'Loading Contacts...' : 'Generate Contact Suggestions')}
           </Button>
+
+          {!isDataLoading && !hasData && (
+             <Alert className="mt-4">
+                  <UserPlus className="h-4 w-4" />
+                  <AlertTitle>No Contacts to Analyze</AlertTitle>
+                  <AlertDescription>
+                      There are no contacts in your list. Please add a contact first to get suggestions.
+                      <div className="mt-2">
+                        <Button variant="link" asChild><Link href="/contacts">Go to Contacts</Link></Button>
+                      </div>
+                  </AlertDescription>
+              </Alert>
+          )}
 
           {analysis && (
             <div className="mt-6 space-y-4">
