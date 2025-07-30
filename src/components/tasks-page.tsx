@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -19,10 +20,11 @@ import {
 import {Checkbox} from '@/components/ui/checkbox';
 import {Input} from '@/components/ui/input';
 import {Button} from '@/components/ui/button';
-import {PlusCircle, Sparkles, Loader2, ListPlus, User} from 'lucide-react';
+import {PlusCircle, Sparkles, Loader2, ListPlus, User, Mic, StopCircle} from 'lucide-react';
 import { type Task, type Contact } from '@/lib/data';
 import {useToast} from '@/hooks/use-toast';
 import {parseTaskString} from '@/ai/flows/parse-task-string';
+import {transcribeAudio} from '@/ai/flows/transcribe-audio';
 import { Badge } from '@/components/ui/badge';
 import {
   Tooltip,
@@ -34,11 +36,16 @@ import { useTasks } from '@/contexts/task-context';
 import { useContacts } from '@/contexts/contact-context';
 import { Skeleton } from './ui/skeleton';
 
+type RecordingState = 'idle' | 'recording' | 'processing';
+
 export function TasksPage() {
   const { tasks, toggleTask, toggleSubtask, addTask, loading: tasksLoading } = useTasks();
   const { contacts, loading: contactsLoading } = useContacts();
   const [newTaskTitle, setNewTaskTitle] = React.useState('');
   const [isParsing, setIsParsing] = React.useState(false);
+  const [recordingState, setRecordingState] = React.useState<RecordingState>('idle');
+  const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
+  const audioChunksRef = React.useRef<Blob[]>([]);
   const {toast} = useToast();
 
   const contactsMap = React.useMemo(() => {
@@ -83,6 +90,62 @@ export function TasksPage() {
     }
   };
 
+  const handleStartRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+
+      mediaRecorderRef.current.ondataavailable = event => {
+        audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorderRef.current.onstop = async () => {
+        setRecordingState('processing');
+        const audioBlob = new Blob(audioChunksRef.current, {type: 'audio/webm'});
+
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = async () => {
+          const base64Audio = reader.result as string;
+          try {
+            const result = await transcribeAudio({ audioDataUri: base64Audio });
+            setNewTaskTitle(result.transcription);
+          } catch (error) {
+            console.error('Transcription failed:', error);
+            toast({
+              variant: 'destructive',
+              title: 'Processing Error',
+              description: 'Failed to process the audio.',
+            });
+          } finally {
+            setRecordingState('idle');
+          }
+        };
+      };
+
+      mediaRecorderRef.current.start();
+      setRecordingState('recording');
+    } catch (err) {
+      console.error('Error starting recording:', err);
+      toast({
+        variant: 'destructive',
+        title: 'Recording Error',
+        description: 'Could not start recording. Please check microphone permissions.',
+      });
+    }
+  };
+  
+  const handleStopRecording = () => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+    }
+  };
+
+  const isRecording = recordingState === 'recording';
+  const isProcessingAudio = recordingState === 'processing';
+
   return (
     <TooltipProvider>
       <Card>
@@ -99,9 +162,18 @@ export function TasksPage() {
               onChange={e => setNewTaskTitle(e.target.value)}
               placeholder="e.g., 'Follow up with Olivia Chen about Project Phoenix'"
               className="flex-grow"
-              disabled={isParsing || tasksLoading}
+              disabled={isParsing || tasksLoading || isRecording || isProcessingAudio}
             />
-            <Button type="submit" size="icon" aria-label="Add task" disabled={isParsing || tasksLoading}>
+             {isRecording ? (
+                 <Button type="button" size="icon" variant="destructive" onClick={handleStopRecording} aria-label="Stop recording">
+                    <StopCircle />
+                 </Button>
+            ) : (
+                 <Button type="button" size="icon" onClick={handleStartRecording} aria-label="Start recording" disabled={isParsing || tasksLoading || isProcessingAudio}>
+                    {isProcessingAudio ? <Loader2 className="animate-spin" /> : <Mic />}
+                 </Button>
+            )}
+            <Button type="submit" size="icon" aria-label="Add task" disabled={isParsing || tasksLoading || isRecording || isProcessingAudio || !newTaskTitle.trim()}>
               {isParsing ? <Loader2 className="animate-spin" /> : <Sparkles />}
             </Button>
           </form>
