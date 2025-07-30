@@ -34,6 +34,7 @@ const prompt = ai.definePrompt({
   name: 'getAppointmentAnalysisPrompt',
   input: {schema: GetAppointmentAnalysisInputSchema},
   output: {schema: GetAppointmentAnalysisOutputSchema},
+  model: 'googleai/gemini-1.5-flash',
   prompt: `You are an expert executive assistant. Your goal is to analyze a user's upcoming appointments for the week and provide a strategic briefing.
 
 Current Date: {{{currentDate}}}
