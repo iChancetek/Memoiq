@@ -57,7 +57,7 @@ const locale = {
     }
 }
 
-function Recorder({ onNewRecording, lang }: { onNewRecording: (blob: Blob) => void, lang: 'en' | 'es' }) {
+function Recorder({ onNewRecording, lang, disabled }: { onNewRecording: (blob: Blob) => void, lang: 'en' | 'es', disabled: boolean }) {
     const [recordingState, setRecordingState] = React.useState<RecordingState>('idle');
     const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
     const audioChunksRef = React.useRef<Blob[]>([]);
@@ -112,7 +112,7 @@ function Recorder({ onNewRecording, lang }: { onNewRecording: (blob: Blob) => vo
                         <StopCircle className="mr-2" /> {t.stopRecording}
                     </Button>
                 ) : (
-                    <Button onClick={handleStartRecording} className="w-full h-20 text-lg">
+                    <Button onClick={handleStartRecording} className="w-full h-20 text-lg" disabled={disabled}>
                         <Mic className="mr-2" /> {t.startRecording}
                     </Button>
                 )}
@@ -121,7 +121,7 @@ function Recorder({ onNewRecording, lang }: { onNewRecording: (blob: Blob) => vo
     );
 }
 
-function RecordingItem({ recording, lang, setLang }: { recording: any, lang: 'en' | 'es', setLang: (lang: 'en' | 'es')=> void }) {
+function RecordingItem({ recording, lang }: { recording: any, lang: 'en' | 'es' }) {
     const { deleteScribeEntry, translateScribeEntry } = useScribe();
     const [isPlaying, setIsPlaying] = React.useState(false);
     const [isTranslating, setIsTranslating] = React.useState(false);
@@ -129,6 +129,7 @@ function RecordingItem({ recording, lang, setLang }: { recording: any, lang: 'en
     const audioRef = React.useRef<HTMLAudioElement | null>(null);
 
     const t = locale[lang];
+    
     const transcriptionText = currentLanguage === 'en' ? recording.transcription_en : recording.transcription_es;
 
 
@@ -139,12 +140,18 @@ function RecordingItem({ recording, lang, setLang }: { recording: any, lang: 'en
             audioRef.current?.pause();
         };
     }, [recording.audioUrl]);
+    
+     // Switch to the global language if it changes
+    React.useEffect(() => {
+        setCurrentLanguage(lang);
+    }, [lang]);
 
     const togglePlay = () => {
+        if (!audioRef.current) return;
         if (isPlaying) {
-            audioRef.current?.pause();
+            audioRef.current.pause();
         } else {
-            audioRef.current?.play();
+            audioRef.current.play().catch(console.error);
         }
         setIsPlaying(!isPlaying);
     };
@@ -152,18 +159,18 @@ function RecordingItem({ recording, lang, setLang }: { recording: any, lang: 'en
     const handleTranslate = async () => {
         setIsTranslating(true);
         const targetLanguage = currentLanguage === 'en' ? 'es' : 'en';
-        const textToTranslate = recording.transcription_en; // Always translate from original English
         
-        const existingTranslation = targetLanguage === 'es' ? recording.transcription_es : recording.transcription_en;
+        // Determine if we need to fetch the translation
+        const needsTranslation = (targetLanguage === 'es' && !recording.transcription_es) || (targetLanguage === 'en' && !recording.transcription_en);
 
-        if (existingTranslation) {
-             setCurrentLanguage(targetLanguage);
-        } else {
+        if (needsTranslation) {
+             const textToTranslate = recording.transcription_en; // Always use English as source for simplicity
              await translateScribeEntry(recording.id, targetLanguage, textToTranslate);
-             // The context will update the recording, which will re-render this component
-             // so we just need to set the language state.
-             setCurrentLanguage(targetLanguage);
         }
+
+        // The context will update the recording, which will re-render this component
+        // so we just need to set the language state.
+        setCurrentLanguage(targetLanguage);
         setIsTranslating(false);
     };
 
@@ -182,17 +189,12 @@ function RecordingItem({ recording, lang, setLang }: { recording: any, lang: 'en
         document.body.removeChild(link);
     };
     
-    // Switch to the global language if it changes
-    React.useEffect(() => {
-        setCurrentLanguage(lang);
-    }, [lang]);
-
     return (
         <Card>
             <CardHeader>
                 <CardTitle>{recording.title}</CardTitle>
                 <CardDescription>
-                    {recording.createdAt ? format(recording.createdAt.toDate(), 'PPP p') : 'Just now'}
+                    {recording.createdAt?.toDate ? format(recording.createdAt.toDate(), 'PPP p') : 'Just now'}
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -211,7 +213,7 @@ function RecordingItem({ recording, lang, setLang }: { recording: any, lang: 'en
                        </Button>
                     </AlertTitle>
                     <AlertDescription className="h-48 overflow-y-auto whitespace-pre-wrap p-2 bg-muted/50 rounded-md">
-                        {transcriptionText || t.noTranscription}
+                        {transcriptionText || (isTranslating ? 'Translating...' : t.noTranscription)}
                     </AlertDescription>
                 </Alert>
             </CardContent>
@@ -273,10 +275,10 @@ export function ScribePage() {
         <div className="space-y-6">
             <div className="flex justify-end">
                 <Button variant="ghost" onClick={() => setLang(lang === 'en' ? 'es' : 'en')}>
-                    <Languages className="mr-2" /> {t.switchTo} {lang === 'en' ? 'Español' : 'English'}
+                    <Languages className="mr-2" /> {lang === 'en' ? 'Español' : 'English'}
                 </Button>
             </div>
-            <Recorder onNewRecording={handleNewRecording} lang={lang} />
+            <Recorder onNewRecording={handleNewRecording} lang={lang} disabled={isProcessing} />
 
             {isProcessing && (
                 <Card className="flex items-center justify-center p-8">
@@ -288,11 +290,16 @@ export function ScribePage() {
             <div className="space-y-4">
                 <h3 className="text-xl font-semibold">{t.pastRecordings}</h3>
                 {loading ? (
-                     <p>{t.loading}</p>
+                     <Card className="flex items-center justify-center p-8">
+                         <Loader2 className="h-8 w-8 animate-spin mr-4" />
+                         <p>{t.loading}</p>
+                    </Card>
                 ) : scribeEntries.length > 0 ? (
-                    scribeEntries.map(entry => <RecordingItem key={entry.id} recording={entry} lang={lang} setLang={setLang} />)
+                    scribeEntries.map(entry => <RecordingItem key={entry.id} recording={entry} lang={lang} />)
                 ) : (
-                    <p className="text-muted-foreground">{t.noRecordings}</p>
+                    <Card className="flex items-center justify-center p-8">
+                        <p className="text-muted-foreground">{t.noRecordings}</p>
+                    </Card>
                 )}
             </div>
         </div>
