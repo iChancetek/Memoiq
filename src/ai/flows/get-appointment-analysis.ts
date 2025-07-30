@@ -68,7 +68,9 @@ const getAppointmentAnalysisFlow = ai.defineFlow(
       try {
         const result = await prompt(input);
         output = result.output;
-        break; // Success
+        if (output) {
+            break; // Success
+        }
       } catch (error: any) {
         attempts++;
         if (error.message.includes('503') && attempts < maxAttempts) {
