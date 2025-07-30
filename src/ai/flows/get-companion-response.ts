@@ -12,11 +12,10 @@ import {z} from 'genkit';
 import wav from 'wav';
 
 const GetCompanionResponseInputSchema = z.object({
-  message: z.string().describe('The user\'s message to iSkylar.'),
   history: z.array(z.object({
       role: z.enum(['user', 'assistant']),
       content: z.string(),
-  })).describe('The conversation history.'),
+  })).describe('The conversation history, including the latest user message.'),
 });
 export type GetCompanionResponseInput = z.infer<typeof GetCompanionResponseInputSchema>;
 
@@ -40,11 +39,10 @@ const companionPrompt = ai.definePrompt({
 
 Your tone should be warm, thoughtful, intelligent, and respectful. Never be robotic. Engage users on meaningful topics like self-care, wellness, fitness, mindfulness, and emotional awareness.
 
-Current conversation:
+Conversation History:
 {{#each history}}
 {{role}}: {{{content}}}
 {{/each}}
-user: {{{message}}}
 assistant:`,
 });
 

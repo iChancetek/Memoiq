@@ -47,14 +47,15 @@ export function AICompanionPage() {
     stopSpeaking(); // Stop any currently playing audio
 
     const userMessage: Message = { role: 'user', content: input };
-    setMessages(prev => [...prev, userMessage]);
+    const newMessages = [...messages, userMessage];
+
+    setMessages(newMessages);
     setInput('');
     setLoading(true);
 
     try {
       const response = await getCompanionResponse({
-        message: input,
-        history: messages,
+        history: newMessages,
       });
       
       const assistantMessage: Message = { role: 'assistant', content: response.text };
@@ -77,6 +78,8 @@ export function AICompanionPage() {
         title: 'Connection Error',
         description: 'Failed to get a response from iSkylar.',
       });
+      // OPTIONAL: Revert the message optimistic update on error
+      setMessages(messages);
     } finally {
       setLoading(false);
     }
