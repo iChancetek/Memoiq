@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -31,8 +32,15 @@ export function AuthPage() {
             Welcome to MemoIQ
           </h2>
           <p className="mt-2 text-muted-foreground">
-            With iSkylar, Your Friendly Companion.
+             With iSkylar — Your Friendly AI Companion.
           </p>
+           <h3 className="mt-6 text-xl font-semibold tracking-tight">
+            Login to Unlock Your Intelligent Day.
+            </h3>
+            <p className="mt-2 text-muted-foreground">
+                Seamlessly manage your tasks, appointments, wellness routines, and daily insights — all in one place.
+                Powered by AI, personalized just for you.
+            </p>
         </div>
         <Card className="w-full max-w-md mx-auto">
             <CardHeader>
