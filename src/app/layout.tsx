@@ -29,7 +29,7 @@ export default function RootLayout({
           rel="stylesheet"
         ></link>
       </head>
-      <body className="font-body antialiased">
+      <body className="font-sans antialiased">
         <AuthProvider>
             <TaskProvider>
                 <AppContent>
