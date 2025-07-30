@@ -19,15 +19,18 @@ import { useTasks } from '@/contexts/task-context';
 import { useToast } from '@/hooks/use-toast';
 import { parseTaskString } from '@/ai/flows/parse-task-string';
 import { useContacts } from '@/contexts/contact-context';
+import { parseContactString } from '@/ai/flows/parse-contact-string';
+import { format } from 'date-fns';
 
 export function QuickAdd() {
   const { addTask, loading: tasksLoading } = useTasks();
+  const { addContact, loading: contactsLoading } = useContacts();
   const { contacts } = useContacts();
   const [isParsing, setIsParsing] = React.useState(false);
   const { toast } = useToast();
   const closeRef = React.useRef<HTMLButtonElement>(null);
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleTaskSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const taskString = formData.get('taskString') as string;
@@ -67,6 +70,41 @@ export function QuickAdd() {
       }
     }
   };
+  
+  const handleContactSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const contactString = formData.get('contactString') as string;
+    
+    if (contactString.trim()) {
+      setIsParsing(true);
+      try {
+        const result = await parseContactString({ contactString });
+
+        await addContact({
+            ...result,
+            lastContact: format(new Date(), 'yyyy-MM-dd'),
+        });
+
+        toast({
+          title: "Contact Added",
+          description: `"${result.name}" has been added to your contacts.`,
+        });
+        
+        closeRef.current?.click();
+        (event.target as HTMLFormElement).reset();
+      } catch (error) {
+         console.error("Failed to parse contact:", error);
+         toast({
+           variant: "destructive",
+           title: "AI Error",
+           description: "Could not understand the contact details. Please try rephrasing.",
+         });
+      } finally {
+          setIsParsing(false);
+      }
+    }
+  };
 
   return (
     <Sheet>
@@ -80,21 +118,19 @@ export function QuickAdd() {
         <SheetHeader>
           <SheetTitle>Add something new</SheetTitle>
           <SheetDescription>
-            Quickly add a new task, memo, or event to your workspace.
+            Quickly add a new task, contact, or event to your workspace.
           </SheetDescription>
         </SheetHeader>
         <Tabs defaultValue="task" className="mt-4">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="task">Task</TabsTrigger>
-            <TabsTrigger value="memo" disabled>
-              Memo
-            </TabsTrigger>
+            <TabsTrigger value="contact">Contact</TabsTrigger>
             <TabsTrigger value="event" disabled>
               Event
             </TabsTrigger>
           </TabsList>
           <TabsContent value="task">
-            <form onSubmit={handleSubmit} className="grid gap-4 py-4">
+            <form onSubmit={handleTaskSubmit} className="grid gap-4 py-4">
               <div className="grid gap-2">
                 <Label htmlFor="taskString">Describe your task</Label>
                 <Input
@@ -108,6 +144,24 @@ export function QuickAdd() {
               <Button type="submit" className="mt-4" disabled={isParsing || tasksLoading}>
                 {isParsing ? <Loader2 className="animate-spin mr-2" /> : <Sparkles className="mr-2" />}
                 {isParsing ? 'Parsing...' : 'Add Task with AI'}
+              </Button>
+            </form>
+          </TabsContent>
+           <TabsContent value="contact">
+            <form onSubmit={handleContactSubmit} className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="contactString">Describe your contact</Label>
+                <Input
+                  id="contactString"
+                  name="contactString"
+                  placeholder="e.g. Add Jane Doe, CEO of Innovate Inc..."
+                  required
+                  disabled={isParsing || contactsLoading}
+                />
+              </div>
+              <Button type="submit" className="mt-4" disabled={isParsing || contactsLoading}>
+                {isParsing ? <Loader2 className="animate-spin mr-2" /> : <Sparkles className="mr-2" />}
+                {isParsing ? 'Parsing...' : 'Add Contact with AI'}
               </Button>
             </form>
           </TabsContent>
