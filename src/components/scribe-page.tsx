@@ -5,7 +5,7 @@ import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Mic, StopCircle, Loader2, Download, Trash2, Languages, Play, Pause, FileText, FileAudio } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useScribe } from '@/contexts/scribe-context';
+import { useScribe, type ScribeEntry } from '@/contexts/scribe-context';
 import { format } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
@@ -33,6 +33,7 @@ const locale = {
         cancel: 'Cancel',
         continue: 'Continue',
         processing: 'Processing new recording...',
+        translating: 'Translating...',
     },
     es: {
         title: 'Escriba de IA',
@@ -54,6 +55,7 @@ const locale = {
         cancel: 'Cancelar',
         continue: 'Continuar',
         processing: 'Procesando nueva grabación...',
+        translating: 'Traduciendo...',
     }
 }
 
@@ -121,8 +123,8 @@ function Recorder({ onNewRecording, lang, disabled }: { onNewRecording: (blob: B
     );
 }
 
-function RecordingItem({ recording, lang }: { recording: any, lang: 'en' | 'es' }) {
-    const { deleteScribeEntry, translateScribeEntry } = useScribe();
+function RecordingItem({ recording, lang, onDelete }: { recording: ScribeEntry, lang: 'en' | 'es', onDelete: (id: string) => void }) {
+    const { translateScribeEntry } = useScribe();
     const [isPlaying, setIsPlaying] = React.useState(false);
     const [isTranslating, setIsTranslating] = React.useState(false);
     const [currentLanguage, setCurrentLanguage] = React.useState<'en' | 'es'>(lang);
@@ -132,7 +134,6 @@ function RecordingItem({ recording, lang }: { recording: any, lang: 'en' | 'es' 
     
     const transcriptionText = currentLanguage === 'en' ? recording.transcription_en : recording.transcription_es;
 
-
     React.useEffect(() => {
         audioRef.current = new Audio(recording.audioUrl);
         audioRef.current.onended = () => setIsPlaying(false);
@@ -141,7 +142,6 @@ function RecordingItem({ recording, lang }: { recording: any, lang: 'en' | 'es' 
         };
     }, [recording.audioUrl]);
     
-     // Switch to the global language if it changes
     React.useEffect(() => {
         setCurrentLanguage(lang);
     }, [lang]);
@@ -157,21 +157,18 @@ function RecordingItem({ recording, lang }: { recording: any, lang: 'en' | 'es' 
     };
 
     const handleTranslate = async () => {
-        setIsTranslating(true);
         const targetLanguage = currentLanguage === 'en' ? 'es' : 'en';
         
-        // Determine if we need to fetch the translation
         const needsTranslation = (targetLanguage === 'es' && !recording.transcription_es) || (targetLanguage === 'en' && !recording.transcription_en);
 
         if (needsTranslation) {
-             const textToTranslate = recording.transcription_en; // Always use English as source for simplicity
+             setIsTranslating(true);
+             const textToTranslate = recording.transcription_en; // Always use English as source for translation
              await translateScribeEntry(recording.id, targetLanguage, textToTranslate);
+             setIsTranslating(false);
         }
 
-        // The context will update the recording, which will re-render this component
-        // so we just need to set the language state.
         setCurrentLanguage(targetLanguage);
-        setIsTranslating(false);
     };
 
     const handleDownload = (type: 'audio' | 'transcript') => {
@@ -180,6 +177,7 @@ function RecordingItem({ recording, lang }: { recording: any, lang: 'en' | 'es' 
             link.href = recording.audioUrl;
             link.download = `recording-${recording.id}.webm`;
         } else {
+            if (!transcriptionText) return;
             const blob = new Blob([transcriptionText], { type: 'text/plain' });
             link.href = URL.createObjectURL(blob);
             link.download = `transcript-${recording.id}-${currentLanguage}.txt`;
@@ -194,7 +192,7 @@ function RecordingItem({ recording, lang }: { recording: any, lang: 'en' | 'es' 
             <CardHeader>
                 <CardTitle>{recording.title}</CardTitle>
                 <CardDescription>
-                    {recording.createdAt?.toDate ? format(recording.createdAt.toDate(), 'PPP p') : 'Just now'}
+                    {recording.createdAt?.toDate ? format(recording.createdAt.toDate(), 'PPP p') : t.processing}
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -208,18 +206,18 @@ function RecordingItem({ recording, lang }: { recording: any, lang: 'en' | 'es' 
                     <AlertTitle className="flex items-center justify-between">
                        <span>{t.transcription} ({currentLanguage.toUpperCase()})</span>
                        <Button size="sm" variant="ghost" onClick={handleTranslate} disabled={isTranslating}>
-                           {isTranslating ? <Loader2 className="animate-spin" /> : <Languages className="mr-2" />}
+                           {isTranslating ? <Loader2 className="animate-spin mr-2" /> : <Languages className="mr-2" />}
                            {t.switchTo} {currentLanguage === 'en' ? 'ES' : 'EN'}
                        </Button>
                     </AlertTitle>
                     <AlertDescription className="h-48 overflow-y-auto whitespace-pre-wrap p-2 bg-muted/50 rounded-md">
-                        {transcriptionText || (isTranslating ? 'Translating...' : t.noTranscription)}
+                        {isTranslating ? t.translating : (transcriptionText || t.noTranscription)}
                     </AlertDescription>
                 </Alert>
             </CardContent>
             <CardFooter className="justify-end gap-2">
                 <Button variant="outline" onClick={() => handleDownload('audio')}><FileAudio className="mr-2"/> {t.downloadAudio}</Button>
-                <Button variant="outline" onClick={() => handleDownload('transcript')}><FileText className="mr-2"/> {t.downloadTranscript}</Button>
+                <Button variant="outline" onClick={() => handleDownload('transcript')} disabled={!transcriptionText}><FileText className="mr-2"/> {t.downloadTranscript}</Button>
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
                          <Button variant="destructive"><Trash2 className="mr-2"/> {t.delete}</Button>
@@ -233,7 +231,7 @@ function RecordingItem({ recording, lang }: { recording: any, lang: 'en' | 'es' 
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                             <AlertDialogCancel>{t.cancel}</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => deleteScribeEntry(recording.id)}>{t.continue}</AlertDialogAction>
+                            <AlertDialogAction onClick={() => onDelete(recording.id)}>{t.continue}</AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
@@ -244,7 +242,7 @@ function RecordingItem({ recording, lang }: { recording: any, lang: 'en' | 'es' 
 
 
 export function ScribePage() {
-    const { scribeEntries, addScribeEntry, loading } = useScribe();
+    const { scribeEntries, addScribeEntry, deleteScribeEntry, loading } = useScribe();
     const { toast } = useToast();
     const [isProcessing, setIsProcessing] = React.useState(false);
     const [lang, setLang] = React.useState<'en' | 'es'>('en');
@@ -268,6 +266,23 @@ export function ScribePage() {
             setIsProcessing(false);
         }
     };
+
+    const handleDelete = async (id: string) => {
+        try {
+            await deleteScribeEntry(id);
+             toast({
+                title: 'Recording Deleted',
+                description: 'The recording and its transcripts have been removed.',
+            });
+        } catch (error) {
+             console.error('Error deleting recording:', error);
+            toast({
+                variant: 'destructive',
+                title: 'Deletion Error',
+                description: 'Failed to delete the recording.',
+            });
+        }
+    }
     
     const t = locale[lang];
 
@@ -295,7 +310,7 @@ export function ScribePage() {
                          <p>{t.loading}</p>
                     </Card>
                 ) : scribeEntries.length > 0 ? (
-                    scribeEntries.map(entry => <RecordingItem key={entry.id} recording={entry} lang={lang} />)
+                    scribeEntries.map(entry => <RecordingItem key={entry.id} recording={entry} lang={lang} onDelete={handleDelete} />)
                 ) : (
                     <Card className="flex items-center justify-center p-8">
                         <p className="text-muted-foreground">{t.noRecordings}</p>

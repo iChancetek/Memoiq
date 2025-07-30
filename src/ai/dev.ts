@@ -16,3 +16,4 @@ import '@/ai/flows/get-daily-briefing.ts';
 import '@/ai/flows/transcribe-audio.ts';
 import '@/ai/flows/parse-contact-string.ts';
 import '@/ai/flows/scribe-transcribe-and-translate.ts';
+import '@/ai/flows/translate-text.ts';

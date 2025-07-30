@@ -17,7 +17,8 @@ import {
 } from 'firebase/firestore';
 import { firebaseApp } from '@/lib/firebase';
 import { useStorage } from './storage-context';
-import { scribeTranscribeAndTranslate } from '@/ai/flows/scribe-transcribe-and-translate';
+import { scribeTranscribe } from '@/ai/flows/scribe-transcribe-and-translate';
+import { translateText } from '@/ai/flows/translate-text';
 
 export interface ScribeEntry {
     id: string;
@@ -33,7 +34,6 @@ export interface ScribeEntry {
 interface ScribeContextType {
   scribeEntries: ScribeEntry[];
   addScribeEntry: (audioBlob: Blob) => Promise<void>;
-  updateScribeEntry: (entryId: string, updates: Partial<ScribeEntry>) => Promise<void>;
   deleteScribeEntry: (entryId: string) => Promise<void>;
   translateScribeEntry: (entryId: string, targetLanguage: 'en' | 'es', text: string) => Promise<void>;
   loading: boolean;
@@ -88,13 +88,8 @@ export function ScribeProvider({ children }: { children: React.ReactNode }) {
         reader.onloadend = () => resolve(reader.result as string);
     });
 
-    // 3. Get transcription (in original language). Let's assume the primary use case is English transcription first.
-    // The translation to Spanish will happen on-demand from the UI.
-    const aiResult = await scribeTranscribeAndTranslate({
-        audioDataUri,
-        targetLanguage: 'en', // This doesn't matter here since we only use transcription
-        existingTranscription: '',
-    });
+    // 3. Get transcription (in English)
+    const { transcription } = await scribeTranscribe({ audioDataUri });
     
     // 4. Save metadata to Firestore
     await addDoc(collection(db, 'users', user.uid, 'scribeEntries'), {
@@ -102,16 +97,10 @@ export function ScribeProvider({ children }: { children: React.ReactNode }) {
       title: `Recording - ${new Date().toLocaleString()}`,
       audioUrl,
       storagePath,
-      transcription_en: aiResult.transcription,
+      transcription_en: transcription,
       transcription_es: '', // Spanish translation is done on demand
       createdAt: serverTimestamp(),
     });
-  };
-
-  const updateScribeEntry = async (entryId: string, updates: Partial<ScribeEntry>) => {
-    if (!user) return;
-    const entryRef = doc(db, 'users', user.uid, 'scribeEntries', entryId);
-    await updateDoc(entryRef, updates);
   };
   
   const deleteScribeEntry = async (entryId: string) => {
@@ -129,23 +118,20 @@ export function ScribeProvider({ children }: { children: React.ReactNode }) {
   }
 
   const translateScribeEntry = async (entryId: string, targetLanguage: 'en' | 'es', text: string) => {
-      if (!user) return;
+      if (!user) throw new Error("User not authenticated");
       const entry = scribeEntries.find(e => e.id === entryId);
-      if (!entry) return;
+      if (!entry) throw new Error("Scribe entry not found");
 
       // Get translation from AI
-      const { translation } = await scribeTranscribeAndTranslate({
-          audioDataUri: '', // Not needed for translation only
-          existingTranscription: text,
-          targetLanguage,
-      });
+      const { translation } = await translateText({ text, targetLanguage });
 
       // Update the entry in Firestore
       const fieldToUpdate = targetLanguage === 'es' ? 'transcription_es' : 'transcription_en';
-      await updateScribeEntry(entryId, { [fieldToUpdate]: translation });
+      const entryRef = doc(db, 'users', user.uid, 'scribeEntries', entryId);
+      await updateDoc(entryRef, { [fieldToUpdate]: translation });
   }
 
-  const value = { scribeEntries, addScribeEntry, updateScribeEntry, deleteScribeEntry, translateScribeEntry, loading };
+  const value = { scribeEntries, addScribeEntry, deleteScribeEntry, translateScribeEntry, loading };
 
   return (
     <ScribeContext.Provider value={value}>

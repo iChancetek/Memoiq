@@ -1,8 +1,8 @@
 'use server';
 /**
- * @fileOverview Transcribes and translates audio recordings.
+ * @fileOverview Transcribes audio recordings.
  *
- * - scribeTranscribeAndTranslate - Transcribes audio and optionally translates it.
+ * - scribeTranscribe - Transcribes audio.
  * - ScribeInput - The input type for the flow.
  * - ScribeOutput - The return type for the flow.
  */
@@ -14,95 +14,51 @@ const ScribeInputSchema = z.object({
   audioDataUri: z
     .string()
     .describe(
-      "An audio file, as a data URI that must include a MIME type and use Base64 encoding. Can be empty if only translation is needed and existing transcription is provided."
+      'An audio file, as a data URI that must include a MIME type and use Base64 encoding.'
     ),
-  existingTranscription: z.string().optional().describe('An existing transcription to be translated.'),
-  targetLanguage: z.enum(['en', 'es']).describe("The language to translate the transcription into."),
 });
 export type ScribeInput = z.infer<typeof ScribeInputSchema>;
 
 const ScribeOutputSchema = z.object({
   transcription: z.string().describe('The original transcription of the audio.'),
-  translation: z.string().describe('The translated text.'),
 });
 export type ScribeOutput = z.infer<typeof ScribeOutputSchema>;
 
-export async function scribeTranscribeAndTranslate(
+export async function scribeTranscribe(
   input: ScribeInput
 ): Promise<ScribeOutput> {
-  return scribeFlow(input);
+  return scribeTranscribeFlow(input);
 }
 
 const transcribePrompt = ai.definePrompt({
     name: 'scribeTranscribePrompt',
-    input: { schema: z.object({ audioDataUri: z.string() }) },
-    output: { schema: z.object({ transcription: z.string() }) },
     model: 'googleai/gemini-1.5-flash',
-    prompt: `You are a transcription expert for English and Spanish. Please transcribe the following audio to text in its original language.\n\nAudio: {{media url=audioDataUri}}`,
+    input: { schema: ScribeInputSchema },
+    output: { schema: ScribeOutputSchema },
+    prompt: `You are a transcription expert for English. Please transcribe the following audio to text in its original language.\n\nAudio: {{media url=audioDataUri}}`,
 });
 
-const translatePrompt = ai.definePrompt({
-    name: 'scribeTranslatePrompt',
-    input: { schema: z.object({ text: z.string(), targetLanguage: z.string() }) },
-    output: { schema: z.object({ translation: z.string() }) },
-    model: 'googleai/gemini-1.5-flash',
-    prompt: `You are a translation expert. Translate the following text to {{targetLanguage}}.
 
-Text:
-{{{text}}}
-`,
-});
-
-const scribeFlow = ai.defineFlow(
+const scribeTranscribeFlow = ai.defineFlow(
   {
-    name: 'scribeFlow',
+    name: 'scribeTranscribeFlow',
     inputSchema: ScribeInputSchema,
     outputSchema: ScribeOutputSchema,
   },
-  async ({ audioDataUri, targetLanguage, existingTranscription }) => {
-    let transcription = existingTranscription;
+  async ({ audioDataUri }) => {
+    let transcriptionOutput;
+    let attempts = 0;
     const maxAttempts = 3;
 
-    // Step 1: Transcribe the audio if no existing transcription is provided
-    if (!transcription && audioDataUri) {
-        let transcriptionOutput;
-        let attempts = 0;
-        while (attempts < maxAttempts) {
-            try {
-                const result = await transcribePrompt({ audioDataUri });
-                transcriptionOutput = result.output;
-                break; // Success
-            } catch (error: any) {
-                attempts++;
-                if (error.message.includes('503') && attempts < maxAttempts) {
-                    console.log(`Scribe transcription attempt ${attempts} failed, retrying...`);
-                    await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
-                } else {
-                    throw error;
-                }
-            }
-        }
-
-        if (!transcriptionOutput) {
-            throw new Error('Transcription failed after multiple attempts.');
-        }
-        transcription = transcriptionOutput.transcription;
-    } else if (!transcription) {
-        throw new Error('Either audio or an existing transcription must be provided.');
-    }
-    
-    // Step 2: Translate the transcription
-    let translationOutput;
-    let attempts = 0;
     while (attempts < maxAttempts) {
         try {
-            const result = await translatePrompt({ text: transcription, targetLanguage });
-            translationOutput = result.output;
+            const result = await transcribePrompt({ audioDataUri });
+            transcriptionOutput = result.output;
             break; // Success
         } catch (error: any) {
             attempts++;
             if (error.message.includes('503') && attempts < maxAttempts) {
-                console.log(`Scribe translation attempt ${attempts} failed, retrying...`);
+                console.log(`Scribe transcription attempt ${attempts} failed, retrying...`);
                 await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
             } else {
                 throw error;
@@ -110,11 +66,10 @@ const scribeFlow = ai.defineFlow(
         }
     }
 
-    if (!translationOutput) {
-        throw new Error('Translation failed after multiple attempts.');
+    if (!transcriptionOutput) {
+        throw new Error('Transcription failed after multiple attempts.');
     }
-    const translation = translationOutput.translation;
     
-    return { transcription, translation };
+    return { transcription: transcriptionOutput.transcription };
   }
 );
