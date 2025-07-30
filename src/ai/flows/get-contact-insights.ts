@@ -31,6 +31,7 @@ const prompt = ai.definePrompt({
   name: 'getContactInsightsPrompt',
   input: {schema: GetContactInsightsInputSchema},
   output: {schema: GetContactInsightsOutputSchema},
+  model: 'googleai/gemini-1.5-flash',
   prompt: `You are a relationship management assistant. Your goal is to help users maintain professional connections by suggesting timely follow-ups.
 
 Current Date: {{{currentDate}}}
@@ -68,6 +69,7 @@ const getContactInsightsFlow = ai.defineFlow(
         if (output) {
             break; // Success
         }
+        // If output is null without an error, it's still a failure condition.
         attempts++;
         if (attempts >= maxAttempts) {
             throw new Error('AI returned empty output after multiple attempts.');
@@ -78,6 +80,7 @@ const getContactInsightsFlow = ai.defineFlow(
           console.log(`Contact insights attempt ${attempts} failed with 503, retrying...`);
           await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
         } else {
+          // Re-throw the error if it's not a 503 or if max attempts are reached
           throw error;
         }
       }
