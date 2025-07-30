@@ -12,9 +12,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@genkit-ai/core": "1.14.0",
-    "@genkit-ai/googleai": "1.14.0",
-    "@genkit-ai/next": "1.14.0",
+    "@genkit-ai/core": "1.15.0",
+    "@genkit-ai/googleai": "1.15.0",
+    "@genkit-ai/next": "1.15.0",
     "@hookform/resolvers": "3.4.0",
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-alert-dialog": "^1.1.1",
@@ -47,14 +47,14 @@
     "tailwind-merge": "2.3.0",
     "tailwindcss-animate": "1.0.7",
     "wav": "1.0.2",
-    "zod": "3.23.8"
+    "zod": "3.24.1"
   },
   "devDependencies": {
     "@types/node": "^20.14.2",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "@types/wav": "^1.0.2",
-    "genkit-cli": "1.14.0",
+    "genkit-cli": "1.15.0",
     "postcss": "^8.4.38",
     "tailwindcss": "^3.4.4",
     "typescript": "^5.4.5"
