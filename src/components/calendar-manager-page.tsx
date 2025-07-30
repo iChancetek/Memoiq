@@ -9,6 +9,7 @@ import { getCalendarAnalysis } from '@/ai/flows/get-calendar-analysis';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useTasks } from '@/contexts/task-context';
 import { useCalendar } from '@/contexts/calendar-context';
+import Link from 'next/link';
 
 export function CalendarManagerPage() {
   const [loading, setLoading] = React.useState(false);
@@ -40,6 +41,7 @@ export function CalendarManagerPage() {
   };
   
   const hasData = tasks.length > 0 || events.length > 0;
+  const isDataLoading = tasksLoading || eventsLoading;
 
   return (
     <div className="container mx-auto max-w-3xl">
@@ -51,10 +53,24 @@ export function CalendarManagerPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={handleAnalyzeCalendar} disabled={loading || tasksLoading || eventsLoading || !hasData} className="w-full">
-            {loading ? <Loader2 className="animate-spin mr-2" /> : <Sparkles className="mr-2" />}
-            {loading ? 'Analyzing...' : 'Generate Calendar Analysis'}
+          <Button onClick={handleAnalyzeCalendar} disabled={loading || isDataLoading || !hasData} className="w-full">
+            {loading || isDataLoading ? <Loader2 className="animate-spin mr-2" /> : <Sparkles className="mr-2" />}
+            {loading ? 'Analyzing...' : (isDataLoading ? 'Loading Data...' : 'Generate Calendar Analysis')}
           </Button>
+
+          {!isDataLoading && !hasData && (
+              <Alert className="mt-4">
+                  <CalendarDays className="h-4 w-4" />
+                  <AlertTitle>No Data to Analyze</AlertTitle>
+                  <AlertDescription>
+                      There are no tasks or calendar events to analyze. Please add some tasks or events first.
+                      <div className="mt-2">
+                        <Button variant="link" asChild><Link href="/tasks">Go to Tasks</Link></Button>
+                        <Button variant="link" asChild><Link href="/calendar">Go to Calendar</Link></Button>
+                      </div>
+                  </AlertDescription>
+              </Alert>
+          )}
 
           {analysis && (
             <div className="mt-6 space-y-4">

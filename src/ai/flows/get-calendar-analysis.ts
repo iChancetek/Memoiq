@@ -59,7 +59,30 @@ const getCalendarAnalysisFlow = ai.defineFlow(
     outputSchema: GetCalendarAnalysisOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    let output;
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    while (attempts < maxAttempts) {
+      try {
+        const result = await prompt(input);
+        output = result.output;
+        break; // Success
+      } catch (error: any) {
+        attempts++;
+        if (error.message.includes('503') && attempts < maxAttempts) {
+          console.log(`Calendar analysis attempt ${attempts} failed, retrying...`);
+          await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
+        } else {
+          throw error;
+        }
+      }
+    }
+    
+    if (!output) {
+      throw new Error('Failed to get calendar analysis after multiple attempts.');
+    }
+    
+    return output;
   }
 );
