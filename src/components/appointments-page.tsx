@@ -18,6 +18,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useTasks } from '@/contexts/task-context';
 import { useContacts } from '@/contexts/contact-context';
 import { useCalendar } from '@/contexts/calendar-context';
+import { format, parse } from 'date-fns';
 
 export function AppointmentsPage() {
   const [request, setRequest] = React.useState('');
@@ -26,7 +27,7 @@ export function AppointmentsPage() {
   const { toast } = useToast();
   const { tasks } = useTasks();
   const { contacts } = useContacts();
-  const { events } = useCalendar();
+  const { events, addEvent } = useCalendar();
 
   const handleSchedule = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,14 +55,40 @@ export function AppointmentsPage() {
     }
   };
   
-  const handleConfirm = () => {
-     // In a real app, this would update the state, call an API, etc.
-     toast({
-        title: "Appointment Confirmed!",
-        description: `"${result.title}" scheduled for ${result.suggestedDate} at ${result.suggestedTime}.`,
-     });
-     setResult(null);
-     setRequest('');
+  const handleConfirm = async () => {
+    if (!result) return;
+    
+    try {
+        const dateTimeString = `${result.suggestedDate} ${result.suggestedTime}`;
+        const formatString = 'yyyy-MM-dd h:mm a';
+        const parsedDate = parse(dateTimeString, formatString, new Date());
+
+        if (isNaN(parsedDate.getTime())) {
+            throw new Error('Invalid date format from AI');
+        }
+
+        await addEvent({
+            title: result.title,
+            startTime: parsedDate,
+            // For simplicity, let's assume a 1-hour duration
+            endTime: new Date(parsedDate.getTime() + 60 * 60 * 1000),
+            location: '',
+        });
+
+        toast({
+            title: "Appointment Confirmed!",
+            description: `"${result.title}" scheduled for ${result.suggestedDate} at ${result.suggestedTime}.`,
+        });
+        setResult(null);
+        setRequest('');
+    } catch (error) {
+        console.error("Error confirming appointment: ", error);
+        toast({
+            variant: 'destructive',
+            title: 'Confirmation Error',
+            description: 'Could not save the appointment. Please try creating it from the calendar directly.',
+        });
+    }
   }
 
   return (
