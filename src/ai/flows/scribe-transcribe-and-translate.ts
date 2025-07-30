@@ -37,6 +37,7 @@ const transcribePrompt = ai.definePrompt({
     name: 'scribeTranscribePrompt',
     input: { schema: z.object({ audioDataUri: z.string() }) },
     output: { schema: z.object({ transcription: z.string() }) },
+    model: 'googleai/gemini-1.5-flash',
     prompt: `You are a transcription expert for English and Spanish. Please transcribe the following audio to text in its original language.\n\nAudio: {{media url=audioDataUri}}`,
 });
 
@@ -44,6 +45,7 @@ const translatePrompt = ai.definePrompt({
     name: 'scribeTranslatePrompt',
     input: { schema: z.object({ text: z.string(), targetLanguage: z.string() }) },
     output: { schema: z.object({ translation: z.string() }) },
+    model: 'googleai/gemini-1.5-flash',
     prompt: `You are a translation expert. Translate the following text to {{targetLanguage}}.
 
 Text:
