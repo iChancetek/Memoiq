@@ -143,7 +143,9 @@ function RecordingItem({ recording }: { recording: any }) {
         <Card>
             <CardHeader>
                 <CardTitle>{recording.title}</CardTitle>
-                <CardDescription>{format(recording.createdAt.toDate(), 'PPP p')}</CardDescription>
+                <CardDescription>
+                    {recording.createdAt ? format(recording.createdAt.toDate(), 'PPP p') : 'Just now'}
+                </CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="flex items-center gap-2 mb-4">
