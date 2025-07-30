@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { CalendarPlus, CheckCircle, XCircle, Sparkles, Loader2, Mic, StopCircle } from 'lucide-react';
+import { CalendarPlus, CheckCircle, XCircle, Sparkles, Loader2, Mic, StopCircle, Bot, Pencil } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { scheduleAppointment } from '@/ai/flows/schedule-appointment';
 import { transcribeAudio } from '@/ai/flows/transcribe-audio';
@@ -20,6 +20,8 @@ import { useTasks } from '@/contexts/task-context';
 import { useContacts } from '@/contexts/contact-context';
 import { useCalendar } from '@/contexts/calendar-context';
 import { format, parse } from 'date-fns';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { ManualAppointmentForm } from './manual-appointment-form';
 
 type RecordingState = 'idle' | 'recording' | 'processing';
 
@@ -162,56 +164,66 @@ export function AppointmentsPage() {
             <CardTitle>Schedule an Appointment</CardTitle>
           </div>
           <CardDescription>
-            Use natural language to schedule. For example: "Lunch with Sam next Friday at 1pm"
+            Use the AI to schedule with natural language, or enter details manually.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSchedule} className="flex gap-2">
-            <Input
-              value={request}
-              onChange={(e) => setRequest(e.target.value)}
-              placeholder="Your request..."
-              className="flex-grow"
-              disabled={loading || isRecording || isProcessing}
-            />
-            {isRecording ? (
-                 <Button type="button" size="icon" variant="destructive" onClick={handleStopRecording} aria-label="Stop recording">
-                    <StopCircle />
-                 </Button>
-            ) : (
-                 <Button type="button" size="icon" onClick={handleStartRecording} aria-label="Start recording" disabled={loading || isProcessing}>
-                    {isProcessing ? <Loader2 className="animate-spin" /> : <Mic />}
-                 </Button>
-            )}
-
-            <Button type="submit" size="icon" aria-label="Schedule" disabled={loading || isRecording || isProcessing}>
-              {loading ? <Loader2 className="animate-spin" /> : <Sparkles />}
-            </Button>
-          </form>
-        </CardContent>
-
-        {result && (
-            <CardFooter>
-                 <Alert variant={result.isPossible ? 'default' : 'destructive'} className="w-full">
-                    {result.isPossible ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-                    <AlertTitle>
-                        {result.isPossible ? `Suggested Time: ${result.title}` : 'Scheduling Conflict'}
-                    </AlertTitle>
-                    <AlertDescription>
-                        <p className="mb-2">{result.reasoning}</p>
-                        {result.isPossible && (
-                            <p className="font-semibold">{result.suggestedDate} at {result.suggestedTime}</p>
+            <Tabs defaultValue="ai" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="ai" className="gap-2"><Bot /> AI Scheduling</TabsTrigger>
+                    <TabsTrigger value="manual" className="gap-2"><Pencil /> Manual Entry</TabsTrigger>
+                </TabsList>
+                <TabsContent value="ai" className="pt-4">
+                     <form onSubmit={handleSchedule} className="flex gap-2">
+                        <Input
+                        value={request}
+                        onChange={(e) => setRequest(e.target.value)}
+                        placeholder="e.g. 'Lunch with Sam next Friday at 1pm'"
+                        className="flex-grow"
+                        disabled={loading || isRecording || isProcessing}
+                        />
+                        {isRecording ? (
+                            <Button type="button" size="icon" variant="destructive" onClick={handleStopRecording} aria-label="Stop recording">
+                                <StopCircle />
+                            </Button>
+                        ) : (
+                            <Button type="button" size="icon" onClick={handleStartRecording} aria-label="Start recording" disabled={loading || isProcessing}>
+                                {isProcessing ? <Loader2 className="animate-spin" /> : <Mic />}
+                            </Button>
                         )}
-                    </AlertDescription>
-                    {result.isPossible && (
-                        <div className="mt-4 flex gap-2 justify-end">
-                            <Button variant="outline" size="sm" onClick={() => setResult(null)}>Cancel</Button>
-                            <Button size="sm" onClick={handleConfirm}>Confirm</Button>
+
+                        <Button type="submit" size="icon" aria-label="Schedule" disabled={loading || isRecording || isProcessing || !request.trim()}>
+                        {loading ? <Loader2 className="animate-spin" /> : <Sparkles />}
+                        </Button>
+                    </form>
+                     {result && (
+                        <div className="mt-4">
+                            <Alert variant={result.isPossible ? 'default' : 'destructive'} className="w-full">
+                                {result.isPossible ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                                <AlertTitle>
+                                    {result.isPossible ? `Suggested Time: ${result.title}` : 'Scheduling Conflict'}
+                                </AlertTitle>
+                                <AlertDescription>
+                                    <p className="mb-2">{result.reasoning}</p>
+                                    {result.isPossible && (
+                                        <p className="font-semibold">{result.suggestedDate} at {result.suggestedTime}</p>
+                                    )}
+                                </AlertDescription>
+                                {result.isPossible && (
+                                    <div className="mt-4 flex gap-2 justify-end">
+                                        <Button variant="outline" size="sm" onClick={() => setResult(null)}>Cancel</Button>
+                                        <Button size="sm" onClick={handleConfirm}>Confirm</Button>
+                                    </div>
+                                )}
+                            </Alert>
                         </div>
                     )}
-                </Alert>
-            </CardFooter>
-        )}
+                </TabsContent>
+                <TabsContent value="manual">
+                    <ManualAppointmentForm />
+                </TabsContent>
+            </Tabs>
+        </CardContent>
       </Card>
     </div>
   );
