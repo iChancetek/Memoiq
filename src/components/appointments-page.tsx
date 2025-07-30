@@ -11,19 +11,25 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { CalendarPlus, CheckCircle, XCircle, Sparkles, Loader2 } from 'lucide-react';
+import { CalendarPlus, CheckCircle, XCircle, Sparkles, Loader2, Mic, StopCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { scheduleAppointment } from '@/ai/flows/schedule-appointment';
+import { transcribeAudio } from '@/ai/flows/transcribe-audio';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useTasks } from '@/contexts/task-context';
 import { useContacts } from '@/contexts/contact-context';
 import { useCalendar } from '@/contexts/calendar-context';
 import { format, parse } from 'date-fns';
 
+type RecordingState = 'idle' | 'recording' | 'processing';
+
 export function AppointmentsPage() {
   const [request, setRequest] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const [result, setResult] = React.useState<any>(null);
+  const [recordingState, setRecordingState] = React.useState<RecordingState>('idle');
+  const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
+  const audioChunksRef = React.useRef<Blob[]>([]);
   const { toast } = useToast();
   const { tasks } = useTasks();
   const { contacts } = useContacts();
@@ -90,6 +96,62 @@ export function AppointmentsPage() {
         });
     }
   }
+  
+  const handleStartRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({audio: true});
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+
+      mediaRecorderRef.current.ondataavailable = event => {
+        audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorderRef.current.onstop = async () => {
+        setRecordingState('processing');
+        const audioBlob = new Blob(audioChunksRef.current, {type: 'audio/webm'});
+
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = async () => {
+          const base64Audio = reader.result as string;
+          try {
+            const result = await transcribeAudio({ audioDataUri: base64Audio });
+            setRequest(result.transcription);
+          } catch (error) {
+            console.error('Transcription failed:', error);
+            toast({
+              variant: 'destructive',
+              title: 'Processing Error',
+              description: 'Failed to process the audio.',
+            });
+          } finally {
+            setRecordingState('idle');
+          }
+        };
+      };
+
+      mediaRecorderRef.current.start();
+      setRecordingState('recording');
+    } catch (err) {
+      console.error('Error starting recording:', err);
+      toast({
+        variant: 'destructive',
+        title: 'Recording Error',
+        description: 'Could not start recording. Please check microphone permissions.',
+      });
+    }
+  };
+  
+  const handleStopRecording = () => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+    }
+  };
+  
+  const isRecording = recordingState === 'recording';
+  const isProcessing = recordingState === 'processing';
 
   return (
     <div className="container mx-auto max-w-2xl">
@@ -110,9 +172,19 @@ export function AppointmentsPage() {
               onChange={(e) => setRequest(e.target.value)}
               placeholder="Your request..."
               className="flex-grow"
-              disabled={loading}
+              disabled={loading || isRecording || isProcessing}
             />
-            <Button type="submit" size="icon" aria-label="Schedule" disabled={loading}>
+            {isRecording ? (
+                 <Button type="button" size="icon" variant="destructive" onClick={handleStopRecording} aria-label="Stop recording">
+                    <StopCircle />
+                 </Button>
+            ) : (
+                 <Button type="button" size="icon" onClick={handleStartRecording} aria-label="Start recording" disabled={loading || isProcessing}>
+                    {isProcessing ? <Loader2 className="animate-spin" /> : <Mic />}
+                 </Button>
+            )}
+
+            <Button type="submit" size="icon" aria-label="Schedule" disabled={loading || isRecording || isProcessing}>
               {loading ? <Loader2 className="animate-spin" /> : <Sparkles />}
             </Button>
           </form>

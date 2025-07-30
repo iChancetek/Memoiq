@@ -13,3 +13,4 @@ import '@/ai/flows/get-appointment-analysis.ts';
 import '@/ai/flows/get-companion-response.ts';
 import '@/ai/flows/get-welcome-greeting.ts';
 import '@/ai/flows/get-daily-briefing.ts';
+import '@/ai/flows/transcribe-audio.ts';
