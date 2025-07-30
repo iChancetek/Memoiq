@@ -5,6 +5,8 @@ import { useAuth } from '@/contexts/auth-context';
 import { usePathname } from 'next/navigation';
 import { MainLayout } from './main-layout';
 import { Loader2 } from 'lucide-react';
+import { Providers } from './providers';
+import { Toaster } from './ui/toaster';
 
 const AUTH_ROUTES = ['/login', '/signup', '/auth'];
 

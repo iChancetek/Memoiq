@@ -1,6 +1,5 @@
 import type {Metadata} from 'next';
 import './globals.css';
-import {Toaster} from '@/components/ui/toaster';
 import { AppContent } from '@/components/app-content';
 import { Providers } from '@/components/providers';
 
@@ -30,10 +29,9 @@ export default function RootLayout({
       </head>
       <body className="font-sans antialiased">
         <Providers>
-            <AppContent>
-                {children}
-            </AppContent>
-            <Toaster />
+          <AppContent>
+            {children}
+          </AppContent>
         </Providers>
       </body>
     </html>
