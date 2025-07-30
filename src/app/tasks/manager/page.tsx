@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -10,7 +11,7 @@ import { getTasksAnalysis } from '@/ai/flows/get-tasks-analysis';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useTasks } from '@/contexts/task-context';
 
-export function TasksManagerPage() {
+function TasksManagerPageComponent() {
   const [loading, setLoading] = React.useState(false);
   const [analysis, setAnalysis] = React.useState<any>(null);
   const { toast } = useToast();
@@ -116,4 +117,8 @@ export function TasksManagerPage() {
       </Card>
     </div>
   );
+}
+
+export default function TasksManagerPage() {
+  return <TasksManagerPageComponent />;
 }
