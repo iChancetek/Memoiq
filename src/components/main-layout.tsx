@@ -89,26 +89,8 @@ export function MainLayout({children}: {children: React.ReactNode}) {
   }, [user, authLoading, router]);
 
   React.useEffect(() => {
-    if (user && user.displayName) {
-        // This is a simplified greeting trigger.
-        // In a real app, this would be tied to the login event.
-        const hasBeenGreeted = sessionStorage.getItem('greeted');
-        if (!hasBeenGreeted) {
-             getWelcomeGreeting({ displayName: user.displayName.split(' ')[0] })
-            .then(greeting => {
-                if (greeting.audioDataUri) {
-                    const audio = new Audio(greeting.audioDataUri);
-                    audio.play().catch(console.error);
-                }
-                toast({
-                    title: "Welcome Back!",
-                    description: greeting.text
-                });
-                sessionStorage.setItem('greeted', 'true');
-            })
-            .catch(console.error);
-        }
-    }
+    // This effect is now handled on the dashboard page for a more integrated experience
+    // The original toast-based greeting is removed to avoid duplication.
   }, [user, toast]);
 
   if (!user) {

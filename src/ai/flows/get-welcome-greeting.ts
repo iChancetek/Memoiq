@@ -1,6 +1,6 @@
 'use server';
 /**
- * @fileOverview Generates a personalized voice greeting for the user upon login.
+ * @fileOverview Generates a personalized, time-aware voice greeting for the user.
  *
  * - getWelcomeGreeting - A function that creates a text and audio greeting.
  * - GetWelcomeGreetingInput - The input type for the getWelcomeGreeting function.
@@ -13,6 +13,7 @@ import wav from 'wav';
 
 const GetWelcomeGreetingInputSchema = z.object({
   displayName: z.string().describe("The user's first name or display name."),
+  hour: z.number().describe('The current hour (0-23) in the user\'s local time.'),
 });
 export type GetWelcomeGreetingInput = z.infer<typeof GetWelcomeGreetingInputSchema>;
 
@@ -26,6 +27,19 @@ export async function getWelcomeGreeting(
   input: GetWelcomeGreetingInput
 ): Promise<GetWelcomeGreetingOutput> {
   return getWelcomeGreetingFlow(input);
+}
+
+const getGreetingText = (name: string, hour: number) => {
+    if (hour >= 5 && hour < 12) {
+        return `Good morning, ${name}.`;
+    }
+    if (hour >= 12 && hour < 18) {
+        return `Good afternoon, ${name}.`;
+    }
+    if (hour >= 18 && hour < 22) {
+        return `Good evening, ${name}.`;
+    }
+    return `Hello, ${name}. I hope you’re winding down for the night.`;
 }
 
 async function toWav(
@@ -61,8 +75,8 @@ const getWelcomeGreetingFlow = ai.defineFlow(
     inputSchema: GetWelcomeGreetingInputSchema,
     outputSchema: GetWelcomeGreetingOutputSchema,
   },
-  async ({ displayName }) => {
-    const greetingText = `Welcome back, ${displayName}. Let's get started with your day.`;
+  async ({ displayName, hour }) => {
+    const greetingText = getGreetingText(displayName, hour);
 
     const { media } = await ai.generate({
       model: 'googleai/gemini-2.5-flash-preview-tts',

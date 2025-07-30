@@ -16,13 +16,17 @@ import {
   Loader2,
   MessageSquare,
   Sparkles,
+  Play,
+  Pause,
 } from 'lucide-react';
-import {getPersonalizedInsights} from '@/ai/flows/get-personalized-insights';
+import {getDailyBriefing} from '@/ai/flows/get-daily-briefing';
+import {getWelcomeGreeting} from '@/ai/flows/get-welcome-greeting';
 import {useToast} from '@/hooks/use-toast';
 import { useTasks } from '@/contexts/task-context';
 import { Skeleton } from './ui/skeleton';
+import { useAuth } from '@/contexts/auth-context';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
-// Mock data will be replaced with live data from contexts/services later
 const mockMemos = [
   { id: 1, title: "Project Phoenix Kick-off", summary: "Initial meeting notes, outlined key milestones and stakeholders." },
 ];
@@ -30,24 +34,48 @@ const mockCalendarEvents = [
     { id: 1, title: "Team Stand-up", time: "9:00 AM", location: "Virtual" },
 ];
 
-function IskylarInsightsCard() {
-  const [insights, setInsights] = React.useState('');
-  const [loading, setLoading] = React.useState(false);
+function IskylarBriefingCard() {
+  const [briefing, setBriefing] = React.useState({ text: '', audioUri: '' });
+  const [loading, setLoading] = React.useState(true);
+  const [isPlaying, setIsPlaying] = React.useState(false);
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const {toast} = useToast();
+  const { user } = useAuth();
   const { tasks } = useTasks();
 
-  const handleGetInsights = async () => {
+  React.useEffect(() => {
+    if (user) {
+        handleGetBriefing();
+    }
+  }, [user, tasks]);
+
+  const handleGetBriefing = async () => {
+    if (!user) return;
     setLoading(true);
-    setInsights('');
+
     try {
-      const result = await getPersonalizedInsights({
+      const currentHour = new Date().getHours();
+      const greetingPromise = getWelcomeGreeting({ 
+          displayName: user.displayName?.split(' ')[0] || 'there',
+          hour: currentHour
+      });
+
+      const briefingPromise = getDailyBriefing({
+        displayName: user.displayName || 'User',
         memos: JSON.stringify(mockMemos.map(m => `${m.title}: ${m.summary}`)),
         tasks: JSON.stringify(tasks.map(t => `${t.title} (Due: ${t.dueDate})`)),
         calendarEvents: JSON.stringify(mockCalendarEvents.map(e => `${e.title} at ${e.time}`)),
       });
-      setInsights(result.insights);
+
+      const [greeting, dailyBriefing] = await Promise.all([greetingPromise, briefingPromise]);
+      
+      const combinedText = `${greeting.text} ${dailyBriefing.briefingText}`;
+      
+      // For simplicity, we'll use the briefing audio. A more advanced version could combine them.
+      setBriefing({ text: combinedText, audioUri: dailyBriefing.briefingAudioDataUri });
+
     } catch (error) {
-      console.error('Error getting insights:', error);
+      console.error('Error getting briefing:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -57,6 +85,34 @@ function IskylarInsightsCard() {
       setLoading(false);
     }
   };
+
+  const togglePlayback = () => {
+    if (!audioRef.current) {
+        if (briefing.audioUri) {
+            audioRef.current = new Audio(briefing.audioUri);
+            audioRef.current.onended = () => setIsPlaying(false);
+        }
+    }
+
+    if (audioRef.current) {
+        if (isPlaying) {
+            audioRef.current.pause();
+        } else {
+            audioRef.current.play().catch(e => console.error("Audio playback error", e));
+        }
+        setIsPlaying(!isPlaying);
+    }
+  }
+  
+  // Cleanup audio on component unmount
+  React.useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
 
   return (
     <Card className="col-span-1 md:col-span-2">
@@ -70,23 +126,36 @@ function IskylarInsightsCard() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        {insights && (
-          <div className="prose prose-invert max-w-none rounded-lg bg-accent/20 p-4 text-sm text-foreground/90">
-            <p className="whitespace-pre-wrap">{insights}</p>
-          </div>
+        {loading ? (
+            <div className="space-y-4">
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-10 w-full" />
+            </div>
+        ) : (
+            <>
+                <Alert>
+                    <Sparkles className="h-4 w-4" />
+                    <AlertTitle>Today's Briefing</AlertTitle>
+                    <AlertDescription>
+                        <p className="whitespace-pre-wrap">{briefing.text}</p>
+                    </AlertDescription>
+                </Alert>
+                <div className="mt-4 flex gap-2">
+                    <Button onClick={togglePlayback} disabled={!briefing.audioUri} className="flex-1">
+                        {isPlaying ? <Pause className="mr-2" /> : <Play className="mr-2" />}
+                        {isPlaying ? 'Pause' : 'Play Briefing'}
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        onClick={handleGetBriefing}
+                        disabled={loading}
+                        aria-label="Regenerate Briefing"
+                        >
+                       {loading ? <Loader2 className="animate-spin" /> : <Sparkles />}
+                    </Button>
+                </div>
+            </>
         )}
-        <Button
-          onClick={handleGetInsights}
-          disabled={loading}
-          className="mt-4 w-full gap-2"
-        >
-          {loading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Sparkles className="h-4 w-4" />
-          )}
-          <span>{loading ? 'Thinking...' : "Get Today's Briefing"}</span>
-        </Button>
       </CardContent>
     </Card>
   );
@@ -97,7 +166,7 @@ export function DashboardPage() {
 
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-      <IskylarInsightsCard />
+      <IskylarBriefingCard />
 
       <Card>
         <CardHeader>
