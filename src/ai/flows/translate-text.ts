@@ -45,14 +45,14 @@ const translateTextFlow = ai.defineFlow(
     inputSchema: TranslateTextInputSchema,
     outputSchema: TranslateTextOutputSchema,
   },
-  async ({ text, targetLanguage }) => {
+  async (input) => {
     let translationOutput;
     let attempts = 0;
     const maxAttempts = 3;
     
     while (attempts < maxAttempts) {
         try {
-            const result = await translatePrompt({ text, targetLanguage });
+            const result = await translatePrompt(input);
             translationOutput = result.output;
             break; // Success
         } catch (error: any) {

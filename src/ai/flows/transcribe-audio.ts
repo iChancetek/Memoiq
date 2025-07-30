@@ -16,6 +16,7 @@ const TranscribeAudioInputSchema = z.object({
     .describe(
       "An audio file, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
+    language: z.enum(['en', 'es']).describe("The language of the audio to transcribe into."),
 });
 export type TranscribeAudioInput = z.infer<typeof TranscribeAudioInputSchema>;
 
@@ -32,7 +33,8 @@ const transcribeAudioPrompt = ai.definePrompt({
   name: 'transcribeAudioPrompt',
   input: {schema: TranscribeAudioInputSchema},
   output: {schema: TranscribeAudioOutputSchema},
-  prompt: `You are a transcription expert. Please transcribe the following audio to text.\n\nAudio: {{media url=audioDataUri}}`,
+  model: 'googleai/gemini-1.5-flash',
+  prompt: `You are a transcription expert. Please transcribe the following audio to text in {{language}}.\n\nAudio: {{media url=audioDataUri}}`,
 });
 
 const transcribeAudioFlow = ai.defineFlow(
@@ -42,7 +44,29 @@ const transcribeAudioFlow = ai.defineFlow(
     outputSchema: TranscribeAudioOutputSchema,
   },
   async input => {
-    const {output} = await transcribeAudioPrompt(input);
-    return output!;
+    let output;
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    while (attempts < maxAttempts) {
+        try {
+            const result = await transcribeAudioPrompt(input);
+            output = result.output;
+            break; 
+        } catch (error: any) {
+            attempts++;
+            if (error.message.includes('503') && attempts < maxAttempts) {
+                console.log(`Scribe transcription attempt ${attempts} failed, retrying...`);
+                await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
+            } else {
+                throw error;
+            }
+        }
+    }
+    
+    if (!output) {
+        throw new Error('Transcription failed after multiple attempts.');
+    }
+    return output;
   }
 );

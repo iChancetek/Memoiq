@@ -10,7 +10,7 @@ import { format } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 
-type RecordingState = 'idle' | 'recording' | 'processing';
+type RecordingState = 'idle' | 'recording';
 
 const locale = {
     en: {
@@ -133,18 +133,21 @@ function RecordingItem({ recording, lang, onDelete }: { recording: ScribeEntry, 
     const t = locale[lang];
     
     const transcriptionText = currentLanguage === 'en' ? recording.transcription_en : recording.transcription_es;
+    const audioUrl = currentLanguage === 'en' ? recording.audioUrl_en : recording.audioUrl_es;
 
-    React.useEffect(() => {
-        audioRef.current = new Audio(recording.audioUrl);
-        audioRef.current.onended = () => setIsPlaying(false);
-        return () => {
-            audioRef.current?.pause();
-        };
-    }, [recording.audioUrl]);
-    
     React.useEffect(() => {
         setCurrentLanguage(lang);
     }, [lang]);
+    
+    React.useEffect(() => {
+        if(audioUrl) {
+            audioRef.current = new Audio(audioUrl);
+            audioRef.current.onended = () => setIsPlaying(false);
+        }
+        return () => {
+            audioRef.current?.pause();
+        };
+    }, [audioUrl]);
 
     const togglePlay = () => {
         if (!audioRef.current) return;
@@ -159,23 +162,24 @@ function RecordingItem({ recording, lang, onDelete }: { recording: ScribeEntry, 
     const handleTranslate = async () => {
         const targetLanguage = currentLanguage === 'en' ? 'es' : 'en';
         
-        const needsTranslation = (targetLanguage === 'es' && !recording.transcription_es) || (targetLanguage === 'en' && !recording.transcription_en);
+        const sourceText = recording.transcription_en; // Always use English as source for now
+        const needsTranslation = targetLanguage === 'es' && !recording.transcription_es;
+        const needsAudio = targetLanguage === 'es' && !recording.audioUrl_es;
 
-        if (needsTranslation) {
+        if (sourceText && (needsTranslation || needsAudio)) {
              setIsTranslating(true);
-             const textToTranslate = recording.transcription_en; // Always use English as source for translation
-             await translateScribeEntry(recording.id, targetLanguage, textToTranslate);
+             await translateScribeEntry(recording.id, targetLanguage, sourceText);
              setIsTranslating(false);
         }
-
         setCurrentLanguage(targetLanguage);
     };
 
     const handleDownload = (type: 'audio' | 'transcript') => {
         const link = document.createElement('a');
         if (type === 'audio') {
-            link.href = recording.audioUrl;
-            link.download = `recording-${recording.id}.webm`;
+            if (!audioUrl) return;
+            link.href = audioUrl;
+            link.download = `recording-${recording.id}-${currentLanguage}.webm`;
         } else {
             if (!transcriptionText) return;
             const blob = new Blob([transcriptionText], { type: 'text/plain' });
@@ -197,7 +201,7 @@ function RecordingItem({ recording, lang, onDelete }: { recording: ScribeEntry, 
             </CardHeader>
             <CardContent>
                 <div className="flex items-center gap-2 mb-4">
-                    <Button size="icon" variant="outline" onClick={togglePlay}>
+                    <Button size="icon" variant="outline" onClick={togglePlay} disabled={!audioUrl}>
                         {isPlaying ? <Pause /> : <Play />}
                     </Button>
                     <div className="text-sm text-muted-foreground">{t.playRecording}</div>
@@ -216,7 +220,7 @@ function RecordingItem({ recording, lang, onDelete }: { recording: ScribeEntry, 
                 </Alert>
             </CardContent>
             <CardFooter className="justify-end gap-2">
-                <Button variant="outline" onClick={() => handleDownload('audio')}><FileAudio className="mr-2"/> {t.downloadAudio}</Button>
+                <Button variant="outline" onClick={() => handleDownload('audio')} disabled={!audioUrl}><FileAudio className="mr-2"/> {t.downloadAudio}</Button>
                 <Button variant="outline" onClick={() => handleDownload('transcript')} disabled={!transcriptionText}><FileText className="mr-2"/> {t.downloadTranscript}</Button>
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
@@ -250,7 +254,7 @@ export function ScribePage() {
     const handleNewRecording = async (audioBlob: Blob) => {
         setIsProcessing(true);
         try {
-            await addScribeEntry(audioBlob);
+            await addScribeEntry(audioBlob, lang);
             toast({
                 title: 'Processing Complete',
                 description: 'Your recording has been transcribed and saved.',
@@ -312,9 +316,11 @@ export function ScribePage() {
                 ) : scribeEntries.length > 0 ? (
                     scribeEntries.map(entry => <RecordingItem key={entry.id} recording={entry} lang={lang} onDelete={handleDelete} />)
                 ) : (
+                    !isProcessing && (
                     <Card className="flex items-center justify-center p-8">
                         <p className="text-muted-foreground">{t.noRecordings}</p>
                     </Card>
+                    )
                 )}
             </div>
         </div>

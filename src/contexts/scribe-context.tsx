@@ -17,15 +17,18 @@ import {
 } from 'firebase/firestore';
 import { firebaseApp } from '@/lib/firebase';
 import { useStorage } from './storage-context';
-import { scribeTranscribe } from '@/ai/flows/scribe-transcribe-and-translate';
+import { transcribeAudio } from '@/ai/flows/transcribe-audio';
 import { translateText } from '@/ai/flows/translate-text';
+import { textToSpeech } from '@/ai/flows/text-to-speech';
 
 export interface ScribeEntry {
     id: string;
     userId: string;
     title: string;
-    audioUrl: string;
-    storagePath: string;
+    audioUrl_en: string;
+    audioUrl_es: string;
+    storagePath_en: string;
+    storagePath_es: string;
     transcription_en: string;
     transcription_es: string;
     createdAt: Timestamp;
@@ -33,7 +36,7 @@ export interface ScribeEntry {
 
 interface ScribeContextType {
   scribeEntries: ScribeEntry[];
-  addScribeEntry: (audioBlob: Blob) => Promise<void>;
+  addScribeEntry: (audioBlob: Blob, lang: 'en' | 'es') => Promise<void>;
   deleteScribeEntry: (entryId: string) => Promise<void>;
   translateScribeEntry: (entryId: string, targetLanguage: 'en' | 'es', text: string) => Promise<void>;
   loading: boolean;
@@ -73,7 +76,7 @@ export function ScribeProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
-  const addScribeEntry = async (audioBlob: Blob) => {
+  const addScribeEntry = async (audioBlob: Blob, lang: 'en' | 'es') => {
     if (!user) throw new Error("User not authenticated");
 
     // 1. Upload audio to Firebase Storage
@@ -88,17 +91,19 @@ export function ScribeProvider({ children }: { children: React.ReactNode }) {
         reader.onloadend = () => resolve(reader.result as string);
     });
 
-    // 3. Get transcription (in English)
-    const { transcription } = await scribeTranscribe({ audioDataUri });
+    // 3. Get transcription
+    const { transcription } = await transcribeAudio({ audioDataUri, language: lang });
     
     // 4. Save metadata to Firestore
     await addDoc(collection(db, 'users', user.uid, 'scribeEntries'), {
       userId: user.uid,
       title: `Recording - ${new Date().toLocaleString()}`,
-      audioUrl,
-      storagePath,
+      audioUrl_en: audioUrl,
+      storagePath_en: storagePath,
       transcription_en: transcription,
-      transcription_es: '', // Spanish translation is done on demand
+      audioUrl_es: '',
+      storagePath_es: '',
+      transcription_es: '',
       createdAt: serverTimestamp(),
     });
   };
@@ -108,11 +113,9 @@ export function ScribeProvider({ children }: { children: React.ReactNode }) {
     const entry = scribeEntries.find(e => e.id === entryId);
     if (!entry) return;
 
-    // Delete audio from storage
-    if (entry.storagePath) {
-        await deleteFile(entry.storagePath);
-    }
-    // Delete metadata from Firestore
+    if (entry.storagePath_en) await deleteFile(entry.storagePath_en);
+    if (entry.storagePath_es) await deleteFile(entry.storagePath_es);
+    
     const entryRef = doc(db, 'users', user.uid, 'scribeEntries', entryId);
     await deleteDoc(entryRef);
   }
@@ -122,13 +125,22 @@ export function ScribeProvider({ children }: { children: React.ReactNode }) {
       const entry = scribeEntries.find(e => e.id === entryId);
       if (!entry) throw new Error("Scribe entry not found");
 
-      // Get translation from AI
       const { translation } = await translateText({ text, targetLanguage });
 
-      // Update the entry in Firestore
-      const fieldToUpdate = targetLanguage === 'es' ? 'transcription_es' : 'transcription_en';
+      const { audioDataUri } = await textToSpeech({ text: translation });
+
+      const audioBlob = await (await fetch(audioDataUri)).blob();
+      const storagePath = `scribe-audio/${user.uid}/${Date.now()}_es.webm`;
+      const audioUrl = await uploadFile(storagePath, audioBlob, { contentType: 'audio/webm' });
+
+      const updates = {
+          transcription_es: translation,
+          audioUrl_es: audioUrl,
+          storagePath_es: storagePath
+      };
+      
       const entryRef = doc(db, 'users', user.uid, 'scribeEntries', entryId);
-      await updateDoc(entryRef, { [fieldToUpdate]: translation });
+      await updateDoc(entryRef, updates);
   }
 
   const value = { scribeEntries, addScribeEntry, deleteScribeEntry, translateScribeEntry, loading };
