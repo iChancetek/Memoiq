@@ -14,3 +14,4 @@ import '@/ai/flows/get-companion-response.ts';
 import '@/ai/flows/get-welcome-greeting.ts';
 import '@/ai/flows/get-daily-briefing.ts';
 import '@/ai/flows/transcribe-audio.ts';
+import '@/ai/flows/parse-contact-string.ts';
