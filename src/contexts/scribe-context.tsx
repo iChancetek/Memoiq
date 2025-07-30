@@ -88,10 +88,11 @@ export function ScribeProvider({ children }: { children: React.ReactNode }) {
         reader.onloadend = () => resolve(reader.result as string);
     });
 
-    // 3. Get transcription and initial translation (to English) from AI
+    // 3. Get transcription (in original language). Let's assume the primary use case is English transcription first.
+    // The translation to Spanish will happen on-demand from the UI.
     const aiResult = await scribeTranscribeAndTranslate({
         audioDataUri,
-        targetLanguage: 'en',
+        targetLanguage: 'en', // This doesn't matter here since we only use transcription
         existingTranscription: '',
     });
     
