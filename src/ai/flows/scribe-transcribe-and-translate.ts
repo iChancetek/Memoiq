@@ -61,12 +61,30 @@ const scribeFlow = ai.defineFlow(
   },
   async ({ audioDataUri, targetLanguage, existingTranscription }) => {
     let transcription = existingTranscription;
+    const maxAttempts = 3;
 
     // Step 1: Transcribe the audio if no existing transcription is provided
     if (!transcription && audioDataUri) {
-        const { output: transcriptionOutput } = await transcribePrompt({ audioDataUri });
+        let transcriptionOutput;
+        let attempts = 0;
+        while (attempts < maxAttempts) {
+            try {
+                const result = await transcribePrompt({ audioDataUri });
+                transcriptionOutput = result.output;
+                break; // Success
+            } catch (error: any) {
+                attempts++;
+                if (error.message.includes('503') && attempts < maxAttempts) {
+                    console.log(`Scribe transcription attempt ${attempts} failed, retrying...`);
+                    await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
+                } else {
+                    throw error;
+                }
+            }
+        }
+
         if (!transcriptionOutput) {
-            throw new Error('Transcription failed.');
+            throw new Error('Transcription failed after multiple attempts.');
         }
         transcription = transcriptionOutput.transcription;
     } else if (!transcription) {
@@ -74,9 +92,26 @@ const scribeFlow = ai.defineFlow(
     }
     
     // Step 2: Translate the transcription
-    const { output: translationOutput } = await translatePrompt({ text: transcription, targetLanguage });
+    let translationOutput;
+    let attempts = 0;
+    while (attempts < maxAttempts) {
+        try {
+            const result = await translatePrompt({ text: transcription, targetLanguage });
+            translationOutput = result.output;
+            break; // Success
+        } catch (error: any) {
+            attempts++;
+            if (error.message.includes('503') && attempts < maxAttempts) {
+                console.log(`Scribe translation attempt ${attempts} failed, retrying...`);
+                await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
+            } else {
+                throw error;
+            }
+        }
+    }
+
     if (!translationOutput) {
-        throw new Error('Translation failed.');
+        throw new Error('Translation failed after multiple attempts.');
     }
     const translation = translationOutput.translation;
     
