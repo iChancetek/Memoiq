@@ -1,10 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import { DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogContent, Dialog, DialogTrigger, DialogClose } from '@/components/ui/dialog';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Mic, Sparkles, Loader2, Save, StopCircle, CheckCircle, XCircle } from 'lucide-react';
+import { Mic, Sparkles, Loader2, Save, StopCircle, CheckCircle, XCircle, CalendarPlus, Bot, Pencil } from 'lucide-react';
 import { useCalendar } from '@/contexts/calendar-context';
 import { useTasks } from '@/contexts/task-context';
 import { useContacts } from '@/contexts/contact-context';
@@ -13,11 +13,12 @@ import { scheduleAppointment } from '@/ai/flows/schedule-appointment';
 import { transcribeAudio } from '@/ai/flows/transcribe-audio';
 import { parse } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { ManualEventForm } from './manual-event-form';
 
 type RecordingState = 'idle' | 'recording' | 'processing';
 
-export function CreateEventDialog() {
-  const [open, setOpen] = React.useState(false);
+function AIScheduler() {
   const [request, setRequest] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const [result, setResult] = React.useState<any>(null);
@@ -26,25 +27,10 @@ export function CreateEventDialog() {
   const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
   const audioChunksRef = React.useRef<Blob[]>([]);
 
-  const { addEvent } = useCalendar();
-  const { events } = useCalendar();
+  const { addEvent, events } = useCalendar();
   const { tasks } = useTasks();
   const { contacts } = useContacts();
   const { toast } = useToast();
-
-  const resetState = () => {
-    setRequest('');
-    setResult(null);
-    setLoading(false);
-    setRecordingState('idle');
-  };
-
-  const handleOpenChange = (isOpen: boolean) => {
-    setOpen(isOpen);
-    if (!isOpen) {
-      resetState();
-    }
-  };
   
   const handleSchedule = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -75,6 +61,7 @@ export function CreateEventDialog() {
   const handleConfirm = async () => {
     if (!result || !result.isPossible) return;
     
+    setLoading(true);
     try {
         const dateTimeString = `${result.suggestedDate} ${result.suggestedTime}`;
         const formatString = 'yyyy-MM-dd h:mm a';
@@ -95,7 +82,8 @@ export function CreateEventDialog() {
             title: "Event Scheduled!",
             description: `"${result.title}" is now on your calendar.`,
         });
-        handleOpenChange(false);
+        setRequest('');
+        setResult(null);
     } catch (error) {
         console.error("Error confirming event: ", error);
         toast({
@@ -103,6 +91,8 @@ export function CreateEventDialog() {
             title: 'Confirmation Error',
             description: 'Could not save the event. Please try again.',
         });
+    } finally {
+        setLoading(false);
     }
   }
 
@@ -158,66 +148,85 @@ export function CreateEventDialog() {
   const isRecording = recordingState === 'recording';
   const isProcessing = recordingState === 'processing';
 
-  return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button>Create Event</Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Create New Event</DialogTitle>
-          <DialogDescription>
-            Describe the event you want to create using natural language.
-          </DialogDescription>
-        </DialogHeader>
-        
-        {!result ? (
-            <form onSubmit={handleSchedule} className="flex items-center gap-2">
-                <Input
-                id="request"
-                placeholder="e.g. 'Dentist appointment tomorrow at 3pm'"
-                value={request}
-                onChange={(e) => setRequest(e.target.value)}
-                disabled={loading || isRecording || isProcessing}
-                />
-                {isRecording ? (
-                    <Button type="button" size="icon" variant="destructive" onClick={handleStopRecording} aria-label="Stop recording">
-                        <StopCircle />
-                    </Button>
-                ) : (
-                    <Button type="button" size="icon" onClick={handleStartRecording} aria-label="Start recording" disabled={loading || isProcessing}>
-                        {isProcessing ? <Loader2 className="animate-spin" /> : <Mic />}
+  if (result) {
+    return (
+        <div className="space-y-4">
+            <Alert variant={result.isPossible ? 'default' : 'destructive'}>
+                {result.isPossible ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
+                <AlertTitle>
+                    {result.isPossible ? `Suggested: ${result.title}` : 'Scheduling Conflict'}
+                </AlertTitle>
+                <AlertDescription>
+                    <p>{result.reasoning}</p>
+                    {result.isPossible && (
+                        <p className="font-semibold mt-2">{result.suggestedDate} at {result.suggestedTime}</p>
+                    )}
+                </AlertDescription>
+            </Alert>
+            <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setResult(null)}>Back</Button>
+                {result.isPossible && (
+                    <Button onClick={handleConfirm} disabled={loading}>
+                        {loading ? <Loader2 className="animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                        Confirm & Save
                     </Button>
                 )}
-                <Button type="submit" size="icon" aria-label="Schedule with AI" disabled={loading || !request.trim() || isRecording || isProcessing}>
-                    {loading ? <Loader2 className="animate-spin" /> : <Sparkles />}
-                </Button>
-            </form>
-        ) : (
-            <div className="space-y-4">
-                 <Alert variant={result.isPossible ? 'default' : 'destructive'}>
-                    {result.isPossible ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
-                    <AlertTitle>
-                        {result.isPossible ? `Suggested: ${result.title}` : 'Scheduling Conflict'}
-                    </AlertTitle>
-                    <AlertDescription>
-                        <p>{result.reasoning}</p>
-                        {result.isPossible && (
-                            <p className="font-semibold mt-2">{result.suggestedDate} at {result.suggestedTime}</p>
-                        )}
-                    </AlertDescription>
-                </Alert>
-                <DialogFooter className="gap-2 sm:justify-end">
-                    <Button variant="outline" onClick={() => setResult(null)}>Back</Button>
-                    {result.isPossible && (
-                        <Button onClick={handleConfirm} disabled={loading}>
-                            <Save className="mr-2 h-4 w-4" /> Confirm & Save
-                        </Button>
-                    )}
-                </DialogFooter>
             </div>
+        </div>
+    );
+  }
+  
+  return (
+    <form onSubmit={handleSchedule} className="flex items-center gap-2">
+        <Input
+        id="request"
+        placeholder="e.g. 'Dentist appointment tomorrow at 3pm'"
+        value={request}
+        onChange={(e) => setRequest(e.target.value)}
+        disabled={loading || isRecording || isProcessing}
+        />
+        {isRecording ? (
+            <Button type="button" size="icon" variant="destructive" onClick={handleStopRecording} aria-label="Stop recording">
+                <StopCircle />
+            </Button>
+        ) : (
+            <Button type="button" size="icon" onClick={handleStartRecording} aria-label="Start recording" disabled={loading || isProcessing}>
+                {isProcessing ? <Loader2 className="animate-spin" /> : <Mic />}
+            </Button>
         )}
-      </DialogContent>
-    </Dialog>
+        <Button type="submit" size="icon" aria-label="Schedule with AI" disabled={loading || !request.trim() || isRecording || isProcessing}>
+            {loading ? <Loader2 className="animate-spin" /> : <Sparkles />}
+        </Button>
+    </form>
+  )
+}
+
+export function CreateEventDialog() {
+  return (
+    <Card>
+        <CardHeader>
+            <div className="flex items-center gap-2">
+                <CalendarPlus className="h-6 w-6 text-primary" />
+                <CardTitle>Create Event</CardTitle>
+            </div>
+            <CardDescription>
+                Use AI to schedule with natural language, or enter details manually.
+            </CardDescription>
+        </CardHeader>
+        <CardContent>
+            <Tabs defaultValue="ai" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="ai" className="gap-2"><Bot /> AI Scheduling</TabsTrigger>
+                    <TabsTrigger value="manual" className="gap-2"><Pencil /> Manual Entry</TabsTrigger>
+                </TabsList>
+                <TabsContent value="ai" className="pt-4">
+                    <AIScheduler />
+                </TabsContent>
+                <TabsContent value="manual">
+                    <ManualEventForm />
+                </TabsContent>
+            </Tabs>
+        </CardContent>
+    </Card>
   );
 }
