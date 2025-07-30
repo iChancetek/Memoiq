@@ -86,8 +86,31 @@ const getDailyBriefingFlow = ai.defineFlow(
     outputSchema: GetDailyBriefingOutputSchema,
   },
   async input => {
-    const {output: textOutput} = await briefingPrompt(input);
-    const briefingText = textOutput!.briefingText;
+    let textOutput;
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    while (attempts < maxAttempts) {
+        try {
+            const result = await briefingPrompt(input);
+            textOutput = result.output;
+            break; // Success, exit loop
+        } catch (error: any) {
+            attempts++;
+            if (error.message.includes('503') && attempts < maxAttempts) {
+                console.log(`Attempt ${attempts} failed with 503, retrying after delay...`);
+                await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempts))); // Exponential backoff
+            } else {
+                throw error; // Rethrow other errors or if max attempts reached
+            }
+        }
+    }
+      
+    if (!textOutput) {
+        throw new Error("Failed to get briefing text from AI after multiple attempts.");
+    }
+    
+    const briefingText = textOutput.briefingText;
 
     const { media } = await ai.generate({
       model: 'googleai/gemini-2.5-flash-preview-tts',
