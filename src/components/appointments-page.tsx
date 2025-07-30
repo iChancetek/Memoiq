@@ -16,6 +16,7 @@ import { useToast } from '@/hooks/use-toast';
 import { scheduleAppointment } from '@/ai/flows/schedule-appointment';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useTasks } from '@/contexts/task-context';
+import { useContacts } from '@/contexts/contact-context';
 
 export function AppointmentsPage() {
   const [request, setRequest] = React.useState('');
@@ -23,6 +24,7 @@ export function AppointmentsPage() {
   const [result, setResult] = React.useState<any>(null);
   const { toast } = useToast();
   const { tasks } = useTasks();
+  const { contacts } = useContacts();
 
   const handleSchedule = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,7 +37,7 @@ export function AppointmentsPage() {
         request,
         calendarEvents: JSON.stringify([]), // To be replaced with live data
         tasks: JSON.stringify(tasks),
-        contacts: JSON.stringify([]), // To be replaced with live data
+        contacts: JSON.stringify(contacts),
       });
       setResult(response);
     } catch (error) {

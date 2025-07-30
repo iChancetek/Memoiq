@@ -11,18 +11,13 @@ import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from './ui/skeleton';
+import { useContacts } from '@/contexts/contact-context';
 
 export function ContactsPage() {
-  const [contacts, setContacts] = React.useState<Contact[]>([]);
-  const [loading, setLoading] = React.useState(true);
+  const { contacts, loading } = useContacts();
   const [loadingInsights, setLoadingInsights] = React.useState(false);
   const [insights, setInsights] = React.useState<string | null>(null);
   const { toast } = useToast();
-
-  React.useEffect(() => {
-      // This will be replaced by a live data fetch from Firestore
-      setLoading(false);
-  }, []);
 
   const handleGetInsights = async () => {
     setLoadingInsights(true);

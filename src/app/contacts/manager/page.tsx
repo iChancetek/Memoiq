@@ -6,20 +6,21 @@ import { Button } from '@/components/ui/button';
 import { Loader2, Sparkles, Users } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getContactInsights } from '@/ai/flows/get-contact-insights';
-import { mockContacts } from '@/lib/data';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useContacts } from '@/contexts/contact-context';
 
 export default function ContactManagerRoute() {
   const [loading, setLoading] = React.useState(false);
   const [analysis, setAnalysis] = React.useState<any>(null);
   const { toast } = useToast();
+  const { contacts, loading: contactsLoading } = useContacts();
 
   const handleAnalyzeContacts = async () => {
     setLoading(true);
     setAnalysis(null);
     try {
       const response = await getContactInsights({
-        contacts: JSON.stringify(mockContacts),
+        contacts: JSON.stringify(contacts),
         currentDate: new Date().toISOString().split('T')[0],
       });
       setAnalysis(response);
@@ -45,7 +46,7 @@ export default function ContactManagerRoute() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={handleAnalyzeContacts} disabled={loading} className="w-full">
+          <Button onClick={handleAnalyzeContacts} disabled={loading || contactsLoading || contacts.length === 0} className="w-full">
             {loading ? <Loader2 className="animate-spin mr-2" /> : <Sparkles className="mr-2" />}
             {loading ? 'Analyzing...' : 'Generate Contact Suggestions'}
           </Button>

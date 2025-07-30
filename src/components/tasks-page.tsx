@@ -31,21 +31,21 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useTasks } from '@/contexts/task-context';
+import { useContacts } from '@/contexts/contact-context';
 import { Skeleton } from './ui/skeleton';
 
 export function TasksPage() {
   const { tasks, toggleTask, toggleSubtask, addTask, loading: tasksLoading } = useTasks();
+  const { contacts, loading: contactsLoading } = useContacts();
   const [newTaskTitle, setNewTaskTitle] = React.useState('');
   const [isParsing, setIsParsing] = React.useState(false);
   const {toast} = useToast();
 
-  // This will be replaced with live contact data in a future step.
-  const mockContacts: Contact[] = [];
   const contactsMap = React.useMemo(() => {
     const map = new Map<string, Contact>();
-    mockContacts.forEach(contact => map.set(contact.id, contact));
+    contacts.forEach(contact => map.set(contact.id, contact));
     return map;
-  }, []);
+  }, [contacts]);
 
   const handleAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +55,7 @@ export function TasksPage() {
     try {
       const result = await parseTaskString({
         taskString: newTaskTitle,
-        contacts: JSON.stringify(mockContacts),
+        contacts: JSON.stringify(contacts),
         context: `Existing tasks: ${JSON.stringify(tasks.map(t => t.title))}`
       });
       
@@ -99,7 +99,7 @@ export function TasksPage() {
               onChange={e => setNewTaskTitle(e.target.value)}
               placeholder="e.g., 'Follow up with Olivia Chen about Project Phoenix'"
               className="flex-grow"
-              disabled={isParsing}
+              disabled={isParsing || tasksLoading}
             />
             <Button type="submit" size="icon" aria-label="Add task" disabled={isParsing || tasksLoading}>
               {isParsing ? <Loader2 className="animate-spin" /> : <Sparkles />}

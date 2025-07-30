@@ -18,9 +18,11 @@ import {Plus, Sparkles, Loader2} from 'lucide-react';
 import { useTasks } from '@/contexts/task-context';
 import { useToast } from '@/hooks/use-toast';
 import { parseTaskString } from '@/ai/flows/parse-task-string';
+import { useContacts } from '@/contexts/contact-context';
 
 export function QuickAdd() {
   const { addTask, loading: tasksLoading } = useTasks();
+  const { contacts } = useContacts();
   const [isParsing, setIsParsing] = React.useState(false);
   const { toast } = useToast();
   const closeRef = React.useRef<HTMLButtonElement>(null);
@@ -35,7 +37,7 @@ export function QuickAdd() {
       try {
         const result = await parseTaskString({
           taskString: taskString,
-          contacts: JSON.stringify([]), // Will be replaced by live data
+          contacts: JSON.stringify(contacts), 
           context: `Existing tasks: ${JSON.stringify(useTasks.getState().tasks.map(t => t.title))}`
         });
 
