@@ -28,6 +28,7 @@ import {
   Smile,
   LogOut,
   User,
+  PenSquare,
 } from 'lucide-react';
 import {QuickAdd} from '@/components/quick-add';
 import {Button} from './ui/button';
@@ -72,6 +73,8 @@ export function MainLayout({children}: {children: React.ReactNode}) {
         return 'Contacts Manager';
       case '/ai-companion':
         return 'AI Companion';
+       case '/scribe':
+        return 'AI Scribe';
       case '/settings':
         return 'Settings';
       default:
@@ -125,6 +128,18 @@ export function MainLayout({children}: {children: React.ReactNode}) {
                 <Link href="/memos">
                   <Mic />
                   <span>Voice Memos</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+             <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname.startsWith('/scribe')}
+                tooltip="Scribe"
+              >
+                <Link href="/scribe">
+                  <PenSquare />
+                  <span>AI Scribe</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
