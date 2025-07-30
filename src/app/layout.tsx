@@ -1,9 +1,8 @@
 import type {Metadata} from 'next';
 import './globals.css';
 import {Toaster} from '@/components/ui/toaster';
-import { TaskProvider } from '@/contexts/task-context';
-import { AuthProvider } from '@/contexts/auth-context';
 import { AppContent } from '@/components/app-content';
+import { Providers } from '@/components/providers';
 
 export const metadata: Metadata = {
   title: 'MemoIQ',
@@ -30,14 +29,12 @@ export default function RootLayout({
         ></link>
       </head>
       <body className="font-sans antialiased">
-        <AuthProvider>
-            <TaskProvider>
-                <AppContent>
-                    {children}
-                </AppContent>
-                <Toaster />
-            </TaskProvider>
-        </AuthProvider>
+        <Providers>
+            <AppContent>
+                {children}
+            </AppContent>
+            <Toaster />
+        </Providers>
       </body>
     </html>
   );
