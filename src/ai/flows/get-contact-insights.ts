@@ -57,7 +57,36 @@ const getContactInsightsFlow = ai.defineFlow(
     outputSchema: GetContactInsightsOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    let output;
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    while (attempts < maxAttempts) {
+      try {
+        const result = await prompt(input);
+        output = result.output;
+        if (output) {
+            break; // Success
+        }
+        attempts++;
+        if (attempts >= maxAttempts) {
+            throw new Error('AI returned empty output after multiple attempts.');
+        }
+      } catch (error: any) {
+        attempts++;
+        if (error.message && error.message.includes('503') && attempts < maxAttempts) {
+          console.log(`Contact insights attempt ${attempts} failed with 503, retrying...`);
+          await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    if (!output) {
+      throw new Error('Failed to get contact insights after multiple attempts.');
+    }
+
+    return output;
   }
 );
