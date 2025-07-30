@@ -76,7 +76,6 @@ const getAppointmentAnalysisFlow = ai.defineFlow(
         if (attempts >= maxAttempts) {
             throw new Error('AI returned empty output after multiple attempts.');
         }
-        await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
       } catch (error: any) {
         attempts++;
         if (error.message && error.message.includes('503') && attempts < maxAttempts) {
