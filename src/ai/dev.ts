@@ -17,3 +17,4 @@ import '@/ai/flows/transcribe-audio.ts';
 import '@/ai/flows/parse-contact-string.ts';
 import '@/ai/flows/translate-text.ts';
 import '@/ai/flows/text-to-speech.ts';
+import '@/ai/flows/get-rag-response.ts';
