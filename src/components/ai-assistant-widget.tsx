@@ -18,7 +18,7 @@ interface Part {
     toolRequest?: { name: string; input: any };
 }
 interface Message {
-  role: 'user' | 'model';
+  role: 'user' | 'model' | 'tool';
   content: Part[];
 }
 type RecordingState = 'idle' | 'recording' | 'processing';

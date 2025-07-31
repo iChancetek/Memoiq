@@ -35,7 +35,7 @@ const getTasks = ai.defineTool(
         query = query.where('completed', '==', status === 'completed');
     }
     const snapshot = await query.get();
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Task);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as any) as Task[];
   }
 );
 
@@ -56,7 +56,7 @@ const getContacts = ai.defineTool(
         query = query.where('name', '==', name);
     }
     const snapshot = await query.get();
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Contact);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as any) as Contact[];
   }
 );
 
@@ -91,8 +91,8 @@ const getCalendarEvents = ai.defineTool(
             id: doc.id,
             startTime: (data.startTime as FirebaseFirestore.Timestamp).toDate(),
             endTime: (data.endTime as FirebaseFirestore.Timestamp).toDate(),
-        } as CalendarEvent
-    });
+        } as any;
+    }) as CalendarEvent[];
   }
 );
 
@@ -186,7 +186,8 @@ const getRagResponseFlow = ai.defineFlow(
     // Inject userId into the input of every tool request in the history.
     // The AI model doesn't know the userId, so we add it here.
     const historyWithUserId = history.map(message => {
-        if (message.content) {
+        // IMPORTANT: Ensure message.content is an array before mapping.
+        if (Array.isArray(message.content)) {
             const newContent = message.content.map(part => {
                 if (part.toolRequest) {
                     return {
