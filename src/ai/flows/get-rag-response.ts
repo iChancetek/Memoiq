@@ -200,15 +200,7 @@ Your capabilities:
 Today's date is ${format(new Date(), 'EEEE, MMMM d, yyyy')}.
 
 Conversation History:
-{{#each history}}
-  {{#if (eq role 'model')}}
-    iSkylar: {{content.[0].text}}
-  {{else if (eq role 'user')}}
-    User: {{content.[0].text}}
-  {{else if (eq role 'tool')}}
-    Tool call: {{content.[0].toolRequest.name}} with input {{content.[0].toolRequest.input}} -> returned {{content.[0].toolResponse.output}}
-  {{/if}}
-{{/each}}
+{{{history}}}
 `,
   output: {schema: z.object({text: z.string()})},
 });
