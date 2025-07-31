@@ -9,7 +9,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { TaskSchema, ContactSchema, CalendarEventSchema, Task, Contact, CalendarEvent } from '@/lib/data';
+import { TaskSchema, ContactSchema, CalendarEventSchema, MemoSchema, ScribeEntrySchema, Task, Contact, CalendarEvent, Memo, ScribeEntry } from '@/lib/data';
 import { format } from 'date-fns';
 import wav from 'wav';
 import { getFirestore } from 'firebase-admin/firestore';
@@ -63,7 +63,7 @@ const getContacts = ai.defineTool(
 const getCalendarEvents = ai.defineTool(
   {
     name: 'getCalendarEvents',
-    description: "Retrieve calendar events for a given date range. Default is today.",
+    description: "Retrieve calendar events or appointments for a given date range. Default is today.",
     inputSchema: z.object({
         userId: z.string().describe("The user's unique ID."),
         startDate: z.string().optional().describe("Start date in YYYY-MM-DD format."),
@@ -95,6 +95,53 @@ const getCalendarEvents = ai.defineTool(
     }) as CalendarEvent[];
   }
 );
+
+const getMemos = ai.defineTool(
+  {
+    name: 'getMemos',
+    description: 'Retrieve a list of the user\'s voice memos, including their titles and summaries.',
+    inputSchema: z.object({
+      userId: z.string().describe("The user's unique ID."),
+    }),
+    outputSchema: z.array(MemoSchema),
+  },
+  async ({ userId }) => {
+    console.log('Tool: getMemos called');
+    const snapshot = await db.collection(`users/${userId}/memos`).orderBy('createdAt', 'desc').get();
+    return snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        ...data,
+        id: doc.id,
+        createdAt: (data.createdAt as FirebaseFirestore.Timestamp)?.toDate(),
+      } as any;
+    }) as Memo[];
+  }
+);
+
+const getScribeEntries = ai.defineTool(
+  {
+    name: 'getScribeEntries',
+    description: 'Retrieve a list of the user\'s AI Scribe entries, which are recordings with transcriptions.',
+    inputSchema: z.object({
+      userId: z.string().describe("The user's unique ID."),
+    }),
+    outputSchema: z.array(ScribeEntrySchema),
+  },
+  async ({ userId }) => {
+    console.log('Tool: getScribeEntries called');
+    const snapshot = await db.collection(`users/${userId}/scribeEntries`).orderBy('createdAt', 'desc').get();
+    return snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        ...data,
+        id: doc.id,
+        createdAt: (data.createdAt as FirebaseFirestore.Timestamp)?.toDate(),
+      } as any;
+    }) as ScribeEntry[];
+  }
+);
+
 
 const PartSchema = z.object({
   text: z.string().optional(),
@@ -136,19 +183,32 @@ export async function getRagResponse(
 const ragPrompt = ai.definePrompt({
   name: 'ragPrompt',
   model: 'googleai/gemini-1.5-pro',
-  tools: [getTasks, getContacts, getCalendarEvents],
+  tools: [getTasks, getContacts, getCalendarEvents, getMemos, getScribeEntries],
   prompt: `You are iSkylar, a friendly and highly intelligent AI Assistant for the MemoIQ platform.
 
 Your capabilities:
-1.  **Dynamic Personal Knowledge Base**: You have access to the user's real-time data through the tools provided (getTasks, getContacts, getCalendarEvents). You MUST pass the user's ID to these tools.
-2.  **Intelligent Responses**: Use the available tools to answer user questions about their schedule, tasks, and contacts. You must decide when to use a tool based on the user's query. For example, if a user asks "What's on my schedule today?", you should use the getCalendarEvents tool.
-3.  **Feature Support**: You are also an expert on how to use the MemoIQ application itself. Answer questions about app functionality clearly and concisely.
+1.  **Dynamic Personal Knowledge Base**: You have access to the user's real-time data through the tools provided. You MUST pass the user's ID to these tools.
+    - 'getTasks': To answer questions about to-do items.
+    - 'getContacts': To retrieve information about the user's contacts.
+    - 'getCalendarEvents': To answer about the user's schedule, calendar, or appointments.
+    - 'getMemos': To retrieve and answer questions about the user's voice memos.
+    - 'getScribeEntries': To get information from the user's transcribed recordings from AI Scribe.
+2.  **Intelligent Responses**: Use the available tools to answer user questions. You must decide when to use a tool based on the user's query.
+3.  **Feature Support**: You are also an expert on how to use the MemoIQ application itself. Answer questions about app functionality clearly and concisely. You can explain what the Dashboard, Voice Memos, AI Scribe, Tasks, Calendar, Appointments, Contacts, and AI Companion pages do.
 4.  **Conversational Tone**: Your tone should be warm, helpful, and professional.
 
 Today's date is ${format(new Date(), 'EEEE, MMMM d, yyyy')}.
 
 Conversation History:
-{{{history}}}
+{{#each history}}
+  {{#if (eq role 'model')}}
+    iSkylar: {{content.[0].text}}
+  {{else if (eq role 'user')}}
+    User: {{content.[0].text}}
+  {{else if (eq role 'tool')}}
+    Tool call: {{content.[0].toolRequest.name}} with input {{content.[0].toolRequest.input}} -> returned {{content.[0].toolResponse.output}}
+  {{/if}}
+{{/each}}
 `,
   output: {schema: z.object({text: z.string()})},
 });
