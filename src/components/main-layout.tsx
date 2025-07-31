@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -95,6 +96,7 @@ export function MainLayout({children}: {children: React.ReactNode}) {
   }
 
   const getInitials = (name: string) => {
+    if (!name) return '';
     return name.split(' ').map(n => n[0]).join('');
   }
 
