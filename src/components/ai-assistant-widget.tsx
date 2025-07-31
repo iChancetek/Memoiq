@@ -14,8 +14,8 @@ import { transcribeAudio } from '@/ai/flows/transcribe-audio';
 import { useAuth } from '@/contexts/auth-context';
 
 interface Message {
-  role: 'user' | 'assistant' | 'model';
-  content: string;
+  role: 'user' | 'model';
+  content: { text: string }[];
 }
 type RecordingState = 'idle' | 'recording' | 'processing';
 
@@ -69,23 +69,16 @@ export function AIAssistantWidget() {
 
     stopSpeaking(); 
 
-    const userMessage: Message = { role: 'user', content: input };
-    const newMessages = [...messages, userMessage];
-    
-    // Map to the format expected by the Genkit flow
-    const historyForAI = newMessages.map(msg => ({
-      role: msg.role === 'assistant' ? 'model' : 'user', // Map roles correctly
-      content: [{ text: msg.content }]
-    }));
+    const userMessage: Message = { role: 'user', content: [{ text: input }] };
+    const newMessages: Message[] = [...messages, userMessage];
 
     setMessages(newMessages);
     setInput('');
     setLoading(true);
 
     try {
-      // @ts-ignore
-      const response = await getRagResponse({ history: historyForAI });
-      const assistantMessage: Message = { role: 'assistant', content: response.text };
+      const response = await getRagResponse({ history: newMessages });
+      const assistantMessage: Message = { role: 'model', content: [{text: response.text}] };
       setMessages(prev => [...prev, assistantMessage]);
       
       if (response.audioDataUri) {
@@ -102,6 +95,7 @@ export function AIAssistantWidget() {
         title: 'Assistant Error',
         description: 'Failed to get a response from iSkylar.',
       });
+      // Revert optimistic update
       setMessages(messages);
     } finally {
       setLoading(false);
@@ -186,14 +180,14 @@ export function AIAssistantWidget() {
                         <div className="space-y-6">
                             {messages.map((message, index) => (
                                 <div key={index} className={`flex items-start gap-3 ${message.role === 'user' ? 'justify-end' : ''}`}>
-                                    {message.role === 'assistant' && (
+                                    {message.role === 'model' && (
                                         <Avatar className="h-8 w-8">
                                             <AvatarImage src="https://placehold.co/100x100.png" data-ai-hint="woman face" />
                                             <AvatarFallback>AI</AvatarFallback>
                                         </Avatar>
                                     )}
                                     <div className={`rounded-lg p-3 max-w-sm text-sm ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                                        <p className="whitespace-pre-wrap">{message.content}</p>
+                                        <p className="whitespace-pre-wrap">{message.content[0].text}</p>
                                     </div>
                                     {message.role === 'user' && (
                                         <Avatar className="h-8 w-8">

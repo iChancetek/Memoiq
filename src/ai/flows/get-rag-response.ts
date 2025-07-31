@@ -35,6 +35,8 @@ const getTasks = ai.defineTool(
   },
   async ({status}) => {
     console.log('Tool: getTasks called with status:', status);
+    // This is client-side Firestore query, which will not work in a server environment (Genkit flow).
+    // This needs to be replaced with firebase-admin
     const tasksRef = collection(db, 'tasks'); // Simplified
     const q = status ? query(tasksRef, where('completed', '==', status === 'completed')) : query(tasksRef);
     const snapshot = await getDocs(q);
@@ -92,14 +94,10 @@ const PartSchema = z.object({
         name: z.string(),
         input: z.any(),
     }).optional(),
-    toolResponse: z.object({
-        name: z.string(),
-        output: z.any(),
-    }).optional(),
 });
 
 const MessageSchema = z.object({
-    role: z.enum(['user', 'model', 'tool']),
+    role: z.enum(['user', 'model']),
     content: z.array(PartSchema),
 });
 
