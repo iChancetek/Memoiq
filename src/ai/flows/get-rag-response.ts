@@ -14,6 +14,11 @@ import { format } from 'date-fns';
 import wav from 'wav';
 import { getFirestore } from 'firebase-admin/firestore';
 import { adminApp } from '@/lib/firebase-admin';
+import Handlebars from 'handlebars';
+
+Handlebars.registerHelper('jsonStringify', function (context) {
+  return JSON.stringify(context);
+});
 
 const db = getFirestore(adminApp);
 
@@ -150,7 +155,7 @@ Today's date is ${format(new Date(), 'EEEE, MMMM d, yyyy')}.
 Conversation History:
 {{#each history}}
 {{#if (eq role 'tool')}}
-tool: (name: {{content.0.toolResponse.name}}, output: {{content.0.toolResponse.output}})
+tool: (name: {{content.0.toolResponse.name}}, output: {{jsonStringify content.0.toolResponse.output}})
 {{else}}
 {{role}}: {{content.0.text}}
 {{/if}}
