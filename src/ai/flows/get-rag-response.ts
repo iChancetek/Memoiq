@@ -91,20 +91,25 @@ const getCalendarEvents = ai.defineTool(
   }
 );
 
+const PartSchema = z.object({
+    text: z.string().optional(),
+    toolRequest: z.object({
+        name: z.string(),
+        input: z.any(),
+    }).optional(),
+    toolResponse: z.object({
+        name: z.string(),
+        output: z.any(),
+    }).optional(),
+});
+
+const MessageSchema = z.object({
+    role: z.enum(['user', 'assistant', 'tool']),
+    content: z.array(PartSchema),
+});
 
 const GetRagResponseInputSchema = z.object({
-  history: z
-    .array(
-      z.object({
-        role: z.enum(['user', 'assistant', 'tool']),
-        content: z.array(z.object({
-            text: z.string().optional(),
-            toolRequest: z.any().optional(),
-            toolResponse: z.any().optional(),
-        })),
-      })
-    )
-    .describe('The conversation history, including the latest user message.'),
+    history: z.array(MessageSchema).describe('The conversation history, including the latest user message.'),
 });
 export type GetRagResponseInput = z.infer<typeof GetRagResponseInputSchema>;
 
@@ -135,7 +140,6 @@ Your capabilities:
 4.  **Conversational Tone**: Your tone should be warm, helpful, and professional.
 
 Today's date is ${format(new Date(), 'EEEE, MMMM d, yyyy')}.`,
-  input: {schema: z.object({ history: GetRagResponseInputSchema.shape.history })},
   output: {schema: z.object({ text: z.string() })},
 });
 
@@ -191,9 +195,10 @@ const getRagResponseFlow = ai.defineFlow(
                 console.log(`RAG response attempt ${attempts} failed with 503, retrying...`);
                 await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts))); 
             } else if (attempts >= maxAttempts) {
+                console.error('Final RAG response attempt failed.', error);
                 throw new Error('Failed to get a response from the AI assistant after multiple attempts.');
             } else {
-                 console.log(`RAG response attempt ${attempts} failed, retrying...`);
+                 console.log(`RAG response attempt ${attempts} failed, retrying...`, error);
                  await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
             }
         }
@@ -231,3 +236,5 @@ const getRagResponseFlow = ai.defineFlow(
     };
   }
 );
+
+    
