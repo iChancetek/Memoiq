@@ -187,11 +187,22 @@ const getRagResponseFlow = ai.defineFlow(
     // The AI model doesn't know the userId, so we add it here.
     const historyWithUserId = history.map(message => {
         if (message.content) {
-            message.content.forEach(part => {
+            const newContent = message.content.map(part => {
                 if (part.toolRequest) {
-                    part.toolRequest.input.userId = userId;
+                    return {
+                        ...part,
+                        toolRequest: {
+                            ...part.toolRequest,
+                            input: {
+                                ...part.toolRequest.input,
+                                userId: userId,
+                            }
+                        }
+                    };
                 }
+                return part;
             });
+            return { ...message, content: newContent };
         }
         return message;
     });
