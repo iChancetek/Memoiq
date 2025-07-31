@@ -281,12 +281,10 @@ export function MainLayout({children}: {children: React.ReactNode}) {
              </Button>
              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                       <Avatar className="h-8 w-8">
-                         <AvatarImage src={user.photoURL ?? ''} alt={user.displayName ?? ''} />
-                         <AvatarFallback>{user.displayName}</AvatarFallback>
-                       </Avatar>
-                    </Button>
+                  <Button variant="ghost" className="gap-2 px-2">
+                    <User className="h-5 w-5" />
+                    <span className="hidden sm:inline-block">{user.displayName}</span>
+                  </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuLabel>
