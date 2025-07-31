@@ -2,6 +2,7 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { AppContent } from '@/components/app-content';
 import { Providers } from '@/components/providers';
+import { ThemeProvider } from '@/contexts/theme-context';
 
 export const metadata: Metadata = {
   title: 'MemoIQ',
@@ -14,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link
@@ -28,11 +29,18 @@ export default function RootLayout({
         ></link>
       </head>
       <body className="font-sans antialiased">
-        <Providers>
-          <AppContent>
-            {children}
-          </AppContent>
-        </Providers>
+        <ThemeProvider
+            attribute="class"
+            defaultTheme="dark"
+            enableSystem
+            disableTransitionOnChange
+        >
+          <Providers>
+            <AppContent>
+              {children}
+            </AppContent>
+          </Providers>
+        </ThemeProvider>
       </body>
     </html>
   );

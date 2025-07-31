@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -7,12 +8,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Moon, Sun } from 'lucide-react';
 import { Switch } from './ui/switch';
+import { useTheme } from '@/contexts/theme-context';
 
 export function SettingsPage() {
   const { user, updateUserProfile, updateUserPassword, loading } = useAuth();
   const { toast } = useToast();
+  const { theme, setTheme } = useTheme();
   
   const [displayName, setDisplayName] = React.useState(user?.displayName || '');
   const [email, setEmail] = React.useState(user?.email || '');
@@ -41,6 +44,10 @@ export function SettingsPage() {
     } else {
         toast({ variant: 'destructive', title: "Error", description: "Passwords do not match." });
     }
+  };
+  
+  const handleThemeChange = (isChecked: boolean) => {
+    setTheme(isChecked ? 'dark' : 'light');
   };
 
   return (
@@ -119,11 +126,18 @@ export function SettingsPage() {
                 <Switch id="voice-greeting" defaultChecked />
             </div>
              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
+                <div className='flex items-center space-x-2'>
+                    <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                    <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
                     <Label htmlFor="theme">Theme</Label>
-                    <p className="text-sm text-muted-foreground">Current theme is Dark.</p>
+                    <p className="text-sm text-muted-foreground capitalize">({theme} mode)</p>
                 </div>
-                <Button variant="outline" disabled>Switch to Light</Button>
+                <Switch
+                    id="theme-switch"
+                    checked={theme === 'dark'}
+                    onCheckedChange={handleThemeChange}
+                    aria-label="Toggle dark mode"
+                />
             </div>
         </CardContent>
       </Card>
