@@ -150,7 +150,7 @@ Today's date is ${format(new Date(), 'EEEE, MMMM d, yyyy')}.
 Conversation History:
 {{#each history}}
 {{#if (eq role 'tool')}}
-tool: (name: {{content.0.toolResponse.name}}, output: {{jsonStringify content.0.toolResponse.output}})
+tool: (name: {{content.0.toolResponse.name}}, output: {{content.0.toolResponse.output}})
 {{else}}
 {{role}}: {{content.0.text}}
 {{/if}}
@@ -231,5 +231,3 @@ const getRagResponseFlow = ai.defineFlow(
     };
   }
 );
-
-    
