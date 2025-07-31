@@ -45,6 +45,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useLanguage } from '@/contexts/language-context';
+import { AIAssistantWidget } from './ai-assistant-widget';
 
 export function MainLayout({children}: {children: React.ReactNode}) {
   const pathname = usePathname();
@@ -281,10 +282,10 @@ export function MainLayout({children}: {children: React.ReactNode}) {
              </Button>
              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="gap-2 px-2">
-                    <User className="h-5 w-5" />
-                    <span className="hidden sm:inline-block">{user.displayName}</span>
-                  </Button>
+                    <Button variant="ghost" className="gap-2 px-2">
+                        <User className="h-5 w-5" />
+                        <span className="hidden sm:inline-block">{user.displayName}</span>
+                    </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuLabel>
@@ -303,6 +304,7 @@ export function MainLayout({children}: {children: React.ReactNode}) {
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">
           {children}
         </main>
+        <AIAssistantWidget />
       </SidebarInset>
     </SidebarProvider>
   );

@@ -19,6 +19,7 @@ import {
 import {firebaseApp} from '@/lib/firebase';
 import {Task, Contact, CalendarEvent} from '@/lib/data';
 import {format} from 'date-fns';
+import wav from 'wav';
 
 const db = getFirestore(firebaseApp);
 
@@ -105,6 +106,7 @@ export type GetRagResponseInput = z.infer<typeof GetRagResponseInputSchema>;
 
 const GetRagResponseOutputSchema = z.object({
   text: z.string().describe('The text response from iSkylar.'),
+  audioDataUri: z.string().describe('The text-to-speech audio of the response as a base64-encoded data URI.'),
 });
 export type GetRagResponseOutput = z.infer<
   typeof GetRagResponseOutputSchema
@@ -136,8 +138,35 @@ Conversation History:
 {{/each}}
 assistant:`,
   input: {schema: GetRagResponseInputSchema},
-  output: {schema: GetRagResponseOutputSchema},
+  output: {schema: z.object({ text: z.string() })},
 });
+
+async function toWav(
+  pcmData: Buffer,
+  channels = 1,
+  rate = 24000,
+  sampleWidth = 2
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const writer = new wav.Writer({
+      channels,
+      sampleRate: rate,
+      bitDepth: sampleWidth * 8,
+    });
+
+    let bufs = [] as any[];
+    writer.on('error', reject);
+    writer.on('data', function (d) {
+      bufs.push(d);
+    });
+    writer.on('end', function () {
+      resolve(Buffer.concat(bufs).toString('base64'));
+    });
+
+    writer.write(pcmData);
+    writer.end();
+  });
+}
 
 const getRagResponseFlow = ai.defineFlow(
   {
@@ -147,6 +176,33 @@ const getRagResponseFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await ragPrompt(input);
-    return output!;
+    const responseText = output!.text;
+
+    const { media } = await ai.generate({
+      model: 'googleai/gemini-2.5-flash-preview-tts',
+      config: {
+        responseModalities: ['AUDIO'],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: 'Algenib' },
+          },
+        },
+      },
+      prompt: responseText,
+    });
+
+    if (!media) {
+      throw new Error('no media returned');
+    }
+    const audioBuffer = Buffer.from(
+      media.url.substring(media.url.indexOf(',') + 1),
+      'base64'
+    );
+    const audioDataUri = 'data:audio/wav;base64,' + (await toWav(audioBuffer));
+
+    return {
+      text: responseText,
+      audioDataUri,
+    };
   }
 );
