@@ -268,5 +268,3 @@ Today's date is ${format(new Date(), 'EEEE, MMMM d, yyyy')}.
     };
   }
 );
-
-    
