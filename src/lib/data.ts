@@ -1,4 +1,5 @@
 import type { Timestamp } from 'firebase/firestore';
+import { z } from 'zod';
 
 export type Memo = {
   id: string; // Firestore document ID
@@ -10,44 +11,50 @@ export type Memo = {
   createdAt: Timestamp;
 };
 
-export type Subtask = {
-  id: string; // Using string for potential unique IDs
-  title: string;
-  completed: boolean;
-};
+export const SubtaskSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  completed: z.boolean(),
+});
+export type Subtask = z.infer<typeof SubtaskSchema>;
 
-export type Task = {
-  id: string; // Firestore document ID
-  userId: string;
-  title: string;
-  completed: boolean;
-  dueDate: string; // YYYY-MM-DD
-  subtasks?: Subtask[];
-  contactIds?: string[];
-  createdAt: Timestamp;
-};
 
-export type CalendarEvent = {
-  id: string; // Firestore document ID
-  userId: string;
-  title: string;
-  startTime: Date;
-  endTime: Date;
-  location: string;
-  createdAt: Timestamp;
-};
+export const TaskSchema = z.object({
+    id: z.string(),
+    userId: z.string(),
+    title: z.string(),
+    completed: z.boolean(),
+    dueDate: z.string(),
+    subtasks: z.array(SubtaskSchema).optional(),
+    contactIds: z.array(z.string()).optional(),
+    createdAt: z.any(),
+});
+export type Task = z.infer<typeof TaskSchema>;
 
-export type Contact = {
-  id: string; // Firestore document ID
-  userId: string;
-  name: string;
-  title: string;
-  company: string;
-  email: string;
-  lastContact: string; // YYYY-MM-DD
-  notes: string;
-  createdAt: Timestamp;
-};
+
+export const CalendarEventSchema = z.object({
+    id: z.string(),
+    userId: z.string(),
+    title: z.string(),
+    startTime: z.date(),
+    endTime: z.date(),
+    location: z.string(),
+    createdAt: z.any(),
+});
+export type CalendarEvent = z.infer<typeof CalendarEventSchema>;
+
+export const ContactSchema = z.object({
+    id: z.string(),
+    userId: z.string(),
+    name: z.string(),
+    title: z.string(),
+    company: z.string(),
+    email: z.string(),
+    lastContact: z.string(),
+    notes: z.string(),
+    createdAt: z.any(),
+});
+export type Contact = z.infer<typeof ContactSchema>;
 
 
 export const mockContacts: Omit<Contact, 'id' | 'userId' | 'createdAt'>[] = [

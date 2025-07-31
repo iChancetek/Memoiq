@@ -9,7 +9,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { Task, Contact, CalendarEvent } from '@/lib/data';
+import { TaskSchema, ContactSchema, CalendarEventSchema, Task, Contact, CalendarEvent } from '@/lib/data';
 import { format } from 'date-fns';
 import wav from 'wav';
 import { getFirestore } from 'firebase-admin/firestore';
@@ -26,7 +26,7 @@ const getTasks = ai.defineTool(
       userId: z.string().describe("The user's unique ID."),
       status: z.enum(['completed', 'pending']).optional().describe('The status of tasks to retrieve.'),
     }),
-    outputSchema: z.array(z.custom<Task>()),
+    outputSchema: z.array(TaskSchema),
   },
   async ({userId, status}) => {
     console.log('Tool: getTasks called with status:', status);
@@ -35,7 +35,7 @@ const getTasks = ai.defineTool(
         query = query.where('completed', '==', status === 'completed');
     }
     const snapshot = await query.get();
-    return snapshot.docs.map(doc => doc.data() as Task);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Task);
   }
 );
 
@@ -47,7 +47,7 @@ const getContacts = ai.defineTool(
       userId: z.string().describe("The user's unique ID."),
       name: z.string().optional().describe("The name of the contact to search for."),
     }),
-    outputSchema: z.array(z.custom<Contact>()),
+    outputSchema: z.array(ContactSchema),
   },
   async ({userId, name}) => {
     console.log('Tool: getContacts called with name:', name);
@@ -56,7 +56,7 @@ const getContacts = ai.defineTool(
         query = query.where('name', '==', name);
     }
     const snapshot = await query.get();
-    return snapshot.docs.map(doc => doc.data() as Contact);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Contact);
   }
 );
 
@@ -69,7 +69,7 @@ const getCalendarEvents = ai.defineTool(
         startDate: z.string().optional().describe("Start date in YYYY-MM-DD format."),
         endDate: z.string().optional().describe("End date in YYYY-MM-DD format."),
     }),
-    outputSchema: z.array(z.custom<CalendarEvent>()),
+    outputSchema: z.array(CalendarEventSchema),
   },
   async ({userId, startDate, endDate}) => {
     console.log('Tool: getCalendarEvents called with:', {startDate, endDate});
@@ -88,6 +88,7 @@ const getCalendarEvents = ai.defineTool(
         const data = doc.data();
         return {
             ...data,
+            id: doc.id,
             startTime: (data.startTime as FirebaseFirestore.Timestamp).toDate(),
             endTime: (data.endTime as FirebaseFirestore.Timestamp).toDate(),
         } as CalendarEvent
@@ -249,5 +250,3 @@ const getRagResponseFlow = ai.defineFlow(
     };
   }
 );
-
-    
