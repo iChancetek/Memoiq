@@ -134,17 +134,7 @@ Your capabilities:
 3.  **Feature Support**: You are also an expert on how to use the MemoIQ application itself. Answer questions about app functionality clearly and concisely.
 4.  **Conversational Tone**: Your tone should be warm, helpful, and professional.
 
-Today's date is ${format(new Date(), 'EEEE, MMMM d, yyyy')}.
-
-Conversation History:
-{{#each history}}
-{{#if (eq role 'user')}}
-user: {{{content.[0].text}}}
-{{else if (eq role 'assistant')}}
-assistant: {{{content.[0].text}}}
-{{/if}}
-{{/each}}
-assistant:`,
+Today's date is ${format(new Date(), 'EEEE, MMMM d, yyyy')}.`,
   input: {schema: z.object({ history: GetRagResponseInputSchema.shape.history })},
   output: {schema: z.object({ text: z.string() })},
 });
