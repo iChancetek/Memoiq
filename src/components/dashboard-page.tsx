@@ -47,6 +47,9 @@ function IskylarBriefingCard() {
 
     try {
       const currentHour = new Date().getHours();
+      // @ts-ignore
+      const lang = user.settings?.language || 'en';
+
       const greetingPromise = getWelcomeGreeting({
         displayName: user.displayName?.split(' ')[0] || 'there',
         hour: currentHour,
@@ -57,6 +60,8 @@ function IskylarBriefingCard() {
         memos: JSON.stringify(memos.map(m => `${m.title}: ${m.summary}`)),
         tasks: JSON.stringify(tasks.map(t => `${t.title} (Due: ${t.dueDate})`)),
         calendarEvents: JSON.stringify(events.map(e => `${e.title} at ${format(e.startTime, 'p')}`)),
+        // @ts-ignore
+        language: lang,
       });
 
       const [greeting, dailyBriefing] = await Promise.all([greetingPromise, briefingPromise]);

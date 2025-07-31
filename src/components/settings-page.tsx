@@ -8,12 +8,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Moon, Sun } from 'lucide-react';
+import { Loader2, Moon, Sun, Languages } from 'lucide-react';
 import { Switch } from './ui/switch';
 import { useTheme } from '@/contexts/theme-context';
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 
 export function SettingsPage() {
-  const { user, updateUserProfile, updateUserPassword, loading } = useAuth();
+  const { user, updateUserProfile, updateUserPassword, loading, updateUserSettings } = useAuth();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
   
@@ -21,6 +22,8 @@ export function SettingsPage() {
   const [email, setEmail] = React.useState(user?.email || '');
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
+  // @ts-ignore
+  const [language, setLanguage] = React.useState(user?.settings?.language || 'en');
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,6 +52,13 @@ export function SettingsPage() {
   const handleThemeChange = (isChecked: boolean) => {
     setTheme(isChecked ? 'dark' : 'light');
   };
+
+  const handleSettingsUpdate = async (key: string, value: any) => {
+      // @ts-ignore
+      const newSettings = { ...user.settings, [key]: value };
+      await updateUserSettings(newSettings);
+      toast({ title: "Preferences Updated", description: "Your new settings have been saved." });
+  }
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
@@ -118,12 +128,41 @@ export function SettingsPage() {
           <CardDescription>Manage your application preferences.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-           <div className="flex items-center justify-between p-4 border rounded-lg">
+            <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                    <Label htmlFor="language-group">Language</Label>
+                    <p className="text-sm text-muted-foreground">Set the language for AI interactions.</p>
+                </div>
+                <RadioGroup 
+                    defaultValue={language}
+                    id="language-group"
+                    className="flex items-center gap-4"
+                    onValueChange={(value) => {
+                        setLanguage(value);
+                        handleSettingsUpdate('language', value);
+                    }}
+                >
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="en" id="lang-en" />
+                        <Label htmlFor="lang-en">English</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="es" id="lang-es" />
+                        <Label htmlFor="lang-es">Español</Label>
+                    </div>
+                </RadioGroup>
+            </div>
+            <div className="flex items-center justify-between p-4 border rounded-lg">
                 <div>
                     <Label htmlFor="voice-greeting">AI Voice Greeting</Label>
                     <p className="text-sm text-muted-foreground">Enable a voice greeting on login.</p>
                 </div>
-                <Switch id="voice-greeting" defaultChecked />
+                <Switch 
+                    id="voice-greeting" 
+                    // @ts-ignore
+                    defaultChecked={user?.settings?.enableVoiceGreeting} 
+                    onCheckedChange={(checked) => handleSettingsUpdate('enableVoiceGreeting', checked)}
+                />
             </div>
              <div className="flex items-center justify-between p-4 border rounded-lg">
                 <div className='flex items-center space-x-2'>

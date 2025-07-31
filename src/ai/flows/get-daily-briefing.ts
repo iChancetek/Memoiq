@@ -17,6 +17,7 @@ const GetDailyBriefingInputSchema = z.object({
   memos: z.string().describe('A JSON string of recent user memos.'),
   tasks: z.string().describe('A JSON string of user tasks for today.'),
   calendarEvents: z.string().describe('A JSON string of user calendar events for today.'),
+  language: z.enum(['en', 'es']).optional().default('en').describe('The language for the briefing.'),
 });
 export type GetDailyBriefingInput = z.infer<typeof GetDailyBriefingInputSchema>;
 
@@ -37,21 +38,22 @@ const briefingPrompt = ai.definePrompt({
   input: {schema: GetDailyBriefingInputSchema},
   output: {schema: z.object({briefingText: z.string()})},
   model: 'googleai/gemini-1.5-flash',
-  prompt: `You are iSkylar, an AI assistant. Generate a concise and friendly daily briefing for the user based on their schedule.
+  prompt: `You are iSkylar, an AI assistant. Generate a concise and friendly daily briefing for the user based on their schedule, in the specified language.
 
+Language: {{{language}}}
 User Name: {{{displayName}}}
 Memos: {{{memos}}}
 Tasks: {{{tasks}}}
 Calendar Events: {{{calendarEvents}}}
 
 Instructions:
-1. Start with a warm and brief intro.
-2. Summarize the number of events, tasks, and any other important items.
-3. Mention the first important event of the day.
+1. Start with a warm and brief intro in the specified language.
+2. Summarize the number of events, tasks, and any other important items in the specified language.
+3. Mention the first important event of the day in the specified language.
 4. Keep the entire briefing to 2-3 short sentences. Be conversational and encouraging.
-5. If there is nothing scheduled, provide a positive, encouraging message for the day.
+5. If there is nothing scheduled, provide a positive, encouraging message for the day in the specified language.
 
-Briefing Text:`,
+Briefing Text (in {{{language}}}):`,
 });
 
 async function toWav(
