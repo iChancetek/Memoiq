@@ -209,8 +209,7 @@ const getRagResponseFlow = ai.defineFlow(
     const llmResponse = await ai.generate({
       model: 'googleai/gemini-1.5-pro',
       tools: [getTasks, getContacts, getCalendarEvents, getMemos, getScribeEntries],
-      prompt: {
-        system: `You are iSkylar, a friendly and highly intelligent AI Assistant for the MemoIQ platform.
+      system: `You are iSkylar, a friendly and highly intelligent AI Assistant for the MemoIQ platform.
 
 Your capabilities:
 1.  **Dynamic Personal Knowledge Base**: You MUST use the tools provided to access the user's real-time data.
@@ -225,9 +224,8 @@ Your capabilities:
 
 Today's date is ${format(new Date(), 'EEEE, MMMM d, yyyy')}.
 `,
-        history: history,
-        context: { userId }
-      },
+      history: history,
+      context: { userId },
       output: {schema: z.object({text: z.string()})},
     });
 
