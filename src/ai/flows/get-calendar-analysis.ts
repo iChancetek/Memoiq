@@ -34,6 +34,7 @@ const prompt = ai.definePrompt({
   name: 'getCalendarAnalysisPrompt',
   input: {schema: GetCalendarAnalysisInputSchema},
   output: {schema: GetCalendarAnalysisOutputSchema},
+  model: 'googleai/gemini-1.5-flash',
   prompt: `You are a world-class executive assistant and scheduling expert. Your goal is to analyze a user's calendar and task list to provide a strategic briefing for the upcoming week.
 
 Current Date: {{{currentDate}}}
