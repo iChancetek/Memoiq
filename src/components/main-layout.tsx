@@ -284,7 +284,7 @@ export function MainLayout({children}: {children: React.ReactNode}) {
                     <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                        <Avatar className="h-8 w-8">
                          <AvatarImage src={user.photoURL ?? ''} alt={user.displayName ?? ''} />
-                         <AvatarFallback>{user.displayName?.[0]}</AvatarFallback>
+                         <AvatarFallback>{user.displayName}</AvatarFallback>
                        </Avatar>
                     </Button>
                 </DropdownMenuTrigger>
