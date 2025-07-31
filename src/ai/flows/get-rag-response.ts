@@ -96,8 +96,12 @@ const GetRagResponseInputSchema = z.object({
   history: z
     .array(
       z.object({
-        role: z.enum(['user', 'assistant']),
-        content: z.string(),
+        role: z.enum(['user', 'assistant', 'tool']),
+        content: z.array(z.object({
+            text: z.string().optional(),
+            toolRequest: z.any().optional(),
+            toolResponse: z.any().optional(),
+        })),
       })
     )
     .describe('The conversation history, including the latest user message.'),
@@ -134,10 +138,14 @@ Today's date is ${format(new Date(), 'EEEE, MMMM d, yyyy')}.
 
 Conversation History:
 {{#each history}}
-{{role}}: {{{content}}}
+{{#if (eq role 'user')}}
+user: {{{content.[0].text}}}
+{{else if (eq role 'assistant')}}
+assistant: {{{content.[0].text}}}
+{{/if}}
 {{/each}}
 assistant:`,
-  input: {schema: GetRagResponseInputSchema},
+  input: {schema: z.object({ history: GetRagResponseInputSchema.shape.history })},
   output: {schema: z.object({ text: z.string() })},
 });
 
@@ -174,9 +182,36 @@ const getRagResponseFlow = ai.defineFlow(
     inputSchema: GetRagResponseInputSchema,
     outputSchema: GetRagResponseOutputSchema,
   },
-  async input => {
-    const {output} = await ragPrompt(input);
-    const responseText = output!.text;
+  async (input) => {
+    let responseText;
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    while (attempts < maxAttempts) {
+        try {
+            const result = await ragPrompt(input);
+            if (!result?.output?.text) {
+                throw new Error("AI returned empty text output.");
+            }
+            responseText = result.output.text;
+            break; 
+        } catch (error: any) {
+            attempts++;
+            if (error.message.includes('503') && attempts < maxAttempts) {
+                console.log(`RAG response attempt ${attempts} failed with 503, retrying...`);
+                await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts))); 
+            } else if (attempts >= maxAttempts) {
+                throw new Error('Failed to get a response from the AI assistant after multiple attempts.');
+            } else {
+                 console.log(`RAG response attempt ${attempts} failed, retrying...`);
+                 await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
+            }
+        }
+    }
+    
+    if (!responseText) {
+        throw new Error("Failed to generate response text.");
+    }
 
     const { media } = await ai.generate({
       model: 'googleai/gemini-2.5-flash-preview-tts',

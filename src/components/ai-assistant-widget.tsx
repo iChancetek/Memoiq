@@ -19,6 +19,13 @@ interface Message {
 }
 type RecordingState = 'idle' | 'recording' | 'processing';
 
+const getInitials = (name: string) => {
+    if (!name) return '';
+    const names = name.split(' ');
+    if (names.length === 1) return names[0][0];
+    return names[0][0] + names[names.length - 1][0];
+}
+
 
 export function AIAssistantWidget() {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -64,13 +71,19 @@ export function AIAssistantWidget() {
 
     const userMessage: Message = { role: 'user', content: input };
     const newMessages = [...messages, userMessage];
+    
+    // Map to the format expected by the Genkit flow
+    const historyForAI = newMessages.map(msg => ({
+      role: msg.role,
+      content: [{ text: msg.content }]
+    }));
 
     setMessages(newMessages);
     setInput('');
     setLoading(true);
 
     try {
-      const response = await getRagResponse({ history: newMessages });
+      const response = await getRagResponse({ history: historyForAI });
       const assistantMessage: Message = { role: 'assistant', content: response.text };
       setMessages(prev => [...prev, assistantMessage]);
       
@@ -183,7 +196,7 @@ export function AIAssistantWidget() {
                                     </div>
                                     {message.role === 'user' && (
                                         <Avatar className="h-8 w-8">
-                                            <AvatarFallback><User /></AvatarFallback>
+                                            <AvatarFallback>{user?.displayName ? getInitials(user.displayName) : <User />}</AvatarFallback>
                                         </Avatar>
                                     )}
                                 </div>
