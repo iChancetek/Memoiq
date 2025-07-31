@@ -22,7 +22,7 @@ const ParseTaskStringOutputSchema = z.object({
   title: z.string().describe('The concise title of the task.'),
   dueDate: z.string().describe('The suggested due date for the task in YYYY-MM-DD format. If not specified, use a reasonable default.'),
   subtasks: z.array(z.string()).describe('A list of generated subtasks based on the main task. The list can be empty if no subtasks are necessary.'),
-  contactIds: z.array(z.number()).describe("A list of IDs for any contacts mentioned in the task string. This should correspond to the IDs from the input contacts list."),
+  contactIds: z.array(z.string()).describe("A list of IDs for any contacts mentioned in the task string. This should correspond to the IDs from the input contacts list."),
 });
 export type ParseTaskStringOutput = z.infer<typeof ParseTaskStringOutputSchema>;
 
@@ -46,7 +46,7 @@ Instructions:
 1.  Determine a clear, concise title for the task.
 2.  Identify the due date. If a specific date or day is mentioned (e.g., "by Thursday", "on the 25th"), calculate the date in YYYY-MM-DD format. If no date is given, suggest a reasonable future date (e.g., 3-7 days from now).
 3.  Based on the task title, generate a list of 2-3 actionable subtasks that would help accomplish the main task. If the task is simple and doesn't need decomposition, return an empty array for subtasks.
-4.  Scan the task string for any names that match the user's contacts. If a match is found, include the corresponding contact's ID in the 'contactIds' array. For example, if the request is "Follow up with Olivia Chen", and Olivia Chen has ID 1, the 'contactIds' should be [1].
+4.  Scan the task string for any names that match the user's contacts. If a match is found, include the corresponding contact's ID (which is a string) in the 'contactIds' array. For example, if the request is "Follow up with Olivia Chen", and Olivia Chen has ID "abc-123", the 'contactIds' should be ["abc-123"].
 5.  Consider the following context if provided: {{context}}
 
 Output the structured task object.`,
