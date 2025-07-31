@@ -9,6 +9,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import wav from 'wav';
 
 const GetCalendarAnalysisInputSchema = z.object({
   calendarEvents: z.string().describe("A JSON string of the user's calendar events, including title and time."),
@@ -21,6 +22,7 @@ const GetCalendarAnalysisOutputSchema = z.object({
   summary: z.string().describe("A brief, high-level summary of the user's schedule for the next 7 days."),
   busyPeriods: z.array(z.string()).describe("A list of identified busy days or times (e.g., 'Wednesday afternoon is packed')."),
   suggestions: z.array(z.string()).describe("A list of 2-3 actionable suggestions to optimize the schedule."),
+  audioDataUri: z.string().describe('The text-to-speech audio of the analysis as a base64-encoded data URI.'),
 });
 export type GetCalendarAnalysisOutput = z.infer<typeof GetCalendarAnalysisOutputSchema>;
 
@@ -33,7 +35,7 @@ export async function getCalendarAnalysis(
 const prompt = ai.definePrompt({
   name: 'getCalendarAnalysisPrompt',
   input: {schema: GetCalendarAnalysisInputSchema},
-  output: {schema: GetCalendarAnalysisOutputSchema},
+  output: {schema: GetCalendarAnalysisOutputSchema.omit({ audioDataUri: true })},
   model: 'googleai/gemini-1.5-flash',
   prompt: `You are a world-class executive assistant and scheduling expert. Your goal is to analyze a user's calendar and task list to provide a strategic briefing for the upcoming week.
 
@@ -53,6 +55,33 @@ Instructions:
 Analyze the provided data and generate the structured output.`,
 });
 
+async function toWav(
+  pcmData: Buffer,
+  channels = 1,
+  rate = 24000,
+  sampleWidth = 2
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const writer = new wav.Writer({
+      channels,
+      sampleRate: rate,
+      bitDepth: sampleWidth * 8,
+    });
+
+    let bufs = [] as any[];
+    writer.on('error', reject);
+    writer.on('data', function (d) {
+      bufs.push(d);
+    });
+    writer.on('end', function () {
+      resolve(Buffer.concat(bufs).toString('base64'));
+    });
+
+    writer.write(pcmData);
+    writer.end();
+  });
+}
+
 const getCalendarAnalysisFlow = ai.defineFlow(
   {
     name: 'getCalendarAnalysisFlow',
@@ -60,14 +89,14 @@ const getCalendarAnalysisFlow = ai.defineFlow(
     outputSchema: GetCalendarAnalysisOutputSchema,
   },
   async input => {
-    let output;
+    let analysisOutput;
     let attempts = 0;
     const maxAttempts = 3;
 
     while (attempts < maxAttempts) {
       try {
         const result = await prompt(input);
-        output = result.output;
+        analysisOutput = result.output;
         break; // Success
       } catch (error: any) {
         attempts++;
@@ -80,10 +109,42 @@ const getCalendarAnalysisFlow = ai.defineFlow(
       }
     }
     
-    if (!output) {
+    if (!analysisOutput) {
       throw new Error('Failed to get calendar analysis after multiple attempts.');
     }
     
-    return output;
+    const readableAnalysis = `
+      Here is your calendar analysis.
+      Summary: ${analysisOutput.summary}.
+      Busy periods: ${analysisOutput.busyPeriods.join(', ')}.
+      Suggestions: ${analysisOutput.suggestions.join('. ')}.
+    `;
+
+    const { media } = await ai.generate({
+      model: 'googleai/gemini-2.5-flash-preview-tts',
+      config: {
+        responseModalities: ['AUDIO'],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: 'Algenib' },
+          },
+        },
+      },
+      prompt: readableAnalysis,
+    });
+
+     if (!media) {
+      throw new Error('no media returned');
+    }
+    const audioBuffer = Buffer.from(
+      media.url.substring(media.url.indexOf(',') + 1),
+      'base64'
+    );
+    const audioDataUri = 'data:audio/wav;base64,' + (await toWav(audioBuffer));
+    
+    return {
+        ...analysisOutput,
+        audioDataUri,
+    };
   }
 );

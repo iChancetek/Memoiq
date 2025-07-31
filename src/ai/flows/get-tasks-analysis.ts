@@ -9,6 +9,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import wav from 'wav';
 
 const GetTasksAnalysisInputSchema = z.object({
   tasks: z.string().describe("A JSON string of the user's tasks, including title, due date, and completion status."),
@@ -27,6 +28,7 @@ const GetTasksAnalysisOutputSchema = z.object({
       description: z.string().describe('A description of the risk if one is detected. Empty if no risk.'),
   }),
   suggestions: z.array(z.string()).describe('A list of 2-3 actionable suggestions to improve productivity or address issues.'),
+  audioDataUri: z.string().describe('The text-to-speech audio of the analysis as a base64-encoded data URI.'),
 });
 export type GetTasksAnalysisOutput = z.infer<typeof GetTasksAnalysisOutputSchema>;
 
@@ -39,7 +41,7 @@ export async function getTasksAnalysis(
 const prompt = ai.definePrompt({
   name: 'getTasksAnalysisPrompt',
   input: {schema: GetTasksAnalysisInputSchema},
-  output: {schema: GetTasksAnalysisOutputSchema},
+  output: {schema: GetTasksAnalysisOutputSchema.omit({ audioDataUri: true })},
   model: 'googleai/gemini-1.5-flash',
   prompt: `You are a world-class productivity coach and project manager. Your goal is to analyze a user's task list and provide a strategic, intelligent briefing.
 
@@ -57,6 +59,33 @@ Instructions:
 Analyze the provided data and generate the structured output.`,
 });
 
+async function toWav(
+  pcmData: Buffer,
+  channels = 1,
+  rate = 24000,
+  sampleWidth = 2
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const writer = new wav.Writer({
+      channels,
+      sampleRate: rate,
+      bitDepth: sampleWidth * 8,
+    });
+
+    let bufs = [] as any[];
+    writer.on('error', reject);
+    writer.on('data', function (d) {
+      bufs.push(d);
+    });
+    writer.on('end', function () {
+      resolve(Buffer.concat(bufs).toString('base64'));
+    });
+
+    writer.write(pcmData);
+    writer.end();
+  });
+}
+
 const getTasksAnalysisFlow = ai.defineFlow(
   {
     name: 'getTasksAnalysisFlow',
@@ -64,18 +93,17 @@ const getTasksAnalysisFlow = ai.defineFlow(
     outputSchema: GetTasksAnalysisOutputSchema,
   },
   async input => {
-    let output;
+    let analysisOutput;
     let attempts = 0;
     const maxAttempts = 3;
 
     while (attempts < maxAttempts) {
       try {
         const result = await prompt(input);
-        output = result.output;
-        if (output) {
+        analysisOutput = result.output;
+        if (analysisOutput) {
             break; // Success
         }
-        // If output is null without an error, it's still a failure condition.
         attempts++;
         if (attempts >= maxAttempts) {
             throw new Error('AI returned empty output after multiple attempts.');
@@ -86,16 +114,48 @@ const getTasksAnalysisFlow = ai.defineFlow(
           console.log(`Task analysis attempt ${attempts} failed with 503, retrying...`);
           await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
         } else {
-          // Re-throw the error if it's not a 503 or if max attempts are reached
           throw error;
         }
       }
     }
 
-    if (!output) {
+    if (!analysisOutput) {
       throw new Error('Failed to get task analysis after multiple attempts.');
     }
 
-    return output;
+    const readableAnalysis = `
+      Here is your task analysis.
+      Summary: ${analysisOutput.summary}.
+      Your priority task is ${analysisOutput.priorityTask.title}, because ${analysisOutput.priorityTask.reasoning}.
+      ${analysisOutput.risk.hasRisk ? `Risk detected: ${analysisOutput.risk.description}` : 'No risks detected.'}
+      Suggestions: ${analysisOutput.suggestions.join('. ')}.
+    `;
+
+    const { media } = await ai.generate({
+      model: 'googleai/gemini-2.5-flash-preview-tts',
+      config: {
+        responseModalities: ['AUDIO'],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: 'Algenib' },
+          },
+        },
+      },
+      prompt: readableAnalysis,
+    });
+
+     if (!media) {
+      throw new Error('no media returned');
+    }
+    const audioBuffer = Buffer.from(
+      media.url.substring(media.url.indexOf(',') + 1),
+      'base64'
+    );
+    const audioDataUri = 'data:audio/wav;base64,' + (await toWav(audioBuffer));
+
+    return {
+      ...analysisOutput,
+      audioDataUri,
+    };
   }
 );

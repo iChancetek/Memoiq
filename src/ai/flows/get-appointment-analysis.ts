@@ -9,6 +9,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import wav from 'wav';
 
 const GetAppointmentAnalysisInputSchema = z.object({
   calendarEvents: z.string().describe("A JSON string of the user's calendar events for the next 7 days."),
@@ -21,6 +22,7 @@ const GetAppointmentAnalysisOutputSchema = z.object({
   summary: z.string().describe("A brief, high-level summary of the upcoming week's appointments."),
   schedulingRisks: z.array(z.string()).describe("A list of identified potential issues, like back-to-back meetings or meetings without buffer time."),
   proactiveSuggestions: z.array(z.string()).describe("A list of 2-3 actionable suggestions, such as sending confirmations or preparing for meetings."),
+  audioDataUri: z.string().describe('The text-to-speech audio of the analysis as a base64-encoded data URI.'),
 });
 export type GetAppointmentAnalysisOutput = z.infer<typeof GetAppointmentAnalysisOutputSchema>;
 
@@ -33,7 +35,7 @@ export async function getAppointmentAnalysis(
 const prompt = ai.definePrompt({
   name: 'getAppointmentAnalysisPrompt',
   input: {schema: GetAppointmentAnalysisInputSchema},
-  output: {schema: GetAppointmentAnalysisOutputSchema},
+  output: {schema: GetAppointmentAnalysisOutputSchema.omit({ audioDataUri: true })},
   model: 'googleai/gemini-1.5-flash',
   prompt: `You are an expert executive assistant. Your goal is to analyze a user's upcoming appointments for the week and provide a strategic briefing.
 
@@ -53,6 +55,33 @@ Instructions:
 Analyze the provided data and generate the structured output.`,
 });
 
+async function toWav(
+  pcmData: Buffer,
+  channels = 1,
+  rate = 24000,
+  sampleWidth = 2
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const writer = new wav.Writer({
+      channels,
+      sampleRate: rate,
+      bitDepth: sampleWidth * 8,
+    });
+
+    let bufs = [] as any[];
+    writer.on('error', reject);
+    writer.on('data', function (d) {
+      bufs.push(d);
+    });
+    writer.on('end', function () {
+      resolve(Buffer.concat(bufs).toString('base64'));
+    });
+
+    writer.write(pcmData);
+    writer.end();
+  });
+}
+
 const getAppointmentAnalysisFlow = ai.defineFlow(
   {
     name: 'getAppointmentAnalysisFlow',
@@ -60,18 +89,17 @@ const getAppointmentAnalysisFlow = ai.defineFlow(
     outputSchema: GetAppointmentAnalysisOutputSchema,
   },
   async input => {
-    let output;
+    let analysisOutput;
     let attempts = 0;
     const maxAttempts = 3;
 
     while (attempts < maxAttempts) {
       try {
         const result = await prompt(input);
-        output = result.output;
-        if (output) {
+        analysisOutput = result.output;
+        if (analysisOutput) {
             break; // Success
         }
-        // If output is null without an error, it's still a failure condition.
         attempts++;
         if (attempts >= maxAttempts) {
             throw new Error('AI returned empty output after multiple attempts.');
@@ -82,16 +110,47 @@ const getAppointmentAnalysisFlow = ai.defineFlow(
           console.log(`Appointment analysis attempt ${attempts} failed with 503, retrying...`);
           await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
         } else {
-          // Re-throw the error if it's not a 503 or if max attempts are reached
           throw error;
         }
       }
     }
 
-    if (!output) {
+    if (!analysisOutput) {
       throw new Error('Failed to get appointment analysis after multiple attempts.');
     }
 
-    return output;
+    const readableAnalysis = `
+      Here is your appointment analysis.
+      Summary: ${analysisOutput.summary}.
+      Scheduling Risks: ${analysisOutput.schedulingRisks.join(', ') || 'None'}.
+      Suggestions: ${analysisOutput.proactiveSuggestions.join('. ')}.
+    `;
+
+    const { media } = await ai.generate({
+      model: 'googleai/gemini-2.5-flash-preview-tts',
+      config: {
+        responseModalities: ['AUDIO'],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: 'Algenib' },
+          },
+        },
+      },
+      prompt: readableAnalysis,
+    });
+
+     if (!media) {
+      throw new Error('no media returned');
+    }
+    const audioBuffer = Buffer.from(
+      media.url.substring(media.url.indexOf(',') + 1),
+      'base64'
+    );
+    const audioDataUri = 'data:audio/wav;base64,' + (await toWav(audioBuffer));
+
+    return {
+        ...analysisOutput,
+        audioDataUri,
+    };
   }
 );

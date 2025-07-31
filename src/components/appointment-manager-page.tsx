@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Sparkles, AlertTriangle, CheckCircle, ShieldAlert } from 'lucide-react';
+import { Loader2, Sparkles, AlertTriangle, CheckCircle, ShieldAlert, Play, Pause } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getAppointmentAnalysis } from '@/ai/flows/get-appointment-analysis';
 import { mockContacts, mockCalendarEvents } from '@/lib/data';
@@ -12,11 +12,18 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 export function AppointmentManagerPage() {
   const [loading, setLoading] = React.useState(false);
   const [analysis, setAnalysis] = React.useState<any>(null);
+  const [audio, setAudio] = React.useState<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = React.useState(false);
   const { toast } = useToast();
 
   const handleAnalyzeAppointments = async () => {
     setLoading(true);
     setAnalysis(null);
+    if (audio) {
+      audio.pause();
+      setAudio(null);
+      setIsPlaying(false);
+    }
     try {
       const response = await getAppointmentAnalysis({
         contacts: JSON.stringify(mockContacts),
@@ -24,6 +31,13 @@ export function AppointmentManagerPage() {
         currentDate: new Date().toISOString().split('T')[0],
       });
       setAnalysis(response);
+      if (response.audioDataUri) {
+          const newAudio = new Audio(response.audioDataUri);
+          setAudio(newAudio);
+          newAudio.play().catch(console.error);
+          setIsPlaying(true);
+          newAudio.onended = () => setIsPlaying(false);
+      }
     } catch (error) {
       console.error('Error analyzing appointments:', error);
       toast({
@@ -33,6 +47,17 @@ export function AppointmentManagerPage() {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const togglePlayback = () => {
+    if (audio) {
+      if (isPlaying) {
+        audio.pause();
+      } else {
+        audio.play().catch(console.error);
+      }
+      setIsPlaying(!isPlaying);
     }
   };
 
@@ -53,6 +78,13 @@ export function AppointmentManagerPage() {
 
           {analysis && (
             <div className="mt-6 space-y-4">
+              <div className="flex justify-end">
+                <Button onClick={togglePlayback} disabled={!analysis.audioDataUri || loading}>
+                  {isPlaying ? <Pause className="mr-2" /> : <Play className="mr-2" />}
+                  {isPlaying ? 'Pause' : 'Play Analysis'}
+                </Button>
+              </div>
+
               <Alert>
                 <CheckCircle className="h-4 w-4" />
                 <AlertTitle>Weekly Appointment Outlook</AlertTitle>

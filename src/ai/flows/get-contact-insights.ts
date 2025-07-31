@@ -9,6 +9,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import wav from 'wav';
 
 const GetContactInsightsInputSchema = z.object({
   contacts: z.string().describe('A JSON string of the user\'s contacts, including name, company, and last contact date.'),
@@ -18,6 +19,7 @@ export type GetContactInsightsInput = z.infer<typeof GetContactInsightsInputSche
 
 const GetContactInsightsOutputSchema = z.object({
   followUpSuggestions: z.string().describe('A formatted string with suggestions for which contacts to follow up with, including the reason. Suggest 2-3 contacts.'),
+  audioDataUri: z.string().describe('The text-to-speech audio of the analysis as a base64-encoded data URI.'),
 });
 export type GetContactInsightsOutput = z.infer<typeof GetContactInsightsOutputSchema>;
 
@@ -30,7 +32,7 @@ export async function getContactInsights(
 const prompt = ai.definePrompt({
   name: 'getContactInsightsPrompt',
   input: {schema: GetContactInsightsInputSchema},
-  output: {schema: GetContactInsightsOutputSchema},
+  output: {schema: GetContactInsightsOutputSchema.omit({ audioDataUri: true })},
   model: 'googleai/gemini-1.5-flash',
   prompt: `You are a relationship management assistant. Your goal is to help users maintain professional connections by suggesting timely follow-ups.
 
@@ -51,6 +53,33 @@ Example output:
 - Olivia Chen: You haven't spoken since late July. Check in on Project Phoenix progress.`,
 });
 
+async function toWav(
+  pcmData: Buffer,
+  channels = 1,
+  rate = 24000,
+  sampleWidth = 2
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const writer = new wav.Writer({
+      channels,
+      sampleRate: rate,
+      bitDepth: sampleWidth * 8,
+    });
+
+    let bufs = [] as any[];
+    writer.on('error', reject);
+    writer.on('data', function (d) {
+      bufs.push(d);
+    });
+    writer.on('end', function () {
+      resolve(Buffer.concat(bufs).toString('base64'));
+    });
+
+    writer.write(pcmData);
+    writer.end();
+  });
+}
+
 const getContactInsightsFlow = ai.defineFlow(
   {
     name: 'getContactInsightsFlow',
@@ -58,18 +87,17 @@ const getContactInsightsFlow = ai.defineFlow(
     outputSchema: GetContactInsightsOutputSchema,
   },
   async input => {
-    let output;
+    let analysisOutput;
     let attempts = 0;
     const maxAttempts = 3;
 
     while (attempts < maxAttempts) {
       try {
         const result = await prompt(input);
-        output = result.output;
-        if (output) {
+        analysisOutput = result.output;
+        if (analysisOutput) {
             break; // Success
         }
-        // If output is null without an error, it's still a failure condition.
         attempts++;
         if (attempts >= maxAttempts) {
             throw new Error('AI returned empty output after multiple attempts.');
@@ -80,16 +108,45 @@ const getContactInsightsFlow = ai.defineFlow(
           console.log(`Contact insights attempt ${attempts} failed with 503, retrying...`);
           await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
         } else {
-          // Re-throw the error if it's not a 503 or if max attempts are reached
           throw error;
         }
       }
     }
 
-    if (!output) {
+    if (!analysisOutput) {
       throw new Error('Failed to get contact insights after multiple attempts.');
     }
+    
+    const readableAnalysis = `
+      Here are your contact suggestions.
+      ${analysisOutput.followUpSuggestions}.
+    `;
 
-    return output;
+    const { media } = await ai.generate({
+      model: 'googleai/gemini-2.5-flash-preview-tts',
+      config: {
+        responseModalities: ['AUDIO'],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: 'Algenib' },
+          },
+        },
+      },
+      prompt: readableAnalysis,
+    });
+
+     if (!media) {
+      throw new Error('no media returned');
+    }
+    const audioBuffer = Buffer.from(
+      media.url.substring(media.url.indexOf(',') + 1),
+      'base64'
+    );
+    const audioDataUri = 'data:audio/wav;base64,' + (await toWav(audioBuffer));
+    
+    return {
+        ...analysisOutput,
+        audioDataUri,
+    };
   }
 );

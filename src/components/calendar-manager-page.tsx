@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Sparkles, AlertTriangle, CheckCircle, CalendarDays } from 'lucide-react';
+import { Loader2, Sparkles, AlertTriangle, CheckCircle, CalendarDays, Play, Pause } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getCalendarAnalysis } from '@/ai/flows/get-calendar-analysis';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -14,6 +14,8 @@ import Link from 'next/link';
 export function CalendarManagerPage() {
   const [loading, setLoading] = React.useState(false);
   const [analysis, setAnalysis] = React.useState<any>(null);
+  const [audio, setAudio] = React.useState<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = React.useState(false);
   const { toast } = useToast();
   const { tasks, loading: tasksLoading } = useTasks();
   const { events, loading: eventsLoading } = useCalendar();
@@ -21,6 +23,11 @@ export function CalendarManagerPage() {
   const handleAnalyzeCalendar = async () => {
     setLoading(true);
     setAnalysis(null);
+    if (audio) {
+      audio.pause();
+      setAudio(null);
+      setIsPlaying(false);
+    }
     try {
       const response = await getCalendarAnalysis({
         tasks: JSON.stringify(tasks),
@@ -28,6 +35,13 @@ export function CalendarManagerPage() {
         currentDate: new Date().toISOString().split('T')[0],
       });
       setAnalysis(response);
+      if (response.audioDataUri) {
+          const newAudio = new Audio(response.audioDataUri);
+          setAudio(newAudio);
+          newAudio.play().catch(console.error);
+          setIsPlaying(true);
+          newAudio.onended = () => setIsPlaying(false);
+      }
     } catch (error) {
       console.error('Error analyzing calendar:', error);
       toast({
@@ -42,6 +56,17 @@ export function CalendarManagerPage() {
   
   const hasData = tasks.length > 0 || events.length > 0;
   const isDataLoading = tasksLoading || eventsLoading;
+
+  const togglePlayback = () => {
+    if (audio) {
+      if (isPlaying) {
+        audio.pause();
+      } else {
+        audio.play().catch(console.error);
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
 
   return (
     <div className="container mx-auto max-w-3xl">
@@ -74,6 +99,13 @@ export function CalendarManagerPage() {
 
           {analysis && (
             <div className="mt-6 space-y-4">
+              <div className="flex justify-end">
+                <Button onClick={togglePlayback} disabled={!analysis.audioDataUri || loading}>
+                  {isPlaying ? <Pause className="mr-2" /> : <Play className="mr-2" />}
+                  {isPlaying ? 'Pause' : 'Play Analysis'}
+                </Button>
+              </div>
+
               <Alert>
                 <CheckCircle className="h-4 w-4" />
                 <AlertTitle>Weekly Outlook</AlertTitle>
