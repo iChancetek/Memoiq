@@ -13,7 +13,10 @@ export function ContactsPage() {
   const { contacts, loading } = useContacts();
 
   const getInitials = (name: string) => {
-    return name.split(' ').map(n => n[0]).join('');
+    if (!name) return '';
+    const names = name.split(' ');
+    if (names.length === 1) return names[0][0];
+    return names[0][0] + names[names.length - 1][0];
   }
 
   return (
@@ -46,7 +49,7 @@ export function ContactsPage() {
           <Card key={contact.id}>
             <CardHeader className="flex flex-row items-center gap-4">
                <Avatar className="h-12 w-12">
-                 <AvatarImage src={`https://placehold.co/100x100.png?text=${getInitials(contact.name)}`} />
+                 <AvatarImage src={`https://placehold.co/100x100.png?text=${encodeURIComponent(contact.name)}`} />
                  <AvatarFallback>{getInitials(contact.name)}</AvatarFallback>
                </Avatar>
                <div>
