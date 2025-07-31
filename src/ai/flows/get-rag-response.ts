@@ -206,7 +206,6 @@ const getRagResponseFlow = ai.defineFlow(
     outputSchema: GetRagResponseOutputSchema,
   },
   async ({ history, userId }) => {
-    // Sanitize history to prevent passing undefined content
     const sanitizedHistory = history.map(message => ({
       role: message.role,
       content: message.content || [],
@@ -268,3 +267,5 @@ Today's date is ${format(new Date(), 'EEEE, MMMM d, yyyy')}.
     };
   }
 );
+
+    
