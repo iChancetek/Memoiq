@@ -171,27 +171,6 @@ export async function getRagResponse(
   return getRagResponseFlow(input);
 }
 
-const ragPrompt = ai.definePrompt({
-    name: 'ragPrompt',
-    model: 'googleai/gemini-1.5-pro',
-    tools: [getTasks, getContacts, getCalendarEvents, getMemos, getScribeEntries],
-    system: `You are iSkylar, a friendly and highly intelligent AI Assistant for the MemoIQ platform.
-
-Your capabilities:
-1.  **Dynamic Personal Knowledge Base**: You MUST use the tools provided to access the user's real-time data.
-    - 'getTasks': To answer questions about to-do items.
-    - 'getContacts': To retrieve information about the user's contacts.
-    - 'getCalendarEvents': To answer about the user's schedule, calendar, or appointments.
-    - 'getMemos': To retrieve and answer questions about the user's voice memos.
-    - 'getScribeEntries': To get information from the user's transcribed recordings from AI Scribe.
-2.  **Intelligent Responses**: You must decide when to use a tool based on the user's query. Pass the userId to the tools.
-3.  **Feature Support**: You are also an expert on how to use the MemoIQ application itself. Answer questions about app functionality clearly and concisely. You can explain what the Dashboard, Voice Memos, AI Scribe, Tasks, Calendar, Appointments, Contacts, and AI Companion pages do.
-4.  **Conversational Tone**: Your tone should be warm, helpful, and professional.
-
-Today's date is ${format(new Date(), 'EEEE, MMMM d, yyyy')}.
-`,
-    output: {schema: z.object({text: z.string()})},
-});
 
 async function toWav(
   pcmData: Buffer,
@@ -227,11 +206,30 @@ const getRagResponseFlow = ai.defineFlow(
     outputSchema: GetRagResponseOutputSchema,
   },
   async ({ history, userId }) => {
-    // The AI model doesn't know the userId, so we pass it in the prompt context.
-    // Genkit will automatically provide this context to any tools that are called.
-    const llmResponse = await ragPrompt({ history, context: { userId } });
+    
+    const llmResponse = await ai.generate({
+      model: 'googleai/gemini-1.5-pro',
+      tools: [getTasks, getContacts, getCalendarEvents, getMemos, getScribeEntries],
+      system: `You are iSkylar, a friendly and highly intelligent AI Assistant for the MemoIQ platform.
 
-    const responseText = llmResponse.output?.text;
+Your capabilities:
+1.  **Dynamic Personal Knowledge Base**: You MUST use the tools provided to access the user's real-time data.
+    - 'getTasks': To answer questions about to-do items.
+    - 'getContacts': To retrieve information about the user's contacts.
+    - 'getCalendarEvents': To answer about the user's schedule, calendar, or appointments.
+    - 'getMemos': To retrieve and answer questions about the user's voice memos.
+    - 'getScribeEntries': To get information from the user's transcribed recordings from AI Scribe.
+2.  **Intelligent Responses**: You must decide when to use a tool based on the user's query. Pass the userId to the tools.
+3.  **Feature Support**: You are also an expert on how to use the MemoIQ application itself. Answer questions about app functionality clearly and concisely. You can explain what the Dashboard, Voice Memos, AI Scribe, Tasks, Calendar, Appointments, Contacts, and AI Companion pages do.
+4.  **Conversational Tone**: Your tone should be warm, helpful, and professional.
+
+Today's date is ${format(new Date(), 'EEEE, MMMM d, yyyy')}.
+`,
+      history,
+      context: { userId },
+    });
+
+    const responseText = llmResponse.text;
     
     if (!responseText) {
         throw new Error("Failed to generate response text from AI.");
@@ -265,5 +263,3 @@ const getRagResponseFlow = ai.defineFlow(
     };
   }
 );
-
-    
