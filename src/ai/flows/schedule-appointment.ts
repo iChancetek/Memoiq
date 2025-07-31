@@ -95,6 +95,7 @@ const prompt = ai.definePrompt({
   name: 'scheduleAppointmentPrompt',
   input: {schema: ScheduleAppointmentInputSchema},
   output: {schema: ScheduleAppointmentOutputSchema},
+  model: 'googleai/gemini-1.5-flash',
   prompt: `You are an intelligent scheduling assistant. Your goal is to parse a user's appointment request, check their calendar and tasks for conflicts, and suggest a valid time slot. You also have access to the user's contacts.
 
 Current Date: ${new Date().toDateString()}
