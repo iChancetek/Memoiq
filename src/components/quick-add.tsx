@@ -25,6 +25,7 @@ import { useCalendar } from '@/contexts/calendar-context';
 import { scheduleAppointment } from '@/ai/flows/schedule-appointment';
 import { transcribeAudio } from '@/ai/flows/transcribe-audio';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
+import { useAuth } from '@/contexts/auth-context';
 
 type RecordingState = 'idle' | 'recording' | 'processing';
 
@@ -42,6 +43,9 @@ export function QuickAdd() {
   const closeRef = React.useRef<HTMLButtonElement>(null);
   const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
   const audioChunksRef = React.useRef<Blob[]>([]);
+  const { user } = useAuth();
+  // @ts-ignore
+  const lang = user?.settings?.language || 'en';
 
   const handleTaskSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -198,7 +202,7 @@ export function QuickAdd() {
         reader.onloadend = async () => {
           const base64Audio = reader.result as string;
           try {
-            const transcriptionResult = await transcribeAudio({ audioDataUri: base64Audio });
+            const transcriptionResult = await transcribeAudio({ audioDataUri: base64Audio, language: lang });
             setter(transcriptionResult.transcription);
           } catch (error) {
             console.error('Transcription failed:', error);

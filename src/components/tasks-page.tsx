@@ -36,6 +36,7 @@ import { useContacts } from '@/contexts/contact-context';
 import { Skeleton } from './ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { ManualTaskForm } from './manual-task-form';
+import { useAuth } from '@/contexts/auth-context';
 
 
 type RecordingState = 'idle' | 'recording' | 'processing';
@@ -49,6 +50,9 @@ function AITaskCreator() {
     const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
     const audioChunksRef = React.useRef<Blob[]>([]);
     const {toast} = useToast();
+    const { user } = useAuth();
+    // @ts-ignore
+    const lang = user?.settings?.language || 'en';
 
     const handleAddTask = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -105,7 +109,7 @@ function AITaskCreator() {
             reader.onloadend = async () => {
               const base64Audio = reader.result as string;
               try {
-                const result = await transcribeAudio({ audioDataUri: base64Audio });
+                const result = await transcribeAudio({ audioDataUri: base64Audio, language: lang });
                 setNewTaskTitle(result.transcription);
               } catch (error) {
                 console.error('Transcription failed:', error);

@@ -15,6 +15,7 @@ import { parse } from 'date-fns';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { ManualEventForm } from './manual-event-form';
+import { useAuth } from '@/contexts/auth-context';
 
 type RecordingState = 'idle' | 'recording' | 'processing';
 
@@ -27,10 +28,13 @@ function AIScheduler() {
   const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
   const audioChunksRef = React.useRef<Blob[]>([]);
 
+  const { user } = useAuth();
   const { addEvent, events } = useCalendar();
   const { tasks } = useTasks();
   const { contacts } = useContacts();
   const { toast } = useToast();
+  // @ts-ignore
+  const lang = user?.settings?.language || 'en';
   
   const handleSchedule = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -112,7 +116,7 @@ function AIScheduler() {
         reader.onloadend = async () => {
           const base64Audio = reader.result as string;
           try {
-            const transcriptionResult = await transcribeAudio({ audioDataUri: base64Audio });
+            const transcriptionResult = await transcribeAudio({ audioDataUri: base64Audio, language: lang });
             setRequest(transcriptionResult.transcription);
           } catch (error) {
             console.error('Transcription failed:', error);

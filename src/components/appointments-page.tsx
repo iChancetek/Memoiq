@@ -22,6 +22,7 @@ import { useCalendar } from '@/contexts/calendar-context';
 import { format, parse } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { ManualAppointmentForm } from './manual-appointment-form';
+import { useAuth } from '@/contexts/auth-context';
 
 type RecordingState = 'idle' | 'recording' | 'processing';
 
@@ -33,9 +34,12 @@ export function AppointmentsPage() {
   const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
   const audioChunksRef = React.useRef<Blob[]>([]);
   const { toast } = useToast();
+  const { user } = useAuth();
   const { tasks } = useTasks();
   const { contacts } = useContacts();
   const { events, addEvent } = useCalendar();
+  // @ts-ignore
+  const lang = user?.settings?.language || 'en';
 
   const handleSchedule = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -118,7 +122,7 @@ export function AppointmentsPage() {
         reader.onloadend = async () => {
           const base64Audio = reader.result as string;
           try {
-            const result = await transcribeAudio({ audioDataUri: base64Audio });
+            const result = await transcribeAudio({ audioDataUri: base64Audio, language: lang });
             setRequest(result.transcription);
           } catch (error) {
             console.error('Transcription failed:', error);

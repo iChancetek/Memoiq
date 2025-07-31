@@ -12,6 +12,7 @@ import { format } from 'date-fns';
 import { transcribeAudio } from '@/ai/flows/transcribe-audio';
 import { parseContactString } from '@/ai/flows/parse-contact-string';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { useAuth } from '@/contexts/auth-context';
 
 type RecordingState = 'idle' | 'recording' | 'processing';
 
@@ -21,6 +22,9 @@ function AIContactCreator({ formRef, setAiRequest, aiRequest }: { formRef: React
     const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
     const audioChunksRef = React.useRef<Blob[]>([]);
     const { toast } = useToast();
+    const { user } = useAuth();
+    // @ts-ignore
+    const lang = user?.settings?.language || 'en';
 
     const handleParse = async () => {
         if (!aiRequest.trim()) return;
@@ -59,7 +63,7 @@ function AIContactCreator({ formRef, setAiRequest, aiRequest }: { formRef: React
             reader.onloadend = async () => {
               const base64Audio = reader.result as string;
               try {
-                const result = await transcribeAudio({ audioDataUri: base64Audio });
+                const result = await transcribeAudio({ audioDataUri: base64Audio, language: lang });
                 setAiRequest(result.transcription);
               } catch (error) {
                 console.error('Transcription failed:', error);
