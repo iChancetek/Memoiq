@@ -149,7 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userCredential = await signInWithPopup(auth, googleProvider);
       await createUserInFirestore(userCredential.user);
       handleAuthSuccess(userCredential);
-    } catch (err) => {
+    } catch (err) {
       handleAuthError(err);
     } finally {
       setLoading(false);
