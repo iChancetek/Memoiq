@@ -30,7 +30,7 @@ import { useAuth } from '@/contexts/auth-context';
 type RecordingState = 'idle' | 'recording' | 'processing';
 
 export function QuickAdd() {
-  const { addTask, loading: tasksLoading } = useTasks();
+  const { tasks, addTask, loading: tasksLoading } = useTasks();
   const { addContact, loading: contactsLoading } = useContacts();
   const { addEvent, events } = useCalendar();
   const { contacts } = useContacts();
@@ -58,7 +58,7 @@ export function QuickAdd() {
         const result = await parseTaskString({
           taskString: taskString,
           contacts: JSON.stringify(contacts), 
-          context: `Existing tasks: ${JSON.stringify(useTasks.getState().tasks.map(t => t.title))}`
+          context: `Existing tasks: ${JSON.stringify(tasks.map(t => t.title))}`
         });
 
         await addTask({
@@ -133,7 +133,7 @@ export function QuickAdd() {
       const response = await scheduleAppointment({
         request: eventRequest,
         calendarEvents: JSON.stringify(events),
-        tasks: JSON.stringify(useTasks.getState().tasks),
+        tasks: JSON.stringify(tasks),
         contacts: JSON.stringify(contacts),
       });
       setEventResult(response);
