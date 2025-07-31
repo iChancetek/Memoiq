@@ -9,19 +9,13 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import {
-  getFirestore,
-  collection,
-  query,
-  where,
-  getDocs,
-} from 'firebase/firestore';
-import {firebaseApp} from '@/lib/firebase';
-import {Task, Contact, CalendarEvent} from '@/lib/data';
-import {format} from 'date-fns';
+import { Task, Contact, CalendarEvent } from '@/lib/data';
+import { format } from 'date-fns';
 import wav from 'wav';
+import { getFirestore } from 'firebase-admin/firestore';
+import { adminApp } from '@/lib/firebase-admin';
 
-const db = getFirestore(firebaseApp);
+const db = getFirestore(adminApp);
 
 // Define tools for the AI to use
 const getTasks = ai.defineTool(
@@ -29,17 +23,18 @@ const getTasks = ai.defineTool(
     name: 'getTasks',
     description: 'Retrieve a list of the user\'s tasks. Can be filtered by status (e.g., "completed", "pending").',
     inputSchema: z.object({
+      userId: z.string().describe("The user's unique ID."),
       status: z.enum(['completed', 'pending']).optional().describe('The status of tasks to retrieve.'),
     }),
     outputSchema: z.array(z.custom<Task>()),
   },
-  async ({status}) => {
+  async ({userId, status}) => {
     console.log('Tool: getTasks called with status:', status);
-    // This is client-side Firestore query, which will not work in a server environment (Genkit flow).
-    // This needs to be replaced with firebase-admin
-    const tasksRef = collection(db, 'tasks'); // Simplified
-    const q = status ? query(tasksRef, where('completed', '==', status === 'completed')) : query(tasksRef);
-    const snapshot = await getDocs(q);
+    let query: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = db.collection(`users/${userId}/tasks`);
+    if (status) {
+        query = query.where('completed', '==', status === 'completed');
+    }
+    const snapshot = await query.get();
     return snapshot.docs.map(doc => doc.data() as Task);
   }
 );
@@ -49,15 +44,18 @@ const getContacts = ai.defineTool(
     name: 'getContacts',
     description: "Retrieve the user's contact list. Can be filtered by name.",
     inputSchema: z.object({
+      userId: z.string().describe("The user's unique ID."),
       name: z.string().optional().describe("The name of the contact to search for."),
     }),
     outputSchema: z.array(z.custom<Contact>()),
   },
-  async ({name}) => {
+  async ({userId, name}) => {
     console.log('Tool: getContacts called with name:', name);
-    const contactsRef = collection(db, 'contacts'); // Simplified
-    const q = name ? query(contactsRef, where('name', '==', name)) : query(contactsRef);
-    const snapshot = await getDocs(q);
+     let query: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = db.collection(`users/${userId}/contacts`);
+    if (name) {
+        query = query.where('name', '==', name);
+    }
+    const snapshot = await query.get();
     return snapshot.docs.map(doc => doc.data() as Contact);
   }
 );
@@ -67,42 +65,56 @@ const getCalendarEvents = ai.defineTool(
     name: 'getCalendarEvents',
     description: "Retrieve calendar events for a given date range. Default is today.",
     inputSchema: z.object({
+        userId: z.string().describe("The user's unique ID."),
         startDate: z.string().optional().describe("Start date in YYYY-MM-DD format."),
         endDate: z.string().optional().describe("End date in YYYY-MM-DD format."),
     }),
     outputSchema: z.array(z.custom<CalendarEvent>()),
   },
-  async ({startDate, endDate}) => {
+  async ({userId, startDate, endDate}) => {
     console.log('Tool: getCalendarEvents called with:', {startDate, endDate});
     const start = startDate ? new Date(startDate) : new Date();
-    const end = endDate ? new Date(endDate) : new Date(start.getTime() + 24 * 60 * 60 * 1000);
+    start.setHours(0, 0, 0, 0);
+
+    const end = endDate ? new Date(endDate) : new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
+    end.setHours(23, 59, 59, 999);
     
-    const eventsRef = collection(db, 'events'); // Simplified
-    const q = query(
-        eventsRef,
-        where('startTime', '>=', start),
-        where('startTime', '<=', end)
-    );
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => doc.data() as CalendarEvent);
+    const snapshot = await db.collection(`users/${userId}/events`)
+        .where('startTime', '>=', start)
+        .where('startTime', '<=', end)
+        .get();
+
+    return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            ...data,
+            startTime: (data.startTime as FirebaseFirestore.Timestamp).toDate(),
+            endTime: (data.endTime as FirebaseFirestore.Timestamp).toDate(),
+        } as CalendarEvent
+    });
   }
 );
 
 const PartSchema = z.object({
-    text: z.string().optional(),
-    toolRequest: z.object({
-        name: z.string(),
-        input: z.any(),
-    }).optional(),
+  text: z.string().optional(),
+  toolRequest: z.object({
+    name: z.string(),
+    input: z.any(),
+  }).optional(),
+  toolResponse: z.object({
+    name: z.string(),
+    output: z.any(),
+  }).optional(),
 });
 
 const MessageSchema = z.object({
-    role: z.enum(['user', 'model']),
-    content: z.array(PartSchema),
+  role: z.enum(['user', 'model', 'tool']),
+  content: z.array(PartSchema),
 });
 
 const GetRagResponseInputSchema = z.object({
-    history: z.array(MessageSchema).describe('The conversation history, including the latest user message.'),
+  history: z.array(MessageSchema).describe('The conversation history, including the latest user message.'),
+  userId: z.string().describe("The current user's ID to fetch data for."),
 });
 export type GetRagResponseInput = z.infer<typeof GetRagResponseInputSchema>;
 
@@ -127,7 +139,7 @@ const ragPrompt = ai.definePrompt({
   system: `You are iSkylar, a friendly and highly intelligent AI Assistant for the MemoIQ platform.
 
 Your capabilities:
-1.  **Dynamic Personal Knowledge Base**: You have access to the user's real-time data through the tools provided (getTasks, getContacts, getCalendarEvents).
+1.  **Dynamic Personal Knowledge Base**: You have access to the user's real-time data through the tools provided (getTasks, getContacts, getCalendarEvents). You MUST pass the user's ID to these tools.
 2.  **Intelligent Responses**: Use the available tools to answer user questions about their schedule, tasks, and contacts. You must decide when to use a tool based on the user's query. For example, if a user asks "What's on my schedule today?", you should use the getCalendarEvents tool.
 3.  **Feature Support**: You are also an expert on how to use the MemoIQ application itself. Answer questions about app functionality clearly and concisely.
 4.  **Conversational Tone**: Your tone should be warm, helpful, and professional.
@@ -169,14 +181,22 @@ const getRagResponseFlow = ai.defineFlow(
     inputSchema: GetRagResponseInputSchema,
     outputSchema: GetRagResponseOutputSchema,
   },
-  async (input) => {
+  async ({ history, userId }) => {
     let responseText;
     let attempts = 0;
     const maxAttempts = 3;
 
+    // Inject userId into tool requests
+    const historyWithUserId = history.map(message => {
+        if (message.role === 'user' && message.content[0].toolRequest) {
+            message.content[0].toolRequest.input.userId = userId;
+        }
+        return message;
+    });
+
     while (attempts < maxAttempts) {
         try {
-            const result = await ragPrompt(input);
+            const result = await ragPrompt({ history: historyWithUserId });
             if (!result?.output?.text) {
                 throw new Error("AI returned empty text output.");
             }
@@ -229,3 +249,5 @@ const getRagResponseFlow = ai.defineFlow(
     };
   }
 );
+
+    

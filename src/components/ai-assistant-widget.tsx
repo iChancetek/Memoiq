@@ -13,9 +13,13 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { transcribeAudio } from '@/ai/flows/transcribe-audio';
 import { useAuth } from '@/contexts/auth-context';
 
+interface Part {
+    text?: string;
+    toolRequest?: { name: string; input: any };
+}
 interface Message {
   role: 'user' | 'model';
-  content: { text: string }[];
+  content: Part[];
 }
 type RecordingState = 'idle' | 'recording' | 'processing';
 
@@ -65,7 +69,7 @@ export function AIAssistantWidget() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || loading) return;
+    if (!input.trim() || loading || !user) return;
 
     stopSpeaking(); 
 
@@ -77,7 +81,7 @@ export function AIAssistantWidget() {
     setLoading(true);
 
     try {
-      const response = await getRagResponse({ history: newMessages });
+      const response = await getRagResponse({ history: newMessages, userId: user.uid });
       const assistantMessage: Message = { role: 'model', content: [{text: response.text}] };
       setMessages(prev => [...prev, assistantMessage]);
       
@@ -259,3 +263,5 @@ export function AIAssistantWidget() {
     </div>
   );
 }
+
+    
