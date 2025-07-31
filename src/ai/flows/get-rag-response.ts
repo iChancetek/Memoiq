@@ -34,13 +34,9 @@ const getTasks = ai.defineTool(
     outputSchema: z.array(z.custom<Task>()),
   },
   async ({status}) => {
-    // This is a placeholder. In a real app, you'd fetch this for the logged-in user.
-    // This example uses mock data for simplicity.
     console.log('Tool: getTasks called with status:', status);
-    const q = query(
-      collection(db, 'tasks'), // Simplified for example
-      status ? where('completed', '==', status === 'completed') : where('completed', 'in', [true, false])
-    );
+    const tasksRef = collection(db, 'tasks'); // Simplified
+    const q = status ? query(tasksRef, where('completed', '==', status === 'completed')) : query(tasksRef);
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => doc.data() as Task);
   }
@@ -57,10 +53,8 @@ const getContacts = ai.defineTool(
   },
   async ({name}) => {
     console.log('Tool: getContacts called with name:', name);
-    const q = query(
-        collection(db, 'contacts'), // Simplified for example
-        name ? where('name', '==', name) : where('name', '!=', '')
-    );
+    const contactsRef = collection(db, 'contacts'); // Simplified
+    const q = name ? query(contactsRef, where('name', '==', name)) : query(contactsRef);
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => doc.data() as Contact);
   }
@@ -81,8 +75,9 @@ const getCalendarEvents = ai.defineTool(
     const start = startDate ? new Date(startDate) : new Date();
     const end = endDate ? new Date(endDate) : new Date(start.getTime() + 24 * 60 * 60 * 1000);
     
+    const eventsRef = collection(db, 'events'); // Simplified
     const q = query(
-        collection(db, 'events'), // Simplified for example
+        eventsRef,
         where('startTime', '>=', start),
         where('startTime', '<=', end)
     );
@@ -104,7 +99,7 @@ const PartSchema = z.object({
 });
 
 const MessageSchema = z.object({
-    role: z.enum(['user', 'assistant', 'tool']),
+    role: z.enum(['user', 'model', 'tool']),
     content: z.array(PartSchema),
 });
 
@@ -236,5 +231,3 @@ const getRagResponseFlow = ai.defineFlow(
     };
   }
 );
-
-    

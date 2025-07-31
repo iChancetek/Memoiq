@@ -14,7 +14,7 @@ import { transcribeAudio } from '@/ai/flows/transcribe-audio';
 import { useAuth } from '@/contexts/auth-context';
 
 interface Message {
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'model';
   content: string;
 }
 type RecordingState = 'idle' | 'recording' | 'processing';
@@ -74,7 +74,7 @@ export function AIAssistantWidget() {
     
     // Map to the format expected by the Genkit flow
     const historyForAI = newMessages.map(msg => ({
-      role: msg.role,
+      role: msg.role === 'assistant' ? 'model' : 'user', // Map roles correctly
       content: [{ text: msg.content }]
     }));
 
@@ -83,6 +83,7 @@ export function AIAssistantWidget() {
     setLoading(true);
 
     try {
+      // @ts-ignore
       const response = await getRagResponse({ history: historyForAI });
       const assistantMessage: Message = { role: 'assistant', content: response.text };
       setMessages(prev => [...prev, assistantMessage]);
