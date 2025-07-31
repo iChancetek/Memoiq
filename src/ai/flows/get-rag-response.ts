@@ -196,41 +196,11 @@ const getRagResponseFlow = ai.defineFlow(
         return message;
     });
 
-    let responseText;
-    let attempts = 0;
-    const maxAttempts = 3;
-
-    while (attempts < maxAttempts) {
-        try {
-            const llmResponse = await ragPrompt({ history: historyWithUserId });
-            const outputText = llmResponse.output?.text;
-
-            if (!outputText) {
-                // If there's no text but there is a tool call, we need to handle that.
-                // For now, we will just retry if the output is empty.
-                const toolCalls = llmResponse.toolRequests;
-                if (!toolCalls || toolCalls.length === 0) {
-                     throw new Error("AI returned empty response and no tool calls.");
-                }
-                 // If there is a tool call, we should ideally handle it, but for now, we'll log and retry.
-                console.log("AI requested a tool, but this case is not fully handled yet. Retrying.", toolCalls);
-            }
-            
-            responseText = outputText;
-            break; 
-        } catch (error: any) {
-            attempts++;
-            if (attempts >= maxAttempts) {
-                console.error('Final RAG response attempt failed.', error);
-                throw new Error('Failed to get a response from the AI assistant after multiple attempts.');
-            }
-            console.log(`RAG response attempt ${attempts} failed, retrying...`, error);
-            await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
-        }
-    }
+    const llmResponse = await ragPrompt({ history: historyWithUserId });
+    const responseText = llmResponse.output?.text;
     
     if (!responseText) {
-        throw new Error("Failed to generate response text after multiple attempts.");
+        throw new Error("Failed to generate response text from AI.");
     }
 
     const { media } = await ai.generate({
@@ -261,5 +231,3 @@ const getRagResponseFlow = ai.defineFlow(
     };
   }
 );
-
-    
