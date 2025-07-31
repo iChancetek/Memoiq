@@ -137,7 +137,7 @@ const ragPrompt = ai.definePrompt({
   name: 'ragPrompt',
   model: 'googleai/gemini-1.5-pro',
   tools: [getTasks, getContacts, getCalendarEvents],
-  system: `You are iSkylar, a friendly and highly intelligent AI Assistant for the MemoIQ platform.
+  prompt: `You are iSkylar, a friendly and highly intelligent AI Assistant for the MemoIQ platform.
 
 Your capabilities:
 1.  **Dynamic Personal Knowledge Base**: You have access to the user's real-time data through the tools provided (getTasks, getContacts, getCalendarEvents). You MUST pass the user's ID to these tools.
@@ -145,14 +145,18 @@ Your capabilities:
 3.  **Feature Support**: You are also an expert on how to use the MemoIQ application itself. Answer questions about app functionality clearly and concisely.
 4.  **Conversational Tone**: Your tone should be warm, helpful, and professional.
 
-Today's date is ${format(new Date(), 'EEEE, MMMM d, yyyy')}.`,
+Today's date is ${format(new Date(), 'EEEE, MMMM d, yyyy')}.
+
+Conversation History:
+{{#each history}}
+{{#if (eq role 'tool')}}
+tool: (name: {{content.0.toolResponse.name}}, output: {{jsonStringify content.0.toolResponse.output}})
+{{else}}
+{{role}}: {{content.0.text}}
+{{/if}}
+{{/each}}
+`,
   output: {schema: z.object({text: z.string()})},
-   input: {
-    schema: z.object({
-        userId: z.string(),
-        history: z.array(MessageSchema),
-    })
-  }
 });
 
 async function toWav(
@@ -189,7 +193,7 @@ const getRagResponseFlow = ai.defineFlow(
     outputSchema: GetRagResponseOutputSchema,
   },
   async ({ history, userId }) => {
-     // The AI model doesn't know the userId, so we pass it in the prompt context.
+    // The AI model doesn't know the userId, so we pass it in the prompt context.
     // Genkit will automatically provide this context to any tools that are called.
     const llmResponse = await ragPrompt({ history, userId });
 
@@ -227,3 +231,5 @@ const getRagResponseFlow = ai.defineFlow(
     };
   }
 );
+
+    
