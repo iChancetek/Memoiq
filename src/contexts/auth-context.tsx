@@ -45,7 +45,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        // Fetch user data from Firestore to get the full profile
         const userDoc = await getDoc(doc(firestore, 'users', user.uid));
         if (userDoc.exists()) {
              // @ts-ignore
@@ -104,12 +103,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               workspaceId: user.uid, // Simple 1-to-1 mapping
               settings: {
                   theme: 'dark',
-                  language: 'en',
+                  language: 'en', // For AI
+                  uiLanguage: 'en', // For UI
                   notifications: true,
                   enableVoiceGreeting: true,
               }
           });
-          // Also update the auth profile if a new display name was provided during signup
           if (displayName && user.displayName !== displayName) {
               await updateProfile(user, { displayName });
           }
@@ -232,7 +231,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     updateUserSettings,
   };
 
-  return <AuthContext.Provider value={value}>{!loading && children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

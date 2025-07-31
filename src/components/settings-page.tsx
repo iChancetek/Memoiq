@@ -10,7 +10,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Moon, Sun, Languages } from 'lucide-react';
 import { Switch } from './ui/switch';
-import { useTheme } from '@/contexts/theme-context';
+import { useTheme } from 'next-themes';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 
 export function SettingsPage() {
@@ -23,7 +23,10 @@ export function SettingsPage() {
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
   // @ts-ignore
-  const [language, setLanguage] = React.useState(user?.settings?.language || 'en');
+  const [aiLanguage, setAiLanguage] = React.useState(user?.settings?.language || 'en');
+   // @ts-ignore
+  const [uiLanguage, setUiLanguage] = React.useState(user?.settings?.uiLanguage || 'en');
+
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -130,25 +133,50 @@ export function SettingsPage() {
         <CardContent className="space-y-4">
             <div className="flex items-center justify-between p-4 border rounded-lg">
                 <div>
-                    <Label htmlFor="language-group">Language</Label>
-                    <p className="text-sm text-muted-foreground">Set the language for AI interactions.</p>
+                    <Label htmlFor="ai-language-group">AI Language</Label>
+                    <p className="text-sm text-muted-foreground">Set the language for AI voice and text interactions.</p>
                 </div>
                 <RadioGroup 
-                    defaultValue={language}
-                    id="language-group"
+                    defaultValue={aiLanguage}
+                    id="ai-language-group"
                     className="flex items-center gap-4"
                     onValueChange={(value) => {
-                        setLanguage(value);
+                        setAiLanguage(value);
                         handleSettingsUpdate('language', value);
                     }}
                 >
                     <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="en" id="lang-en" />
-                        <Label htmlFor="lang-en">English</Label>
+                        <RadioGroupItem value="en" id="ai-lang-en" />
+                        <Label htmlFor="ai-lang-en">English</Label>
                     </div>
                     <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="es" id="lang-es" />
-                        <Label htmlFor="lang-es">Español</Label>
+                        <RadioGroupItem value="es" id="ai-lang-es" />
+                        <Label htmlFor="ai-lang-es">Español</Label>
+                    </div>
+                </RadioGroup>
+            </div>
+             <div className="flex items-center justify-between p-4 border rounded-lg">
+                <div>
+                    <Label htmlFor="ui-language-group">Application Language</Label>
+                    <p className="text-sm text-muted-foreground">Set the display language for the entire application.</p>
+                </div>
+                <RadioGroup 
+                    defaultValue={uiLanguage}
+                    id="ui-language-group"
+                    className="flex items-center gap-4"
+                    onValueChange={(value) => {
+                        setUiLanguage(value);
+                        handleSettingsUpdate('uiLanguage', value);
+                        window.location.reload(); // Reload to apply the new language
+                    }}
+                >
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="en" id="ui-lang-en" />
+                        <Label htmlFor="ui-lang-en">English</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="es" id="ui-lang-es" />
+                        <Label htmlFor="ui-lang-es">Español</Label>
                     </div>
                 </RadioGroup>
             </div>
