@@ -5,16 +5,20 @@ import clsx from 'clsx';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Send, Sparkles, Bot, User, X, ChevronUp, Volume2, StopCircle } from 'lucide-react';
+import { Loader2, Send, Sparkles, Bot, User, X, ChevronUp, Volume2, StopCircle, Mic } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getRagResponse } from '@/ai/flows/get-rag-response';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { transcribeAudio } from '@/ai/flows/transcribe-audio';
+import { useAuth } from '@/contexts/auth-context';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
 }
+type RecordingState = 'idle' | 'recording' | 'processing';
+
 
 export function AIAssistantWidget() {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -24,6 +28,12 @@ export function AIAssistantWidget() {
   const [audio, setAudio] = React.useState<HTMLAudioElement | null>(null);
   const { toast } = useToast();
   const scrollAreaRef = React.useRef<HTMLDivElement>(null);
+  const [recordingState, setRecordingState] = React.useState<RecordingState>('idle');
+  const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
+  const audioChunksRef = React.useRef<Blob[]>([]);
+  const { user } = useAuth();
+  // @ts-ignore
+  const lang = user?.settings?.language || 'en';
   
   const stopSpeaking = React.useCallback(() => {
     if (audio) {
@@ -34,14 +44,12 @@ export function AIAssistantWidget() {
   }, [audio]);
 
   React.useEffect(() => {
-    // Stop audio when widget is closed
     if (!isOpen) {
       stopSpeaking();
     }
   }, [isOpen, stopSpeaking]);
 
   React.useEffect(() => {
-    // Scroll to the bottom when new messages are added
     if (scrollAreaRef.current) {
         // @ts-ignore
         scrollAreaRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -86,8 +94,64 @@ export function AIAssistantWidget() {
     }
   };
 
+  const handleStartRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      audioChunksRef.current = [];
+
+      mediaRecorderRef.current.ondataavailable = event => {
+        audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorderRef.current.onstop = async () => {
+        setRecordingState('processing');
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = async () => {
+          const base64Audio = reader.result as string;
+          try {
+            const result = await transcribeAudio({ audioDataUri: base64Audio, language: lang });
+            setInput(result.transcription);
+          } catch (error) {
+            console.error('Transcription failed:', error);
+            toast({
+              variant: 'destructive',
+              title: 'Processing Error',
+              description: 'Failed to process the audio.',
+            });
+          } finally {
+            setRecordingState('idle');
+          }
+        };
+      };
+
+      mediaRecorderRef.current.start();
+      setRecordingState('recording');
+    } catch (err) {
+      console.error('Error starting recording:', err);
+      toast({
+        variant: 'destructive',
+        title: 'Recording Error',
+        description: 'Could not start recording. Please check microphone permissions.',
+      });
+    }
+  };
+
+  const handleStopRecording = () => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+    }
+  };
+
+  const isRecording = recordingState === 'recording';
+  const isProcessingAudio = recordingState === 'processing';
+
   return (
-    <div className="fixed bottom-5 right-5 z-50">
+    <div className="fixed bottom-4 right-4 z-50">
         <div className={clsx("transition-all duration-300 ease-in-out", { 'opacity-100 translate-y-0': isOpen, 'opacity-0 translate-y-10 pointer-events-none': !isOpen })}>
            <Card className="w-[400px] h-[600px] flex flex-col shadow-2xl">
                 <CardHeader className="flex flex-row items-center justify-between border-b">
@@ -150,7 +214,7 @@ export function AIAssistantWidget() {
                                 onChange={e => setInput(e.target.value)}
                                 placeholder="Ask about your day or app features..."
                                 className="flex-grow resize-none"
-                                disabled={loading}
+                                disabled={loading || isRecording || isProcessingAudio}
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter' && !e.shiftKey) {
                                         e.preventDefault();
@@ -158,7 +222,16 @@ export function AIAssistantWidget() {
                                     }
                                 }}
                             />
-                            <Button type="submit" size="icon" aria-label="Send" disabled={loading || !input.trim()}>
+                            {isRecording ? (
+                                <Button type="button" size="icon" variant="destructive" onClick={handleStopRecording} aria-label="Stop recording">
+                                    <StopCircle />
+                                </Button>
+                            ) : (
+                                <Button type="button" size="icon" onClick={handleStartRecording} aria-label="Start recording" disabled={loading || isProcessingAudio}>
+                                    {isProcessingAudio ? <Loader2 className="animate-spin" /> : <Mic />}
+                                </Button>
+                            )}
+                            <Button type="submit" size="icon" aria-label="Send" disabled={loading || isRecording || isProcessingAudio || !input.trim()}>
                                 {loading ? <Loader2 className="animate-spin" /> : <Send />}
                             </Button>
                         </form>
