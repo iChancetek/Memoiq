@@ -34,6 +34,7 @@ const prompt = ai.definePrompt({
   name: 'parseContactStringPrompt',
   input: {schema: ParseContactStringInputSchema},
   output: {schema: ParseContactStringOutputSchema},
+  model: 'googleai/gemini-1.5-flash',
   prompt: `You are an expert at parsing contact information from natural language. Analyze the user's request and convert it into a structured contact object.
 
 User Request: "{{contactString}}"
