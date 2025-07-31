@@ -147,6 +147,12 @@ Your capabilities:
 
 Today's date is ${format(new Date(), 'EEEE, MMMM d, yyyy')}.`,
   output: {schema: z.object({text: z.string()})},
+   input: {
+    schema: z.object({
+        userId: z.string(),
+        history: z.array(MessageSchema),
+    })
+  }
 });
 
 async function toWav(
@@ -183,32 +189,10 @@ const getRagResponseFlow = ai.defineFlow(
     outputSchema: GetRagResponseOutputSchema,
   },
   async ({ history, userId }) => {
-    // Inject userId into the input of every tool request in the history.
-    // The AI model doesn't know the userId, so we add it here.
-    const historyWithUserId = history.map(message => {
-        // IMPORTANT: Ensure message.content is an array before mapping.
-        if (Array.isArray(message.content)) {
-            const newContent = message.content.map(part => {
-                if (part.toolRequest) {
-                    return {
-                        ...part,
-                        toolRequest: {
-                            ...part.toolRequest,
-                            input: {
-                                ...part.toolRequest.input,
-                                userId: userId,
-                            }
-                        }
-                    };
-                }
-                return part;
-            });
-            return { ...message, content: newContent };
-        }
-        return message;
-    });
+     // The AI model doesn't know the userId, so we pass it in the prompt context.
+    // Genkit will automatically provide this context to any tools that are called.
+    const llmResponse = await ragPrompt({ history, userId });
 
-    const llmResponse = await ragPrompt({ history: historyWithUserId });
     const responseText = llmResponse.output?.text;
     
     if (!responseText) {
