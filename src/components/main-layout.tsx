@@ -43,40 +43,42 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { useLanguage } from '@/contexts/language-context';
 
 export function MainLayout({children}: {children: React.ReactNode}) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout, loading: authLoading } = useAuth();
+  const { t } = useLanguage();
   
   const getPageTitle = () => {
     switch (pathname) {
       case '/':
-        return 'Dashboard';
+        return t('dashboard');
       case '/memos':
-        return 'Voice Memos';
+        return t('voiceMemos');
       case '/tasks':
-        return 'Task Management';
+        return t('taskManagement');
       case '/tasks/manager':
-        return 'Tasks Manager';
+        return t('tasksManager');
       case '/calendar':
-        return 'Calendar';
+        return t('calendar');
       case '/calendar/manager':
-        return 'Calendar Manager';
+        return t('calendarManager');
       case '/appointments':
-        return 'Appointments';
+        return t('appointments');
       case '/appointments/manager':
-        return 'Appointment Manager';
+        return t('appointmentManager');
       case '/contacts':
-        return 'Contacts';
+        return t('contacts');
       case '/contacts/manager':
-        return 'Contacts Manager';
+        return t('contactsManager');
       case '/ai-companion':
-        return 'AI Companion';
+        return t('aiCompanion');
        case '/scribe':
-        return 'AI Scribe';
+        return t('aiScribe');
       case '/settings':
-        return 'Settings';
+        return t('settings');
       default:
         return 'MemoIQ';
     }
@@ -111,11 +113,11 @@ export function MainLayout({children}: {children: React.ReactNode}) {
               <SidebarMenuButton
                 asChild
                 isActive={pathname === '/'}
-                tooltip="Dashboard"
+                tooltip={t('dashboard')}
               >
                 <Link href="/">
                   <Home />
-                  <span>Dashboard</span>
+                  <span>{t('dashboard')}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -123,11 +125,11 @@ export function MainLayout({children}: {children: React.ReactNode}) {
               <SidebarMenuButton
                 asChild
                 isActive={pathname.startsWith('/memos')}
-                tooltip="Memos"
+                tooltip={t('voiceMemos')}
               >
                 <Link href="/memos">
                   <Mic />
-                  <span>Voice Memos</span>
+                  <span>{t('voiceMemos')}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -135,11 +137,11 @@ export function MainLayout({children}: {children: React.ReactNode}) {
               <SidebarMenuButton
                 asChild
                 isActive={pathname.startsWith('/scribe')}
-                tooltip="Scribe"
+                tooltip={t('aiScribe')}
               >
                 <Link href="/scribe">
                   <PenSquare />
-                  <span>AI Scribe</span>
+                  <span>{t('aiScribe')}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -147,11 +149,11 @@ export function MainLayout({children}: {children: React.ReactNode}) {
               <SidebarMenuButton
                 asChild
                 isActive={pathname.startsWith('/tasks')}
-                tooltip="Tasks"
+                tooltip={t('tasks')}
               >
                 <Link href="/tasks">
                   <CheckSquare />
-                  <span>Tasks</span>
+                  <span>{t('tasks')}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -159,11 +161,11 @@ export function MainLayout({children}: {children: React.ReactNode}) {
               <SidebarMenuButton
                 asChild
                 isActive={pathname.startsWith('/calendar')}
-                tooltip="Calendar"
+                tooltip={t('calendar')}
               >
                 <Link href="/calendar">
                   <Calendar />
-                  <span>Calendar</span>
+                  <span>{t('calendar')}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -171,11 +173,11 @@ export function MainLayout({children}: {children: React.ReactNode}) {
               <SidebarMenuButton
                 asChild
                 isActive={pathname.startsWith('/appointments')}
-                tooltip="Appointments"
+                tooltip={t('appointments')}
               >
                 <Link href="/appointments">
                   <CalendarPlus />
-                  <span>Appointments</span>
+                  <span>{t('appointments')}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -183,11 +185,11 @@ export function MainLayout({children}: {children: React.ReactNode}) {
               <SidebarMenuButton
                 asChild
                 isActive={pathname.startsWith('/contacts')}
-                tooltip="Contacts"
+                tooltip={t('contacts')}
               >
                 <Link href="/contacts">
                   <Contact />
-                  <span>Contacts</span>
+                  <span>{t('contacts')}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -195,28 +197,28 @@ export function MainLayout({children}: {children: React.ReactNode}) {
               <SidebarMenuButton
                 asChild
                 isActive={pathname.startsWith('/ai-companion')}
-                tooltip="AI Companion"
+                tooltip={t('aiCompanion')}
               >
                 <Link href="/ai-companion">
                   <Smile />
-                  <span>AI Companion</span>
+                  <span>{t('aiCompanion')}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           
             <SidebarMenuItem className="mt-4">
-               <span className="px-2 text-xs font-semibold text-muted-foreground">Managers</span>
+               <span className="px-2 text-xs font-semibold text-muted-foreground">{t('managers')}</span>
             </SidebarMenuItem>
 
              <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
                 isActive={pathname === '/tasks/manager'}
-                tooltip="Tasks Manager"
+                tooltip={t('tasksManager')}
               >
                 <Link href="/tasks/manager">
                   <Briefcase />
-                  <span>Tasks Manager</span>
+                  <span>{t('tasksManager')}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -224,11 +226,11 @@ export function MainLayout({children}: {children: React.ReactNode}) {
               <SidebarMenuButton
                 asChild
                 isActive={pathname === '/calendar/manager'}
-                tooltip="Calendar Manager"
+                tooltip={t('calendarManager')}
               >
                 <Link href="/calendar/manager">
                   <Briefcase />
-                  <span>Calendar Manager</span>
+                  <span>{t('calendarManager')}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -236,11 +238,11 @@ export function MainLayout({children}: {children: React.ReactNode}) {
               <SidebarMenuButton
                 asChild
                 isActive={pathname === '/appointments/manager'}
-                tooltip="Appointment Manager"
+                tooltip={t('appointmentManager')}
               >
                 <Link href="/appointments/manager">
                   <Briefcase />
-                  <span>Appointment Manager</span>
+                  <span>{t('appointmentManager')}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -248,11 +250,11 @@ export function MainLayout({children}: {children: React.ReactNode}) {
               <SidebarMenuButton
                 asChild
                 isActive={pathname === '/contacts/manager'}
-                tooltip="Contacts Manager"
+                tooltip={t('contactsManager')}
               >
                 <Link href="/contacts/manager">
                   <Briefcase />
-                  <span>Contacts Manager</span>
+                  <span>{t('contactsManager')}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -277,7 +279,7 @@ export function MainLayout({children}: {children: React.ReactNode}) {
              <Button variant="ghost" size="icon" asChild>
                 <Link href="/settings">
                     <Settings className="h-5 w-5" />
-                    <span className="sr-only">Settings</span>
+                    <span className="sr-only">{t('settings')}</span>
                 </Link>
              </Button>
              <DropdownMenu>
@@ -297,7 +299,7 @@ export function MainLayout({children}: {children: React.ReactNode}) {
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={logout}>
                         <LogOut className="mr-2"/>
-                        Logout
+                        {t('logout')}
                     </DropdownMenuItem>
                 </DropdownMenuContent>
              </DropdownMenu>

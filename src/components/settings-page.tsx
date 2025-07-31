@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -12,11 +11,13 @@ import { Loader2, Moon, Sun, Languages } from 'lucide-react';
 import { Switch } from './ui/switch';
 import { useTheme } from 'next-themes';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+import { useLanguage } from '@/contexts/language-context';
 
 export function SettingsPage() {
   const { user, updateUserProfile, updateUserPassword, loading, updateUserSettings } = useAuth();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
+  const { t } = useLanguage();
   
   const [displayName, setDisplayName] = React.useState(user?.displayName || '');
   const [email, setEmail] = React.useState(user?.email || '');
@@ -32,7 +33,7 @@ export function SettingsPage() {
     e.preventDefault();
     if (displayName !== user?.displayName) {
       await updateUserProfile({ displayName });
-      toast({ title: "Success", description: "Profile updated successfully." });
+      toast({ title: t('success'), description: t('profileUpdatedSuccess') });
     }
   };
 
@@ -41,14 +42,14 @@ export function SettingsPage() {
     if (newPassword && newPassword === confirmPassword) {
       try {
         await updateUserPassword(newPassword);
-        toast({ title: "Success", description: "Password updated successfully." });
+        toast({ title: t('success'), description: t('passwordUpdatedSuccess') });
         setNewPassword('');
         setConfirmPassword('');
       } catch (error: any) {
-        toast({ variant: 'destructive', title: "Error", description: error.message });
+        toast({ variant: 'destructive', title: t('error'), description: error.message });
       }
     } else {
-        toast({ variant: 'destructive', title: "Error", description: "Passwords do not match." });
+        toast({ variant: 'destructive', title: t('error'), description: t('passwordsDoNotMatch') });
     }
   };
   
@@ -60,20 +61,20 @@ export function SettingsPage() {
       // @ts-ignore
       const newSettings = { ...user.settings, [key]: value };
       await updateUserSettings(newSettings);
-      toast({ title: "Preferences Updated", description: "Your new settings have been saved." });
+      toast({ title: t('preferencesUpdated'), description: t('newSettingsSaved') });
   }
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
       <Card>
         <CardHeader>
-          <CardTitle>Profile Settings</CardTitle>
-          <CardDescription>Update your display name and email.</CardDescription>
+          <CardTitle>{t('profileSettings')}</CardTitle>
+          <CardDescription>{t('updateProfileDescription')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleProfileUpdate} className="space-y-4">
             <div className="grid gap-2">
-              <Label htmlFor="displayName">Display Name</Label>
+              <Label htmlFor="displayName">{t('displayName')}</Label>
               <Input
                 id="displayName"
                 value={displayName}
@@ -81,12 +82,12 @@ export function SettingsPage() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">{t('email')}</Label>
               <Input id="email" value={email} disabled />
             </div>
             <Button type="submit" disabled={loading}>
               {loading ? <Loader2 className="animate-spin mr-2" /> : null}
-              Save Changes
+              {t('saveChanges')}
             </Button>
           </form>
         </CardContent>
@@ -94,13 +95,13 @@ export function SettingsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Change Password</CardTitle>
-          <CardDescription>Update your account password.</CardDescription>
+          <CardTitle>{t('changePassword')}</CardTitle>
+          <CardDescription>{t('updatePasswordDescription')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handlePasswordUpdate} className="space-y-4">
             <div className="grid gap-2">
-              <Label htmlFor="newPassword">New Password</Label>
+              <Label htmlFor="newPassword">{t('newPassword')}</Label>
               <Input
                 id="newPassword"
                 type="password"
@@ -109,7 +110,7 @@ export function SettingsPage() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="confirmPassword">Confirm New Password</Label>
+              <Label htmlFor="confirmPassword">{t('confirmNewPassword')}</Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -119,7 +120,7 @@ export function SettingsPage() {
             </div>
             <Button type="submit" disabled={loading}>
               {loading ? <Loader2 className="animate-spin mr-2" /> : null}
-              Update Password
+              {t('updatePassword')}
             </Button>
           </form>
         </CardContent>
@@ -127,14 +128,14 @@ export function SettingsPage() {
 
        <Card>
         <CardHeader>
-          <CardTitle>Preferences</CardTitle>
-          <CardDescription>Manage your application preferences.</CardDescription>
+          <CardTitle>{t('preferences')}</CardTitle>
+          <CardDescription>{t('managePreferences')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
             <div className="flex items-center justify-between p-4 border rounded-lg">
                 <div>
-                    <Label htmlFor="ai-language-group">AI Language</Label>
-                    <p className="text-sm text-muted-foreground">Set the language for AI voice and text interactions.</p>
+                    <Label htmlFor="ai-language-group">{t('aiLanguage')}</Label>
+                    <p className="text-sm text-muted-foreground">{t('aiLanguageDescription')}</p>
                 </div>
                 <RadioGroup 
                     defaultValue={aiLanguage}
@@ -147,18 +148,18 @@ export function SettingsPage() {
                 >
                     <div className="flex items-center space-x-2">
                         <RadioGroupItem value="en" id="ai-lang-en" />
-                        <Label htmlFor="ai-lang-en">English</Label>
+                        <Label htmlFor="ai-lang-en">{t('english')}</Label>
                     </div>
                     <div className="flex items-center space-x-2">
                         <RadioGroupItem value="es" id="ai-lang-es" />
-                        <Label htmlFor="ai-lang-es">Español</Label>
+                        <Label htmlFor="ai-lang-es">{t('spanish')}</Label>
                     </div>
                 </RadioGroup>
             </div>
              <div className="flex items-center justify-between p-4 border rounded-lg">
                 <div>
-                    <Label htmlFor="ui-language-group">Application Language</Label>
-                    <p className="text-sm text-muted-foreground">Set the display language for the entire application.</p>
+                    <Label htmlFor="ui-language-group">{t('appLanguage')}</Label>
+                    <p className="text-sm text-muted-foreground">{t('appLanguageDescription')}</p>
                 </div>
                 <RadioGroup 
                     defaultValue={uiLanguage}
@@ -172,18 +173,18 @@ export function SettingsPage() {
                 >
                     <div className="flex items-center space-x-2">
                         <RadioGroupItem value="en" id="ui-lang-en" />
-                        <Label htmlFor="ui-lang-en">English</Label>
+                        <Label htmlFor="ui-lang-en">{t('english')}</Label>
                     </div>
                     <div className="flex items-center space-x-2">
                         <RadioGroupItem value="es" id="ui-lang-es" />
-                        <Label htmlFor="ui-lang-es">Español</Label>
+                        <Label htmlFor="ui-lang-es">{t('spanish')}</Label>
                     </div>
                 </RadioGroup>
             </div>
             <div className="flex items-center justify-between p-4 border rounded-lg">
                 <div>
-                    <Label htmlFor="voice-greeting">AI Voice Greeting</Label>
-                    <p className="text-sm text-muted-foreground">Enable a voice greeting on login.</p>
+                    <Label htmlFor="voice-greeting">{t('aiVoiceGreeting')}</Label>
+                    <p className="text-sm text-muted-foreground">{t('voiceGreetingDescription')}</p>
                 </div>
                 <Switch 
                     id="voice-greeting" 
@@ -196,14 +197,14 @@ export function SettingsPage() {
                 <div className='flex items-center space-x-2'>
                     <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
                     <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                    <Label htmlFor="theme">Theme</Label>
-                    <p className="text-sm text-muted-foreground capitalize">({theme} mode)</p>
+                    <Label htmlFor="theme">{t('theme')}</Label>
+                    <p className="text-sm text-muted-foreground capitalize">({theme} {t('mode')})</p>
                 </div>
                 <Switch
                     id="theme-switch"
                     checked={theme === 'dark'}
                     onCheckedChange={handleThemeChange}
-                    aria-label="Toggle dark mode"
+                    aria-label={t('toggleDarkMode')}
                 />
             </div>
         </CardContent>

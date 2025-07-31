@@ -8,24 +8,27 @@ import { CalendarProvider } from '@/contexts/calendar-context';
 import { ScribeProvider } from '@/contexts/scribe-context';
 import { StorageProvider } from '@/contexts/storage-context';
 import { MemoProvider } from './memos-page';
+import { LanguageProvider } from '@/contexts/language-context';
 
 export function Providers({ children }: { children: React.ReactNode }) {
     return (
         <AuthProvider>
-            <StorageProvider>
-                <TaskProvider>
-                    <ContactProvider>
-                        <CalendarProvider>
-                            <MemoProvider>
-                                <ScribeProvider>
-                                    {children}
-                                    <Toaster />
-                                </ScribeProvider>
-                            </MemoProvider>
-                        </CalendarProvider>
-                    </ContactProvider>
-                </TaskProvider>
-            </StorageProvider>
+            <LanguageProvider>
+                <StorageProvider>
+                    <TaskProvider>
+                        <ContactProvider>
+                            <CalendarProvider>
+                                <MemoProvider>
+                                    <ScribeProvider>
+                                        {children}
+                                        <Toaster />
+                                    </ScribeProvider>
+                                </MemoProvider>
+                            </CalendarProvider>
+                        </ContactProvider>
+                    </TaskProvider>
+                </StorageProvider>
+            </LanguageProvider>
         </AuthProvider>
     );
 }

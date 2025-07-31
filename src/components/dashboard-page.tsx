@@ -27,8 +27,9 @@ import { Skeleton } from './ui/skeleton';
 import { useAuth } from '@/contexts/auth-context';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { useCalendar } from '@/contexts/calendar-context';
-import { useMemos } from '@/contexts/memo-context';
+import { useMemos } from '@/components/memos-page';
 import { format } from 'date-fns';
+import { useLanguage } from '@/contexts/language-context';
 
 function IskylarBriefingCard() {
   const [briefing, setBriefing] = React.useState({ text: '', audioUri: '' });
@@ -40,6 +41,7 @@ function IskylarBriefingCard() {
   const { tasks } = useTasks();
   const { events } = useCalendar();
   const { memos } = useMemos();
+  const { t } = useLanguage();
 
   const handleGetBriefing = React.useCallback(async () => {
     if (!user) return;
@@ -72,14 +74,14 @@ function IskylarBriefingCard() {
       console.error('Error getting briefing:', error);
       toast({
         variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to get insights from iSkylar.',
+        title: t('error'),
+        description: t('failedToGetInsights'),
       });
-      setBriefing({ text: 'I seem to be having trouble connecting right now. Please try again in a moment.', audioUri: '' });
+      setBriefing({ text: t('briefingConnectionError'), audioUri: '' });
     } finally {
       setLoading(false);
     }
-  }, [user, tasks, events, memos, toast]);
+  }, [user, tasks, events, memos, toast, t]);
 
   React.useEffect(() => {
     if (user) {
@@ -122,10 +124,10 @@ function IskylarBriefingCard() {
       <CardHeader>
         <div className="flex items-center gap-2">
           <Bot className="h-6 w-6 text-primary" />
-          <CardTitle>iSkylar Assistant</CardTitle>
+          <CardTitle>{t('iskylarAssistant')}</CardTitle>
         </div>
         <CardDescription>
-          Your personal AI assistant for insights and reminders.
+          {t('personalAssistantDescription')}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -138,7 +140,7 @@ function IskylarBriefingCard() {
             <>
                 <Alert>
                     <Sparkles className="h-4 w-4" />
-                    <AlertTitle>Today's Briefing</AlertTitle>
+                    <AlertTitle>{t('todaysBriefing')}</AlertTitle>
                     <AlertDescription>
                         <p className="whitespace-pre-wrap">{briefing.text}</p>
                     </AlertDescription>
@@ -146,13 +148,13 @@ function IskylarBriefingCard() {
                 <div className="mt-4 flex gap-2">
                     <Button onClick={togglePlayback} disabled={!briefing.audioUri} className="flex-1">
                         {isPlaying ? <Pause className="mr-2" /> : <Play className="mr-2" />}
-                        {isPlaying ? 'Pause' : 'Play Briefing'}
+                        {isPlaying ? t('pause') : t('playBriefing')}
                     </Button>
                     <Button
                         variant="secondary"
                         onClick={handleGetBriefing}
                         disabled={loading}
-                        aria-label="Regenerate Briefing"
+                        aria-label={t('regenerateBriefing')}
                         >
                        {loading ? <Loader2 className="animate-spin" /> : <Sparkles />}
                     </Button>
@@ -166,15 +168,16 @@ function IskylarBriefingCard() {
 
 function RecentMemosCard() {
     const { memos, loading } = useMemos();
+    const { t } = useLanguage();
 
     return (
         <Card>
             <CardHeader>
             <div className="flex items-center gap-2">
                 <MessageSquare className="h-6 w-6 text-primary" />
-                <CardTitle>Recent Memos</CardTitle>
+                <CardTitle>{t('recentMemos')}</CardTitle>
             </div>
-            <CardDescription>Your latest transcribed thoughts.</CardDescription>
+            <CardDescription>{t('latestTranscribedThoughts')}</CardDescription>
             </CardHeader>
             <CardContent>
              {loading ? (
@@ -202,6 +205,7 @@ function RecentMemosCard() {
 export function DashboardPage() {
   const { tasks, loading: tasksLoading } = useTasks();
   const { events, loading: eventsLoading } = useCalendar();
+  const { t } = useLanguage();
 
   const upcomingEvents = events
     .filter(event => event.startTime >= new Date())
@@ -215,9 +219,9 @@ export function DashboardPage() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <CalendarDays className="h-6 w-6 text-primary" />
-            <CardTitle>Upcoming Events</CardTitle>
+            <CardTitle>{t('upcomingEvents')}</CardTitle>
           </div>
-          <CardDescription>Your schedule for today.</CardDescription>
+          <CardDescription>{t('yourScheduleForToday')}</CardDescription>
         </CardHeader>
         <CardContent>
           {eventsLoading ? (
@@ -240,7 +244,7 @@ export function DashboardPage() {
                     </div>
                 </li>
                 )) : (
-                    <p className="text-sm text-muted-foreground text-center pt-4">No upcoming events.</p>
+                    <p className="text-sm text-muted-foreground text-center pt-4">{t('noUpcomingEvents')}</p>
                 )}
             </ul>
           )}
@@ -253,9 +257,9 @@ export function DashboardPage() {
         <CardHeader>
           <div className="flex items-center gap-2">
             <ListTodo className="h-6 w-6 text-primary" />
-            <CardTitle>To-Do List</CardTitle>
+            <CardTitle>{t('toDoList')}</CardTitle>
           </div>
-          <CardDescription>A quick look at your pending tasks.</CardDescription>
+          <CardDescription>{t('quickLookAtTasks')}</CardDescription>
         </CardHeader>
         <CardContent>
           {tasksLoading ? (
@@ -294,11 +298,4 @@ export function DashboardPage() {
       </Card>
     </div>
   );
-}
-
-// Need a memo context to avoid prop drilling, similar to tasks and contacts
-const MemoContext = React.createContext<{ memos: Memo[]; loading: boolean; }>({ memos: [], loading: true });
-
-function useMemos() {
-    return React.useContext(MemoContext);
 }
