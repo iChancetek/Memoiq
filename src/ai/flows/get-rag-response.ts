@@ -113,7 +113,7 @@ export const getMemos = ai.defineTool(
       return {
         ...data,
         id: doc.id,
-        createdAt: (data.createdAt as FirebaseFirestore.Timestamp)?.toDate(),
+        createdAt: (data.createdAt as Timestamp)?.toDate(),
       } as any;
     }) as Memo[];
   }
@@ -136,7 +136,7 @@ export const getScribeEntries = ai.defineTool(
       return {
         ...data,
         id: doc.id,
-        createdAt: (data.createdAt as FirebaseFirestore.Timestamp)?.toDate(),
+        createdAt: (data.createdAt as Timestamp)?.toDate(),
       } as any;
     }) as ScribeEntry[];
   }
@@ -202,7 +202,7 @@ Your capabilities:
 
 Today's date is ${format(new Date(), 'EEEE, MMMM d, yyyy')}.
 `,
-      history: history,
+      history: history as Part[],
       context: { userId },
     });
 
