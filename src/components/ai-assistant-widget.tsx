@@ -8,19 +8,20 @@ import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Send, Sparkles, Bot, User, X, ChevronUp, Volume2, StopCircle, Mic } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getRagResponse } from '@/ai/flows/get-rag-response';
+import { callTool } from '@/ai/flows/call-tool';
+import { textToSpeech } from '@/ai/flows/text-to-speech';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { transcribeAudio } from '@/ai/flows/transcribe-audio';
 import { useAuth } from '@/contexts/auth-context';
+import { GenerateResponseData, Part } from '@genkit-ai/googleai';
 
-interface Part {
-    text?: string;
-    toolRequest?: { name: string; input: any };
-}
+
 interface Message {
   role: 'user' | 'model' | 'tool';
   content: Part[];
 }
+
 type RecordingState = 'idle' | 'recording' | 'processing';
 
 const getInitials = (name: string) => {
@@ -63,47 +64,80 @@ export function AIAssistantWidget() {
   React.useEffect(() => {
     if (scrollAreaRef.current) {
         // @ts-ignore
-        scrollAreaRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        const viewport = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
+        if (viewport) {
+            viewport.scrollTop = viewport.scrollHeight;
+        }
     }
-  }, [messages]);
+  }, [messages, loading]);
+
+  const runConversation = React.useCallback(async (history: Message[]) => {
+      setLoading(true);
+
+      if (!user) {
+          toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.'});
+          setLoading(false);
+          return;
+      }
+      
+      try {
+        const response = await getRagResponse({ history, userId: user.uid });
+        const lastMessage = response.history[response.history.length - 1];
+        
+        setMessages(response.history);
+
+        const toolRequest = lastMessage.content.find(part => part.toolRequest);
+        if (toolRequest && toolRequest.toolRequest) {
+            const toolResponse = await callTool({
+                name: toolRequest.toolRequest.name,
+                input: toolRequest.toolRequest.input,
+            });
+
+            const newHistory: Message[] = [
+                ...response.history,
+                { role: 'tool', content: [{ toolResponse }] },
+            ];
+            setMessages(newHistory);
+            runConversation(newHistory); // Continue conversation
+        } else {
+            const textResponse = lastMessage.content.map(p => p.text).join('');
+            if (textResponse) {
+                const { audioDataUri } = await textToSpeech({ text: textResponse });
+                if (audioDataUri) {
+                    const newAudio = new Audio(audioDataUri);
+                    setAudio(newAudio);
+                    newAudio.play().catch(console.error);
+                    newAudio.onended = () => setAudio(null);
+                }
+            }
+            setLoading(false);
+        }
+      } catch (err) {
+           console.error('Error with AI Assistant:', err);
+            toast({
+                variant: 'destructive',
+                title: 'Assistant Error',
+                description: 'Failed to get a response from iSkylar.',
+            });
+            setLoading(false);
+      }
+
+  }, [user, toast]);
+
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || loading || !user) return;
+    if (!input.trim() || loading) return;
 
     stopSpeaking(); 
 
     const userMessage: Message = { role: 'user', content: [{ text: input }] };
-    const newMessages: Message[] = [...messages, userMessage];
-
-    setMessages(newMessages);
+    const newHistory = [...messages, userMessage];
+    
+    setMessages(newHistory);
     setInput('');
-    setLoading(true);
 
-    try {
-      const response = await getRagResponse({ history: newMessages, userId: user.uid });
-      const assistantMessage: Message = { role: 'model', content: [{text: response.text}] };
-      setMessages(prev => [...prev, assistantMessage]);
-      
-      if (response.audioDataUri) {
-        const newAudio = new Audio(response.audioDataUri);
-        setAudio(newAudio);
-        newAudio.play().catch(console.error);
-        newAudio.onended = () => setAudio(null);
-      }
-
-    } catch (error) {
-      console.error('Error with AI Assistant:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Assistant Error',
-        description: 'Failed to get a response from iSkylar.',
-      });
-      // Revert optimistic update
-      setMessages(messages);
-    } finally {
-      setLoading(false);
-    }
+    await runConversation(newHistory);
   };
 
   const handleStartRecording = async () => {
@@ -180,26 +214,31 @@ export function AIAssistantWidget() {
                      <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}><X className="h-4 w-4" /></Button>
                 </CardHeader>
                 <CardContent className="flex-1 flex flex-col p-0">
-                     <ScrollArea className="flex-1 p-4">
+                     <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
                         <div className="space-y-6">
-                            {messages.map((message, index) => (
-                                <div key={index} className={`flex items-start gap-3 ${message.role === 'user' ? 'justify-end' : ''}`}>
-                                    {message.role === 'model' && (
-                                        <Avatar className="h-8 w-8">
-                                            <AvatarImage src="https://placehold.co/100x100.png" data-ai-hint="woman face" />
-                                            <AvatarFallback>AI</AvatarFallback>
-                                        </Avatar>
-                                    )}
-                                    <div className={`rounded-lg p-3 max-w-sm text-sm ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                                        <p className="whitespace-pre-wrap">{message.content[0].text}</p>
+                            {messages.map((message, index) => {
+                                const textContent = message.content.map(p => p.text).filter(Boolean).join('\n');
+                                if (!textContent) return null;
+
+                                return (
+                                    <div key={index} className={`flex items-start gap-3 ${message.role === 'user' ? 'justify-end' : ''}`}>
+                                        {message.role === 'model' && (
+                                            <Avatar className="h-8 w-8">
+                                                <AvatarImage src="https://placehold.co/100x100.png" data-ai-hint="woman face" />
+                                                <AvatarFallback>AI</AvatarFallback>
+                                            </Avatar>
+                                        )}
+                                        <div className={`rounded-lg p-3 max-w-sm text-sm ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                                            <p className="whitespace-pre-wrap">{textContent}</p>
+                                        </div>
+                                        {message.role === 'user' && (
+                                            <Avatar className="h-8 w-8">
+                                                <AvatarFallback>{user?.displayName ? getInitials(user.displayName) : <User />}</AvatarFallback>
+                                            </Avatar>
+                                        )}
                                     </div>
-                                    {message.role === 'user' && (
-                                        <Avatar className="h-8 w-8">
-                                            <AvatarFallback>{user?.displayName ? getInitials(user.displayName) : <User />}</AvatarFallback>
-                                        </Avatar>
-                                    )}
-                                </div>
-                            ))}
+                                )
+                            })}
                             {loading && (
                                 <div className="flex items-start gap-3">
                                     <Avatar className="h-8 w-8">
@@ -212,7 +251,6 @@ export function AIAssistantWidget() {
                                 </div>
                             )}
                         </div>
-                         <div ref={scrollAreaRef} />
                     </ScrollArea>
                     <div className="p-4 border-t">
                         {audio && (

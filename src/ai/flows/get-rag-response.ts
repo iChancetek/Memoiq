@@ -11,14 +11,14 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { TaskSchema, ContactSchema, CalendarEventSchema, MemoSchema, ScribeEntrySchema, Task, Contact, CalendarEvent, Memo, ScribeEntry } from '@/lib/data';
 import { format } from 'date-fns';
-import wav from 'wav';
 import { getFirestore } from 'firebase-admin/firestore';
 import { adminApp } from '@/lib/firebase-admin';
+import { GenerateResponse, GenerateResponseData, Part } from '@genkit-ai/googleai';
 
 const db = getFirestore(adminApp);
 
 // Define tools for the AI to use
-const getTasks = ai.defineTool(
+export const getTasks = ai.defineTool(
   {
     name: 'getTasks',
     description: 'Retrieve a list of the user\'s tasks. Can be filtered by status (e.g., "completed", "pending").',
@@ -39,7 +39,7 @@ const getTasks = ai.defineTool(
   }
 );
 
-const getContacts = ai.defineTool(
+export const getContacts = ai.defineTool(
   {
     name: 'getContacts',
     description: "Retrieve the user's contact list. Can be filtered by name.",
@@ -60,7 +60,7 @@ const getContacts = ai.defineTool(
   }
 );
 
-const getCalendarEvents = ai.defineTool(
+export const getCalendarEvents = ai.defineTool(
   {
     name: 'getCalendarEvents',
     description: "Retrieve calendar events or appointments for a given date range. Default is today.",
@@ -96,7 +96,7 @@ const getCalendarEvents = ai.defineTool(
   }
 );
 
-const getMemos = ai.defineTool(
+export const getMemos = ai.defineTool(
   {
     name: 'getMemos',
     description: 'Retrieve a list of the user\'s voice memos, including their titles and summaries.',
@@ -119,7 +119,7 @@ const getMemos = ai.defineTool(
   }
 );
 
-const getScribeEntries = ai.defineTool(
+export const getScribeEntries = ai.defineTool(
   {
     name: 'getScribeEntries',
     description: 'Retrieve a list of the user\'s AI Scribe entries, which are recordings with transcriptions.',
@@ -156,14 +156,7 @@ const GetRagResponseInputSchema = z.object({
   userId: z.string().describe("The current user's ID to fetch data for."),
 });
 export type GetRagResponseInput = z.infer<typeof GetRagResponseInputSchema>;
-
-const GetRagResponseOutputSchema = z.object({
-  text: z.string().describe('The text response from iSkylar.'),
-  audioDataUri: z.string().describe('The text-to-speech audio of the response as a base64-encoded data URI.'),
-});
-export type GetRagResponseOutput = z.infer<
-  typeof GetRagResponseOutputSchema
->;
+export type GetRagResponseOutput = GenerateResponseData;
 
 export async function getRagResponse(
   input: GetRagResponseInput
@@ -171,42 +164,14 @@ export async function getRagResponse(
   return getRagResponseFlow(input);
 }
 
-
-async function toWav(
-  pcmData: Buffer,
-  channels = 1,
-  rate = 24000,
-  sampleWidth = 2
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const writer = new wav.Writer({
-      channels,
-      sampleRate: rate,
-      bitDepth: sampleWidth * 8,
-    });
-
-    let bufs = [] as any[];
-    writer.on('error', reject);
-    writer.on('data', function (d) {
-      bufs.push(d);
-    });
-    writer.on('end', function () {
-      resolve(Buffer.concat(bufs).toString('base64'));
-    });
-
-    writer.write(pcmData);
-    writer.end();
-  });
-}
-
 const getRagResponseFlow = ai.defineFlow(
   {
     name: 'getRagResponseFlow',
     inputSchema: GetRagResponseInputSchema,
-    outputSchema: GetRagResponseOutputSchema,
+    outputSchema: z.custom<GenerateResponseData>(),
   },
   async ({ history, userId }) => {
-    const llmResponse = await ai.generate({
+    const response = await ai.generate({
       model: 'googleai/gemini-1.5-pro',
       tools: [getTasks, getContacts, getCalendarEvents, getMemos, getScribeEntries],
       system: `You are iSkylar, a friendly and highly intelligent AI Assistant for the MemoIQ platform.
@@ -228,37 +193,6 @@ Today's date is ${format(new Date(), 'EEEE, MMMM d, yyyy')}.
       context: { userId },
     });
 
-    const responseText = llmResponse.text;
-    
-    if (!responseText) {
-        throw new Error("Failed to generate response text from AI.");
-    }
-
-    const { media } = await ai.generate({
-      model: 'googleai/gemini-2.5-flash-preview-tts',
-      config: {
-        responseModalities: ['AUDIO'],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Algenib' },
-          },
-        },
-      },
-      prompt: responseText,
-    });
-
-    if (!media) {
-      throw new Error('no media returned');
-    }
-    const audioBuffer = Buffer.from(
-      media.url.substring(media.url.indexOf(',') + 1),
-      'base64'
-    );
-    const audioDataUri = 'data:audio/wav;base64,' + (await toWav(audioBuffer));
-
-    return {
-      text: responseText,
-      audioDataUri,
-    };
+    return response.toJSON();
   }
 );
