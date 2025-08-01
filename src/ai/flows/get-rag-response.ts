@@ -142,17 +142,9 @@ export const getScribeEntries = ai.defineTool(
   }
 );
 
-const MessageSchema = z.object({
-  role: z.enum(['user', 'model', 'tool']),
-  content: z.array(z.object({
-    text: z.string().optional(),
-    toolRequest: z.object({ name: z.string(), input: z.any() }).optional(),
-    toolResponse: z.object({ name: z.string(), output: z.any() }).optional(),
-  })),
-});
 
 const GetRagResponseInputSchema = z.object({
-  history: z.array(MessageSchema).describe('The conversation history, including the latest user message.'),
+  history: z.array(z.any()).describe('The conversation history, including the latest user message.'),
   userId: z.string().describe("The current user's ID to fetch data for."),
 });
 export type GetRagResponseInput = z.infer<typeof GetRagResponseInputSchema>;
