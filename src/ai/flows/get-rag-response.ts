@@ -13,7 +13,7 @@ import { TaskSchema, ContactSchema, CalendarEventSchema, MemoSchema, ScribeEntry
 import { format } from 'date-fns';
 import { getFirestore } from 'firebase-admin/firestore';
 import { adminApp } from '@/lib/firebase-admin';
-import { GenerateResponse, GenerateResponseData, Part } from '@genkit-ai/googleai';
+import { GenerateResponseData } from '@genkit-ai/googleai';
 
 const db = getFirestore(adminApp);
 
