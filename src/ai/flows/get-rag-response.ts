@@ -206,11 +206,6 @@ const getRagResponseFlow = ai.defineFlow(
     outputSchema: GetRagResponseOutputSchema,
   },
   async ({ history, userId }) => {
-    const sanitizedHistory = history.map(message => ({
-      role: message.role,
-      content: message.content || [],
-    }));
-
     const llmResponse = await ai.generate({
       model: 'googleai/gemini-1.5-pro',
       tools: [getTasks, getContacts, getCalendarEvents, getMemos, getScribeEntries],
@@ -229,7 +224,7 @@ Your capabilities:
 
 Today's date is ${format(new Date(), 'EEEE, MMMM d, yyyy')}.
 `,
-      history: sanitizedHistory,
+      history: history,
       context: { userId },
     });
 
@@ -267,5 +262,3 @@ Today's date is ${format(new Date(), 'EEEE, MMMM d, yyyy')}.
     };
   }
 );
-
-    
