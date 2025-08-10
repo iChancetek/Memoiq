@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -13,6 +14,7 @@ import {z} from 'genkit';
 import wav from 'wav';
 
 const GetDailyBriefingInputSchema = z.object({
+  greeting: z.string().describe("The user's personalized greeting."),
   displayName: z.string().describe("The user's display name."),
   memos: z.string().describe('A JSON string of recent user memos.'),
   tasks: z.string().describe('A JSON string of user tasks for today.'),
@@ -35,10 +37,10 @@ export async function getDailyBriefing(
 
 const briefingPrompt = ai.definePrompt({
   name: 'briefingPrompt',
-  input: {schema: GetDailyBriefingInputSchema},
+  input: {schema: GetDailyBriefingInputSchema.omit({ greeting: true })},
   output: {schema: z.object({briefingText: z.string()})},
   model: 'googleai/gemini-1.5-flash',
-  prompt: `You are iSkylar, an AI assistant. Generate a concise and friendly daily briefing for the user based on their schedule, in the specified language.
+  prompt: `You are iSkylar, an AI assistant. Generate a concise and friendly daily briefing for the user based on their schedule, in the specified language. Do not include the greeting, just the briefing part.
 
 Language: {{{language}}}
 User Name: {{{displayName}}}
@@ -47,11 +49,10 @@ Tasks: {{{tasks}}}
 Calendar Events: {{{calendarEvents}}}
 
 Instructions:
-1. Start with a warm and brief intro in the specified language.
-2. Summarize the number of events, tasks, and any other important items in the specified language.
-3. Mention the first important event of the day in the specified language.
-4. Keep the entire briefing to 2-3 short sentences. Be conversational and encouraging.
-5. If there is nothing scheduled, provide a positive, encouraging message for the day in the specified language.
+1. Summarize the number of events, tasks, and any other important items in the specified language.
+2. Mention the first important event of the day in the specified language.
+3. Keep the entire briefing to 2-3 short sentences. Be conversational and encouraging.
+4. If there is nothing scheduled, provide a positive, encouraging message for the day in the specified language.
 
 Briefing Text (in {{{language}}}):`,
 });
@@ -112,7 +113,7 @@ const getDailyBriefingFlow = ai.defineFlow(
         throw new Error("Failed to get briefing text from AI after multiple attempts.");
     }
     
-    const briefingText = textOutput.briefingText;
+    const combinedBriefingText = `${input.greeting} ${textOutput.briefingText}`;
 
     const { media } = await ai.generate({
       model: 'googleai/gemini-2.5-flash-preview-tts',
@@ -124,7 +125,7 @@ const getDailyBriefingFlow = ai.defineFlow(
           },
         },
       },
-      prompt: briefingText,
+      prompt: combinedBriefingText,
     });
 
     if (!media) {
@@ -137,7 +138,7 @@ const getDailyBriefingFlow = ai.defineFlow(
     const briefingAudioDataUri = 'data:audio/wav;base64,' + (await toWav(audioBuffer));
     
     return {
-      briefingText,
+      briefingText: combinedBriefingText,
       briefingAudioDataUri,
     };
   }

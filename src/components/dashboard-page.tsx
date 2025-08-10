@@ -23,7 +23,7 @@ import {
   VolumeX,
 } from 'lucide-react';
 import {getDailyBriefing} from '@/ai/flows/get-daily-briefing';
-import {getWelcomeGreeting} from '@/ai/flows/get-welcome-greeting';
+import {getWelcomeGreetingText} from '@/ai/flows/get-welcome-greeting';
 import {useToast} from '@/hooks/use-toast';
 import { useTasks } from '@/contexts/task-context';
 import { Skeleton } from './ui/skeleton';
@@ -59,12 +59,13 @@ function IskylarBriefingCard() {
       // @ts-ignore
       const lang = user.settings?.language || 'en';
 
-      const greetingPromise = getWelcomeGreeting({
+      const greetingText = await getWelcomeGreetingText({
         displayName: user.displayName?.split(' ')[0] || 'there',
         hour: currentHour,
       });
 
-      const briefingPromise = getDailyBriefing({
+      const dailyBriefing = await getDailyBriefing({
+        greeting: greetingText,
         displayName: user.displayName || 'User',
         memos: JSON.stringify(memos.map(m => `${m.title}: ${m.summary}`)),
         tasks: JSON.stringify(tasks.map(t => `${t.title} (Due: ${t.dueDate})`)),
@@ -72,11 +73,8 @@ function IskylarBriefingCard() {
         // @ts-ignore
         language: lang,
       });
-
-      const [greeting, dailyBriefing] = await Promise.all([greetingPromise, briefingPromise]);
-
-      const combinedText = `${greeting.text} ${dailyBriefing.briefingText}`;
-      setBriefing({ text: combinedText, audioUri: dailyBriefing.briefingAudioDataUri });
+      
+      setBriefing({ text: dailyBriefing.briefingText, audioUri: dailyBriefing.briefingAudioDataUri });
     } catch (error) {
       console.error('Error getting briefing:', error);
       toast({
@@ -132,6 +130,7 @@ function IskylarBriefingCard() {
         } else {
             audioRef.current.play().catch(e => console.error("Audio playback error", e));
         }
+        setIsPlaying(!audioRef.current.paused);
     }
   }
 
@@ -315,5 +314,3 @@ export function DashboardPage() {
     </div>
   );
 }
-
-
