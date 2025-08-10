@@ -98,17 +98,6 @@ function IskylarBriefingCard() {
     if (briefing.audioUri) {
         const audio = new Audio(briefing.audioUri);
         audioRef.current = audio;
-
-        const playAudio = () => {
-            audio.play().then(() => setIsPlaying(true)).catch(e => {
-                console.error("Audio auto-play failed, user interaction may be required.", e)
-                setIsPlaying(false);
-            });
-        }
-
-        if (enableVoiceGreeting) {
-            playAudio();
-        }
         
         audio.onended = () => setIsPlaying(false);
         audio.onpause = () => setIsPlaying(false);
@@ -121,14 +110,14 @@ function IskylarBriefingCard() {
             audioRef.current = null;
         }
     }
-  }, [briefing.audioUri, enableVoiceGreeting]);
+  }, [briefing.audioUri]);
 
   const togglePlayback = () => {
     if (audioRef.current) {
-        if (isPlaying) {
-            audioRef.current.pause();
-        } else {
+        if (audioRef.current.paused) {
             audioRef.current.play().catch(e => console.error("Audio playback error", e));
+        } else {
+            audioRef.current.pause();
         }
         setIsPlaying(!audioRef.current.paused);
     }
