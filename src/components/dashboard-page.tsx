@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -18,6 +19,8 @@ import {
   Sparkles,
   Play,
   Pause,
+  Volume2,
+  VolumeX,
 } from 'lucide-react';
 import {getDailyBriefing} from '@/ai/flows/get-daily-briefing';
 import {getWelcomeGreeting} from '@/ai/flows/get-welcome-greeting';
@@ -42,6 +45,10 @@ function IskylarBriefingCard() {
   const { events } = useCalendar();
   const { memos } = useMemos();
   const { t } = useLanguage();
+
+  // @ts-ignore
+  const enableVoiceGreeting = user?.settings?.enableVoiceGreeting !== false; // Default to true if not set
+
 
   const handleGetBriefing = React.useCallback(async () => {
     if (!user) return;
@@ -93,10 +100,12 @@ function IskylarBriefingCard() {
     if (briefing.audioUri) {
         const audio = new Audio(briefing.audioUri);
         audioRef.current = audio;
-        audio.play().then(() => setIsPlaying(true)).catch(e => {
-            console.error("Audio auto-play failed, user interaction may be required.", e)
-            setIsPlaying(false);
-        });
+        if (enableVoiceGreeting) {
+            audio.play().then(() => setIsPlaying(true)).catch(e => {
+                console.error("Audio auto-play failed, user interaction may be required.", e)
+                setIsPlaying(false);
+            });
+        }
         audio.onended = () => setIsPlaying(false);
     }
     
@@ -106,7 +115,7 @@ function IskylarBriefingCard() {
             audioRef.current = null;
         }
     }
-  }, [briefing.audioUri]);
+  }, [briefing.audioUri, enableVoiceGreeting]);
 
   const togglePlayback = () => {
     if (audioRef.current) {
@@ -147,7 +156,7 @@ function IskylarBriefingCard() {
                 </Alert>
                 <div className="mt-4 flex gap-2">
                     <Button onClick={togglePlayback} disabled={!briefing.audioUri} className="flex-1">
-                        {isPlaying ? <Pause className="mr-2" /> : <Play className="mr-2" />}
+                        {isPlaying ? <Pause className="mr-2" /> : (enableVoiceGreeting ? <Volume2 className="mr-2" /> : <VolumeX className="mr-2" />)}
                         {isPlaying ? t('pause') : t('playBriefing')}
                     </Button>
                     <Button
@@ -299,3 +308,4 @@ export function DashboardPage() {
     </div>
   );
 }
+

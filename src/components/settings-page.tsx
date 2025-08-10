@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -189,7 +190,7 @@ export function SettingsPage() {
                 <Switch 
                     id="voice-greeting" 
                     // @ts-ignore
-                    defaultChecked={user?.settings?.enableVoiceGreeting} 
+                    checked={user?.settings?.enableVoiceGreeting !== false} 
                     onCheckedChange={(checked) => handleSettingsUpdate('enableVoiceGreeting', checked)}
                 />
             </div>
@@ -213,3 +214,4 @@ export function SettingsPage() {
     </div>
   );
 }
+
