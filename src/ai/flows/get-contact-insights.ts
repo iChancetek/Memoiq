@@ -104,7 +104,7 @@ const getContactInsightsFlow = ai.defineFlow(
         }
       } catch (error: any) {
         attempts++;
-        if (error.message && error.message.includes('503') && attempts < maxAttempts) {
+        if (error.message && (error.message.includes('503') || error.message.includes('429')) && attempts < maxAttempts) {
           console.log(`Contact insights attempt ${attempts} failed with 503, retrying...`);
           await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
         } else {
@@ -122,18 +122,35 @@ const getContactInsightsFlow = ai.defineFlow(
       ${analysisOutput.followUpSuggestions}.
     `;
 
-    const { media } = await ai.generate({
-      model: 'googleai/gemini-2.5-flash-preview-tts',
-      config: {
-        responseModalities: ['AUDIO'],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Algenib' },
-          },
-        },
-      },
-      prompt: readableAnalysis,
-    });
+    let media;
+    attempts = 0; // Reset for TTS
+    while (attempts < maxAttempts) {
+        try {
+            const ttsResponse = await ai.generate({
+                model: 'googleai/gemini-2.5-flash-preview-tts',
+                config: {
+                    responseModalities: ['AUDIO'],
+                    speechConfig: {
+                    voiceConfig: {
+                        prebuiltVoiceConfig: { voiceName: 'Algenib' },
+                    },
+                    },
+                },
+                prompt: readableAnalysis,
+            });
+            media = ttsResponse.media;
+            break; // Success
+        } catch(error: any) {
+            attempts++;
+            if (error.message && (error.message.includes('503') || error.message.includes('429')) && attempts < maxAttempts) {
+                console.log(`TTS generation attempt ${attempts} failed, retrying...`);
+                await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
+            } else {
+                throw error;
+            }
+        }
+    }
+
 
      if (!media) {
       throw new Error('no media returned');

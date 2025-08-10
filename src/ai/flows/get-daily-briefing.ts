@@ -100,8 +100,8 @@ const getDailyBriefingFlow = ai.defineFlow(
             break; // Success, exit loop
         } catch (error: any) {
             attempts++;
-            if (error.message.includes('503') && attempts < maxAttempts) {
-                console.log(`Attempt ${attempts} failed with 503, retrying after delay...`);
+            if (error.message.includes('503') || error.message.includes('429') && attempts < maxAttempts) {
+                console.log(`Attempt ${attempts} failed with ${error.message}, retrying after delay...`);
                 await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempts))); // Exponential backoff
             } else {
                 throw error; // Rethrow other errors or if max attempts reached
@@ -115,18 +115,35 @@ const getDailyBriefingFlow = ai.defineFlow(
     
     const combinedBriefingText = `${input.greeting} ${textOutput.briefingText}`;
 
-    const { media } = await ai.generate({
-      model: 'googleai/gemini-2.5-flash-preview-tts',
-      config: {
-        responseModalities: ['AUDIO'],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Algenib' },
-          },
-        },
-      },
-      prompt: combinedBriefingText,
-    });
+    let media;
+    attempts = 0;
+    while (attempts < maxAttempts) {
+        try {
+            const ttsResponse = await ai.generate({
+                model: 'googleai/gemini-2.5-flash-preview-tts',
+                config: {
+                    responseModalities: ['AUDIO'],
+                    speechConfig: {
+                    voiceConfig: {
+                        prebuiltVoiceConfig: { voiceName: 'Algenib' },
+                    },
+                    },
+                },
+                prompt: combinedBriefingText,
+            });
+            media = ttsResponse.media;
+            break; // Success
+        } catch(error: any) {
+            attempts++;
+            if (error.message && (error.message.includes('503') || error.message.includes('429')) && attempts < maxAttempts) {
+                console.log(`TTS generation attempt ${attempts} failed, retrying...`);
+                await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
+            } else {
+                throw error;
+            }
+        }
+    }
+
 
     if (!media) {
       throw new Error('no media returned');

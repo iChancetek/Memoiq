@@ -61,18 +61,37 @@ const textToSpeechFlow = ai.defineFlow(
     outputSchema: TextToSpeechOutputSchema,
   },
   async ({ text }) => {
-    const { media } = await ai.generate({
-      model: 'googleai/gemini-2.5-flash-preview-tts',
-      config: {
-        responseModalities: ['AUDIO'],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Algenib' },
-          },
-        },
-      },
-      prompt: text,
-    });
+    let media;
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    while (attempts < maxAttempts) {
+        try {
+            const ttsResponse = await ai.generate({
+                model: 'googleai/gemini-2.5-flash-preview-tts',
+                config: {
+                    responseModalities: ['AUDIO'],
+                    speechConfig: {
+                    voiceConfig: {
+                        prebuiltVoiceConfig: { voiceName: 'Algenib' },
+                    },
+                    },
+                },
+                prompt: text,
+            });
+            media = ttsResponse.media;
+            break; // Success
+        } catch(error: any) {
+            attempts++;
+            if (error.message && (error.message.includes('503') || error.message.includes('429')) && attempts < maxAttempts) {
+                console.log(`TTS generation attempt ${attempts} failed, retrying...`);
+                await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
+            } else {
+                throw error;
+            }
+        }
+    }
+
 
     if (!media) {
       throw new Error('no media returned');
