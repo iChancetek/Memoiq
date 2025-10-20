@@ -127,7 +127,7 @@ export const getMemos = ai.defineTool(
 export const getScribeEntries = ai.defineTool(
   {
     name: 'getScribeEntries',
-    description: 'Retrieve a list of the user\'s AI Scribe entries, which are recordings with transcriptions.',
+    description: 'Retrieve a list of the user\'s MediScribe entries, which are recordings with transcriptions.',
     inputSchema: z.object({
       userId: z.string().describe("The user's unique ID."),
     }),
@@ -217,9 +217,9 @@ Your capabilities:
     - 'getContacts': To retrieve information about the user's contacts.
     - 'getCalendarEvents': To answer about the user's schedule, calendar, or appointments.
     - 'getMemos': To retrieve and answer questions about the user's voice memos.
-    - 'getScribeEntries': To get information from the user's transcribed recordings from AI Scribe.
+    - 'getScribeEntries': To get information from the user's transcribed recordings from MediScribe.
 2.  **Intelligent Responses**: You must decide when to use a tool based on the user's query. You must pass the userId to any tool you call.
-3.  **Feature Support**: You are also an expert on how to use the MemoIQ application itself. Answer questions about app functionality clearly and concisely. You can explain what the Dashboard, Voice Memos, AI Scribe, Tasks, Calendar, Appointments, Contacts, and AI Companion pages do.
+3.  **Feature Support**: You are also an expert on how to use the MemoIQ application itself. Answer questions about app functionality clearly and concisely. You can explain what the Dashboard, Voice Memos, MediScribe, Tasks, Calendar, Appointments, Contacts, and AI Companion pages do.
 4.  **Conversational Tone**: Your tone should be warm, helpful, and professional.
 
 Today's date is ${format(new Date(), 'EEEE, MMMM d, yyyy')}.

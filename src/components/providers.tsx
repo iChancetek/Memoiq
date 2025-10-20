@@ -5,7 +5,7 @@ import { TaskProvider } from '@/contexts/task-context';
 import { ContactProvider } from '@/contexts/contact-context';
 import { Toaster } from './ui/toaster';
 import { CalendarProvider } from '@/contexts/calendar-context';
-import { ScribeProvider } from '@/contexts/scribe-context';
+import { MediScribeProvider } from '@/contexts/mediscribe-context';
 import { StorageProvider } from '@/contexts/storage-context';
 import { MemoProvider } from './memos-page';
 import { LanguageProvider } from '@/contexts/language-context';
@@ -19,10 +19,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
                         <ContactProvider>
                             <CalendarProvider>
                                 <MemoProvider>
-                                    <ScribeProvider>
+                                    <MediScribeProvider>
                                         {children}
                                         <Toaster />
-                                    </ScribeProvider>
+                                    </MediScribeProvider>
                                 </MemoProvider>
                             </CalendarProvider>
                         </ContactProvider>

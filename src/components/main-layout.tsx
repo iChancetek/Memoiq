@@ -77,8 +77,8 @@ export function MainLayout({children}: {children: React.ReactNode}) {
         return t('contactsManager');
       case '/ai-companion':
         return t('aiCompanion');
-       case '/scribe':
-        return t('aiScribe');
+       case '/mediscribe':
+        return t('aiScribe'); // Keep t('aiScribe') for now, will update json later
       case '/settings':
         return t('settings');
       default:
@@ -134,10 +134,10 @@ export function MainLayout({children}: {children: React.ReactNode}) {
              <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                isActive={pathname.startsWith('/scribe')}
+                isActive={pathname.startsWith('/mediscribe')}
                 tooltip={t('aiScribe')}
               >
-                <Link href="/scribe">
+                <Link href="/mediscribe">
                   <PenSquare />
                   <span>{t('aiScribe')}</span>
                 </Link>
