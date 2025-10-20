@@ -274,14 +274,12 @@ export function MainLayout({children}: {children: React.ReactNode}) {
           </div>
           <div className="flex items-center gap-2">
              <QuickAdd />
-             <Link href="/settings" passHref>
-                <Button variant="ghost" size="icon" asChild>
-                    <a>
-                        <Settings className="h-5 w-5" />
-                        <span className="sr-only">{t('settings')}</span>
-                    </a>
-                </Button>
-            </Link>
+            <Button variant="ghost" size="icon" asChild>
+                <Link href="/settings">
+                    <Settings className="h-5 w-5" />
+                    <span className="sr-only">{t('settings')}</span>
+                </Link>
+            </Button>
              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="gap-2 px-2">
