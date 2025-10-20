@@ -13,26 +13,31 @@ const translations = { en, es };
 interface LanguageContextType {
   t: (key: keyof typeof en) => string;
   language: Locale;
+  setLanguage: (lang: Locale) => void;
 }
 
 const LanguageContext = React.createContext<LanguageContextType | undefined>(undefined);
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  // @ts-ignore
-  const userLanguage = user?.settings?.uiLanguage || 'en';
-  const [language, setLanguage] = React.useState<Locale>(userLanguage);
+  const [language, setLanguage] = React.useState<Locale>('en');
 
   React.useEffect(() => {
-      // @ts-ignore
-    setLanguage(user?.settings?.uiLanguage || 'en');
+    const userLang = user?.settings?.uiLanguage;
+    if (userLang && (userLang === 'en' || userLang === 'es')) {
+      setLanguage(userLang);
+    }
   }, [user]);
 
   const t = (key: keyof typeof en) => {
     return translations[language][key] || translations.en[key];
   };
 
-  const value = { t, language };
+  const handleSetLanguage = (lang: Locale) => {
+      setLanguage(lang);
+  }
+
+  const value = { t, language, setLanguage: handleSetLanguage };
 
   return (
     <LanguageContext.Provider value={value}>

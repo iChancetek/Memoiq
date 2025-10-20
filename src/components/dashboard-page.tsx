@@ -46,7 +46,6 @@ function IskylarBriefingCard() {
   const { memos } = useMemos();
   const { t } = useLanguage();
 
-  // @ts-ignore
   const enableVoiceGreeting = user?.settings?.enableVoiceGreeting !== false; // Default to true if not set
 
 
@@ -56,7 +55,6 @@ function IskylarBriefingCard() {
 
     try {
       const currentHour = new Date().getHours();
-      // @ts-ignore
       const lang = user.settings?.language || 'en';
 
       const greetingText = await getWelcomeGreetingText({
@@ -70,7 +68,6 @@ function IskylarBriefingCard() {
         memos: JSON.stringify(memos.map(m => `${m.title}: ${m.summary}`)),
         tasks: JSON.stringify(tasks.map(t => `${t.title} (Due: ${t.dueDate})`)),
         calendarEvents: JSON.stringify(events.map(e => `${e.title} at ${format(e.startTime, 'p')}`)),
-        // @ts-ignore
         language: lang,
       });
       
@@ -99,14 +96,18 @@ function IskylarBriefingCard() {
         const audio = new Audio(briefing.audioUri);
         audioRef.current = audio;
         
-        audio.onended = () => setIsPlaying(false);
-        audio.onpause = () => setIsPlaying(false);
-        audio.onplay = () => setIsPlaying(true);
-    }
-    
-    return () => {
-        if (audioRef.current) {
-            audioRef.current.pause();
+        const handlePlay = () => setIsPlaying(true);
+        const handlePause = () => setIsPlaying(false);
+
+        audio.addEventListener('play', handlePlay);
+        audio.addEventListener('pause', handlePause);
+        audio.addEventListener('ended', handlePause);
+
+        return () => {
+            audio.removeEventListener('play', handlePlay);
+            audio.removeEventListener('pause', handlePause);
+            audio.removeEventListener('ended', handlePause);
+            audio.pause();
             audioRef.current = null;
         }
     }
@@ -119,7 +120,6 @@ function IskylarBriefingCard() {
         } else {
             audioRef.current.pause();
         }
-        setIsPlaying(!audioRef.current.paused);
     }
   }
 

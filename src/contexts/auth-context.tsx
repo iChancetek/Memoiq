@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -17,8 +18,18 @@ import { getFirestore, doc, setDoc, serverTimestamp, getDoc, updateDoc } from 'f
 import { firebaseApp } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 
+export interface AppUser extends User {
+    settings?: {
+        theme?: string;
+        language?: 'en' | 'es';
+        uiLanguage?: 'en' | 'es';
+        notifications?: boolean;
+        enableVoiceGreeting?: boolean;
+    }
+}
+
 interface AuthContextType {
-  user: User | null;
+  user: AppUser | null;
   loading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
@@ -37,7 +48,7 @@ const firestore = getFirestore(firebaseApp);
 const googleProvider = new GoogleAuthProvider();
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = React.useState<User | null>(null);
+  const [user, setUser] = React.useState<AppUser | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const router = useRouter();
@@ -45,10 +56,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const userDoc = await getDoc(doc(firestore, 'users', user.uid));
+        const userDocRef = doc(firestore, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
-             // @ts-ignore
-             setUser({ ...user, ...userDoc.data() });
+             setUser({ ...user, ...userDoc.data() } as AppUser);
         } else {
              setUser(user);
         }
@@ -60,8 +71,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  const handleAuthSuccess = (userCredential: any) => {
-    setUser(userCredential.user);
+  const handleAuthSuccess = async (userCredential: any) => {
+    const userDocRef = doc(firestore, 'users', userCredential.user.uid);
+    const userDoc = await getDoc(userDocRef);
+    if (userDoc.exists()) {
+      setUser({ ...userCredential.user, ...userDoc.data() } as AppUser);
+    } else {
+      setUser(userCredential.user);
+    }
     router.push('/');
     setError(null);
   }
@@ -94,7 +111,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userDoc = await getDoc(userRef);
 
       if (!userDoc.exists()) {
-          await setDoc(userRef, {
+          const newUser = {
               uid: user.uid,
               email: user.email,
               displayName: displayName || user.displayName,
@@ -108,11 +125,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   notifications: true,
                   enableVoiceGreeting: true,
               }
-          });
+          };
+          await setDoc(userRef, newUser);
           if (displayName && user.displayName !== displayName) {
               await updateProfile(user, { displayName });
           }
+          return newUser;
       }
+      return userDoc.data();
   }
 
   const login = async (email: string, password: string) => {
@@ -132,9 +152,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      await createUserInFirestore(userCredential.user, displayName);
+      const firestoreUser = await createUserInFirestore(userCredential.user, displayName);
       await updateProfile(userCredential.user, { displayName });
-      handleAuthSuccess({ ...userCredential, user: { ...userCredential.user, displayName }});
+      handleAuthSuccess({ ...userCredential, user: { ...userCredential.user, ...firestoreUser }});
     } catch (err) {
       handleAuthError(err);
     } finally {
@@ -146,8 +166,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     try {
       const userCredential = await signInWithPopup(auth, googleProvider);
-      await createUserInFirestore(userCredential.user);
-      handleAuthSuccess(userCredential);
+      const firestoreUser = await createUserInFirestore(userCredential.user);
+      handleAuthSuccess({ ...userCredential, user: { ...userCredential.user, ...firestoreUser }});
     } catch (err) {
       handleAuthError(err);
     } finally {
@@ -161,7 +181,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
             await updateProfile(user, profile);
             await setDoc(doc(firestore, 'users', user.uid), profile, { merge: true });
-            // @ts-ignore
             setUser({ ...user, ...profile });
             setError(null);
         } catch (err) {
@@ -192,9 +211,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setLoading(true);
           try {
               const userRef = doc(firestore, 'users', user.uid);
-              await updateDoc(userRef, { settings });
-              // @ts-ignore
-              setUser(prevUser => ({ ...prevUser, settings: { ...prevUser.settings, ...settings } }));
+              await updateDoc(userRef, { settings: { ...user.settings, ...settings} });
+              setUser(prevUser => ({ ...prevUser!, settings: { ...prevUser!.settings, ...settings } }));
               setError(null);
           } catch (err) {
               handleAuthError(err);

@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Moon, Sun, Languages } from 'lucide-react';
+import { Loader2, Moon, Sun } from 'lucide-react';
 import { Switch } from './ui/switch';
 import { useTheme } from 'next-themes';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
@@ -18,16 +18,24 @@ export function SettingsPage() {
   const { user, updateUserProfile, updateUserPassword, loading, updateUserSettings } = useAuth();
   const { toast } = useToast();
   const { theme, setTheme } = useTheme();
-  const { t } = useLanguage();
+  const { t, language: uiLanguage, setLanguage: setUiLanguage } = useLanguage();
   
-  const [displayName, setDisplayName] = React.useState(user?.displayName || '');
-  const [email, setEmail] = React.useState(user?.email || '');
+  const [displayName, setDisplayName] = React.useState('');
+  const [email, setEmail] = React.useState('');
   const [newPassword, setNewPassword] = React.useState('');
   const [confirmPassword, setConfirmPassword] = React.useState('');
-  // @ts-ignore
-  const [aiLanguage, setAiLanguage] = React.useState(user?.settings?.language || 'en');
-   // @ts-ignore
-  const [uiLanguage, setUiLanguage] = React.useState(user?.settings?.uiLanguage || 'en');
+  
+  const [aiLanguage, setAiLanguage] = React.useState('en');
+  const [enableVoiceGreeting, setEnableVoiceGreeting] = React.useState(true);
+  
+  React.useEffect(() => {
+    if (user) {
+        setDisplayName(user.displayName || '');
+        setEmail(user.email || '');
+        setAiLanguage(user.settings?.language || 'en');
+        setEnableVoiceGreeting(user.settings?.enableVoiceGreeting !== false);
+    }
+  }, [user]);
 
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
@@ -55,14 +63,28 @@ export function SettingsPage() {
   };
   
   const handleThemeChange = (isChecked: boolean) => {
-    setTheme(isChecked ? 'dark' : 'light');
+    const newTheme = isChecked ? 'dark' : 'light';
+    setTheme(newTheme);
+    handleSettingsUpdate('theme', newTheme);
   };
 
   const handleSettingsUpdate = async (key: string, value: any) => {
-      // @ts-ignore
-      const newSettings = { ...user.settings, [key]: value };
-      await updateUserSettings(newSettings);
+      await updateUserSettings({ [key]: value });
       toast({ title: t('preferencesUpdated'), description: t('newSettingsSaved') });
+  }
+
+  const handleUiLanguageChange = (value: string) => {
+    setUiLanguage(value as 'en' | 'es');
+    handleSettingsUpdate('uiLanguage', value);
+    // The language context will handle the reload if necessary, or components will just re-render.
+  }
+
+  if (!user) {
+      return (
+          <div className="flex h-full w-full items-center justify-center">
+              <Loader2 className="h-10 w-10 animate-spin" />
+          </div>
+      )
   }
 
   return (
@@ -139,7 +161,7 @@ export function SettingsPage() {
                     <p className="text-sm text-muted-foreground">{t('aiLanguageDescription')}</p>
                 </div>
                 <RadioGroup 
-                    defaultValue={aiLanguage}
+                    value={aiLanguage}
                     id="ai-language-group"
                     className="flex items-center gap-4"
                     onValueChange={(value) => {
@@ -163,14 +185,10 @@ export function SettingsPage() {
                     <p className="text-sm text-muted-foreground">{t('appLanguageDescription')}</p>
                 </div>
                 <RadioGroup 
-                    defaultValue={uiLanguage}
+                    value={uiLanguage}
                     id="ui-language-group"
                     className="flex items-center gap-4"
-                    onValueChange={(value) => {
-                        setUiLanguage(value);
-                        handleSettingsUpdate('uiLanguage', value);
-                        window.location.reload(); // Reload to apply the new language
-                    }}
+                    onValueChange={handleUiLanguageChange}
                 >
                     <div className="flex items-center space-x-2">
                         <RadioGroupItem value="en" id="ui-lang-en" />
@@ -189,16 +207,18 @@ export function SettingsPage() {
                 </div>
                 <Switch 
                     id="voice-greeting" 
-                    // @ts-ignore
-                    checked={user?.settings?.enableVoiceGreeting !== false} 
-                    onCheckedChange={(checked) => handleSettingsUpdate('enableVoiceGreeting', checked)}
+                    checked={enableVoiceGreeting} 
+                    onCheckedChange={(checked) => {
+                        setEnableVoiceGreeting(checked);
+                        handleSettingsUpdate('enableVoiceGreeting', checked);
+                    }}
                 />
             </div>
              <div className="flex items-center justify-between p-4 border rounded-lg">
                 <div className='flex items-center space-x-2'>
                     <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
                     <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                    <Label htmlFor="theme">{t('theme')}</Label>
+                    <Label htmlFor="theme" className='ml-2'>{t('theme')}</Label>
                     <p className="text-sm text-muted-foreground capitalize">({theme} {t('mode')})</p>
                 </div>
                 <Switch
@@ -214,4 +234,3 @@ export function SettingsPage() {
     </div>
   );
 }
-

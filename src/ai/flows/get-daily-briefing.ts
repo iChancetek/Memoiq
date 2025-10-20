@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -73,15 +74,36 @@ const getDailyBriefingFlow = ai.defineFlow(
     
     const combinedBriefingText = `${input.greeting} ${textOutput.briefingText}`;
 
-    const { media: audio } = await ai.generate({
-      model: tts1,
-      prompt: combinedBriefingText,
-      config: {
-        voice: 'nova'
-      }
-    });
+    let media;
+    let attempts = 0;
+    const maxAttempts = 3;
+    while (attempts < maxAttempts) {
+        try {
+            const ttsResponse = await ai.generate({
+                model: tts1,
+                prompt: combinedBriefingText,
+                config: {
+                    voice: 'nova'
+                }
+            });
+            media = ttsResponse.media;
+            break; // Success
+        } catch(error: any) {
+            attempts++;
+            if (error.message && (error.message.includes('503') || error.message.includes('429')) && attempts < maxAttempts) {
+                console.log(`TTS generation attempt ${attempts} failed, retrying...`);
+                await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
+            } else {
+                throw error;
+            }
+        }
+    }
 
-    const briefingAudioDataUri = audio!.url;
+    if (!media) {
+      throw new Error('no media returned');
+    }
+
+    const briefingAudioDataUri = media.url;
     
     return {
       briefingText: combinedBriefingText,
