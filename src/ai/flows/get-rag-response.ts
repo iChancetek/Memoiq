@@ -16,8 +16,9 @@ import { format } from 'date-fns';
 import { getFirestore } from 'firebase/firestore';
 import { collection, query as firestoreQuery, where, getDocs, orderBy } from 'firebase/firestore';
 import { firebaseApp } from '@/lib/firebase';
-import { MessageData } from '@genkit-ai/googleai';
 import { gpt4o } from 'genkitx-openai';
+import { type GenerateRequest, type Message, Candidate } from '@genkit-ai/core';
+
 
 const db = getFirestore(firebaseApp);
 
@@ -48,7 +49,7 @@ export const getContacts = ai.defineTool(
     name: 'getContacts',
     description: "Retrieve the user's contact list. Can be filtered by name.",
     inputSchema: z.object({
-      userId: z.string().describe("The user's unique ID."),
+      userId: z.string().describe("The user's unique 'ID'."),
       name: z.string().optional().describe("The name of the contact to search for."),
     }),
     outputSchema: z.array(ContactSchema),
@@ -166,6 +167,51 @@ export async function getRagResponse(
   return getRagResponseFlow(input);
 }
 
+// Helper to convert client-side history to Genkit-compatible history
+function toGenkitHistory(history: any[]): Message[] {
+    return history.map(msg => ({
+      role: msg.role,
+      content: msg.content.map((c: any) => {
+        if (c.toolResponse) {
+          return {
+            toolResult: {
+              name: c.toolResponse.name,
+              result: c.toolResponse.output,
+            },
+          };
+        }
+        return c;
+      }),
+    }));
+}
+
+// Helper to convert Genkit response history back to client-side format
+function fromGenkitHistory(history: Message[]): any[] {
+    return history.map(msg => {
+      const content = msg.content.map(c => {
+        if (c.toolResult) {
+          return {
+            toolResponse: {
+              name: c.toolResult.name,
+              output: c.toolResult.result,
+            },
+          };
+        }
+        // Handle toolRequest if needed
+        if (c.toolRequest) {
+            return {
+                toolRequest: {
+                    name: c.toolRequest.name,
+                    input: c.toolRequest.input
+                }
+            }
+        }
+        return c;
+      });
+      return { role: msg.role, content };
+    });
+}
+
 const getRagResponseFlow = ai.defineFlow(
   {
     name: 'getRagResponseFlow',
@@ -173,6 +219,9 @@ const getRagResponseFlow = ai.defineFlow(
     outputSchema: GetRagResponseOutputSchema,
   },
   async ({ history, userId }) => {
+
+    const genkitHistory = toGenkitHistory(history);
+
     const response = await ai.generate({
       model: gpt4o,
       tools: [getTasks, getContacts, getCalendarEvents, getMemos, getScribeEntries],
@@ -191,38 +240,17 @@ Your capabilities:
 
 Today's date is ${format(new Date(), 'EEEE, MMMM d, yyyy')}.
 `,
-      history: history.map(msg => ({...msg, content: msg.content.map((c: any) => {
-        // Convert client-side toolResponse to what Genkit expects
-        if (c.toolResponse) {
-            return {
-                toolResult: {
-                    name: c.toolResponse.name,
-                    result: c.toolResponse.output
-                }
-            };
-        }
-        return c;
-    })})) as MessageData[],
+      history: genkitHistory,
     });
+    
+    // Manually construct the new history
+    const newHistory: Message[] = [...genkitHistory, response.toMessage()];
+    
+    const finalHistoryForClient = fromGenkitHistory(newHistory);
 
-    const finalHistory = response.history.map(msg => {
-        const content = msg.content.map(c => {
-          if (c.toolResult) {
-            return {
-              toolResponse: {
-                name: c.toolResult.name,
-                output: c.toolResult.result,
-              },
-            };
-          }
-          return c;
-        });
-        return { role: msg.role, content };
-      });
-  
-      return {
-        history: finalHistory,
-        text: response.text,
-      };
+    return {
+      history: finalHistoryForClient,
+      text: response.text,
+    };
   }
 );
