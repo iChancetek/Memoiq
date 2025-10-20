@@ -14,7 +14,7 @@ import { useAuth } from '@/contexts/auth-context';
 
 type RecordingState = 'idle' | 'recording';
 
-function Recorder({ onNewRecording, disabled }: { onNewRecording: (blob: Blob) => void, disabled: boolean }) {
+function Recorder({ onNewRecording, disabled }: { onNewRecording: (audioBlob: Blob) => void, disabled: boolean }) {
     const [recordingState, setRecordingState] = React.useState<RecordingState>('idle');
     const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
     const audioChunksRef = React.useRef<Blob[]>([]);
