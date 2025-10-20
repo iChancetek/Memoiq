@@ -33,12 +33,12 @@ export async function transcribeAndSummarizeMemo(input: TranscribeAndSummarizeMe
 
 const transcribeMemoPrompt = ai.definePrompt({
   name: 'transcribeMemoPrompt',
-  input: {schema: TranscribeAndSummarizeMemoInputSchema},
+  input: {schema: z.object({ audioDataUri: z.string() })},
   output: {schema: z.object({transcription: z.string()})},
   model: whisper1,
   prompt: [
     { text: `You are a transcription expert. Please transcribe the following audio memo to text.` },
-    { media: { url: '{{audioDataUri}}' } }
+    { media: { url: '{{{audioDataUri}}}' } }
   ],
 });
 
