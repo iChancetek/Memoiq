@@ -36,7 +36,10 @@ const transcribePrompt = ai.definePrompt({
     model: whisper1,
     input: { schema: ScribeInputSchema },
     output: { schema: ScribeOutputSchema },
-    prompt: `You are a transcription expert for English. Please transcribe the following audio to text in its original language.\n\nAudio: {{media url=audioDataUri}}`,
+    prompt: [
+        { text: `You are a transcription expert for English. Please transcribe the following audio to text in its original language.` },
+        { media: { url: '{{audioDataUri}}' } }
+    ],
 });
 
 
