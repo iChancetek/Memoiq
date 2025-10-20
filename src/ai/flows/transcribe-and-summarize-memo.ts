@@ -31,17 +31,6 @@ export async function transcribeAndSummarizeMemo(input: TranscribeAndSummarizeMe
   return transcribeAndSummarizeMemoFlow(input);
 }
 
-const transcribeMemoPrompt = ai.definePrompt({
-  name: 'transcribeMemoPrompt',
-  input: {schema: z.object({ audioDataUri: z.string() })},
-  output: {schema: z.object({transcription: z.string()})},
-  model: whisper1,
-  prompt: [
-    { text: `You are a transcription expert. Please transcribe the following audio memo to text.` },
-    { media: { url: '{{{audioDataUri}}}' } }
-  ],
-});
-
 const summarizeMemoPrompt = ai.definePrompt({
   name: 'summarizeMemoPrompt',
   input: {schema: z.object({transcription: z.string()})},
@@ -56,10 +45,22 @@ const transcribeAndSummarizeMemoFlow = ai.defineFlow(
     inputSchema: TranscribeAndSummarizeMemoInputSchema,
     outputSchema: TranscribeAndSummarizeMemoOutputSchema,
   },
-  async input => {
-    const transcriptionResult = await transcribeMemoPrompt(input);
-    const transcription = transcriptionResult.output!.transcription;
+  async ({ audioDataUri }) => {
+    // Directly call the whisper model for transcription.
+    const transcriptionResult = await ai.generate({
+      model: whisper1,
+      prompt: [
+        { text: `Transcribe the following audio.` },
+        { media: { url: audioDataUri } }
+      ],
+    });
 
+    const transcription = transcriptionResult.text;
+    if (!transcription) {
+      throw new Error("Transcription failed to produce text.");
+    }
+    
+    // Use the transcription to get a summary.
     const summaryResult = await summarizeMemoPrompt({transcription});
     const summary = summaryResult.output!.summary;
 
