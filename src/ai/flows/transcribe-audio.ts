@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A voice transcription AI agent.
@@ -9,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { whisper1 } from 'genkitx-openai';
 
 const TranscribeAudioInputSchema = z.object({
   audioDataUri: z
@@ -33,7 +35,7 @@ const transcribeAudioPrompt = ai.definePrompt({
   name: 'transcribeAudioPrompt',
   input: {schema: TranscribeAudioInputSchema},
   output: {schema: TranscribeAudioOutputSchema},
-  model: 'googleai/gemini-1.5-flash',
+  model: whisper1,
   prompt: `You are a transcription expert. Please transcribe the following audio to text in {{language}}.\n\nAudio: {{media url=audioDataUri}}`,
 });
 
@@ -52,7 +54,9 @@ const transcribeAudioFlow = ai.defineFlow(
         try {
             const result = await transcribeAudioPrompt(input);
             output = result.output;
-            break; 
+            if (output) {
+                break; 
+            }
         } catch (error: any) {
             attempts++;
             if (error.message.includes('503') && attempts < maxAttempts) {
