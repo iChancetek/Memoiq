@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Translates text to a specified language.
@@ -9,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { gpt4o } from 'genkitx-openai';
 
 const TranslateTextInputSchema = z.object({
   text: z.string().describe('The text to be translated.'),
@@ -29,7 +31,7 @@ export async function translateText(
 
 const translatePrompt = ai.definePrompt({
     name: 'translateTextPrompt',
-    model: 'googleai/gemini-1.5-flash',
+    model: gpt4o,
     input: { schema: TranslateTextInputSchema },
     output: { schema: TranslateTextOutputSchema },
     prompt: `You are a translation expert. Translate the following text to {{targetLanguage}}.
@@ -54,11 +56,14 @@ const translateTextFlow = ai.defineFlow(
         try {
             const result = await translatePrompt(input);
             translationOutput = result.output;
-            break; // Success
+            if (translationOutput) {
+              break; // Success
+            }
+            attempts++;
         } catch (error: any) {
             attempts++;
-            if (error.message.includes('503') && attempts < maxAttempts) {
-                console.log(`Scribe translation attempt ${attempts} failed, retrying...`);
+            if ((error.message.includes('503') || error.message.includes('429')) && attempts < maxAttempts) {
+                console.log(`Translation attempt ${attempts} failed, retrying...`);
                 await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
             } else {
                 throw error;
