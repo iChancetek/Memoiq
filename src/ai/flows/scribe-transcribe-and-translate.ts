@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Transcribes audio recordings.
@@ -35,7 +36,7 @@ const transcribePrompt = ai.definePrompt({
     name: 'scribeTranscribePrompt',
     model: whisper1,
     input: { schema: ScribeInputSchema },
-    output: { schema: ScribeOutputSchema },
+    output: { schema: z.object({ transcription: z.string() }) },
     prompt: [
         { text: `You are a transcription expert for English. Please transcribe the following audio to text in its original language.` },
         { media: { url: '{{audioDataUri}}' } }

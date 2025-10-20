@@ -36,7 +36,10 @@ const transcribeMemoPrompt = ai.definePrompt({
   input: {schema: TranscribeAndSummarizeMemoInputSchema},
   output: {schema: z.object({transcription: z.string()})},
   model: whisper1,
-  prompt: `You are a transcription expert. Please transcribe the following audio memo to text.\\n\\nAudio: {{media url=audioDataUri}}`,
+  prompt: [
+    { text: `You are a transcription expert. Please transcribe the following audio memo to text.` },
+    { media: { url: '{{audioDataUri}}' } }
+  ],
 });
 
 const summarizeMemoPrompt = ai.definePrompt({
