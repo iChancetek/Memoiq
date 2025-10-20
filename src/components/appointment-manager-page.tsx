@@ -1,13 +1,15 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, Sparkles, AlertTriangle, CheckCircle, ShieldAlert, Play, Pause } from 'lucide-react';
+import { Loader2, Sparkles, AlertTriangle, CheckCircle, ShieldAlert, Play, Pause, CalendarDays } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getAppointmentAnalysis } from '@/ai/flows/get-appointment-analysis';
-import { mockContacts, mockCalendarEvents } from '@/lib/data';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { useContacts } from '@/contexts/contact-context';
+import { useCalendar } from '@/contexts/calendar-context';
 
 export function AppointmentManagerPage() {
   const [loading, setLoading] = React.useState(false);
@@ -15,6 +17,11 @@ export function AppointmentManagerPage() {
   const [audio, setAudio] = React.useState<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = React.useState(false);
   const { toast } = useToast();
+  const { contacts, loading: contactsLoading } = useContacts();
+  const { events, loading: eventsLoading } = useCalendar();
+
+  const isDataLoading = contactsLoading || eventsLoading;
+  const hasData = contacts.length > 0 || events.length > 0;
 
   const handleAnalyzeAppointments = async () => {
     setLoading(true);
@@ -26,8 +33,8 @@ export function AppointmentManagerPage() {
     }
     try {
       const response = await getAppointmentAnalysis({
-        contacts: JSON.stringify(mockContacts),
-        calendarEvents: JSON.stringify(mockCalendarEvents),
+        contacts: JSON.stringify(contacts),
+        calendarEvents: JSON.stringify(events),
         currentDate: new Date().toISOString().split('T')[0],
       });
       setAnalysis(response);
@@ -71,10 +78,24 @@ export function AppointmentManagerPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={handleAnalyzeAppointments} disabled={loading} className="w-full">
-            {loading ? <Loader2 className="animate-spin mr-2" /> : <Sparkles className="mr-2" />}
-            {loading ? 'Analyzing...' : 'Generate Appointment Analysis'}
+          <Button onClick={handleAnalyzeAppointments} disabled={loading || isDataLoading || !hasData} className="w-full">
+            {loading || isDataLoading ? <Loader2 className="animate-spin mr-2" /> : <Sparkles className="mr-2" />}
+            {loading ? 'Analyzing...' : isDataLoading ? 'Loading Data...' : 'Generate Appointment Analysis'}
           </Button>
+
+          {!isDataLoading && !hasData && (
+              <Alert className="mt-4">
+                  <CalendarDays className="h-4 w-4" />
+                  <AlertTitle>No Data to Analyze</AlertTitle>
+                  <AlertDescription>
+                      There are no contacts or events to analyze. Please add some first.
+                      <div className="mt-2">
+                        <Button variant="link" asChild><Link href="/contacts">Go to Contacts</Link></Button>
+                        <Button variant="link" asChild><Link href="/calendar">Go to Calendar</Link></Button>
+                      </div>
+                  </AlertDescription>
+              </Alert>
+          )}
 
           {analysis && (
             <div className="mt-6 space-y-4">
