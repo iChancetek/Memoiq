@@ -12,9 +12,7 @@ import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
 const ScribeInputSchema = z.object({
-  // We no longer use a data URI, but we'll receive the blob as a Buffer on the server
-  audioBlobBuffer: z.any().describe('The audio file blob as a Buffer.'),
-  mimeType: z.string().describe('The MIME type of the audio blob, e.g., "audio/webm".')
+  audioDataUri: z.string().describe('The audio file as a data URI string.'),
 });
 export type ScribeInput = z.infer<typeof ScribeInputSchema>;
 
@@ -36,17 +34,23 @@ const scribeTranscribeFlow = ai.defineFlow(
     inputSchema: ScribeInputSchema,
     outputSchema: ScribeOutputSchema,
   },
-  async ({ audioBlobBuffer, mimeType }) => {
+  async ({ audioDataUri }) => {
     
     if (!process.env.OPENAI_API_KEY) {
       throw new Error('OPENAI_API_KEY is not set.');
     }
 
-    const formData = new FormData();
-    // Convert the plain object buffer back to a real Buffer
-    const audioBuffer = Buffer.from(audioBlobBuffer.data);
+    // Decode the data URI
+    const parts = audioDataUri.match(/^data:(.*);base64,(.*)$/);
+    if (!parts) {
+      throw new Error('Invalid data URI format');
+    }
+    const mimeType = parts[1];
+    const base64Data = parts[2];
+    const audioBuffer = Buffer.from(base64Data, 'base64');
     const audioBlob = new Blob([audioBuffer], { type: mimeType });
 
+    const formData = new FormData();
     formData.append("file", audioBlob, "recording.webm");
     formData.append("model", "whisper-1");
 

@@ -85,14 +85,18 @@ export function MediScribeProvider({ children }: { children: React.ReactNode }) 
     const storagePath = `scribe-audio/${user.uid}/${Date.now()}.${fileExtension}`;
     const audioUrl = await uploadFile(storagePath, audioBlob, { contentType: audioBlob.type });
 
-    // 2. Convert Blob to a Buffer-like object for the server action
-    const arrayBuffer = await audioBlob.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    // 2. Convert Blob to a data URI string to pass to the server action
+    const reader = new FileReader();
+    const dataUriPromise = new Promise<string>((resolve, reject) => {
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+    });
+    reader.readAsDataURL(audioBlob);
+    const audioDataUri = await dataUriPromise;
 
-    // 3. Get transcription
+    // 3. Get transcription via server action
     const { transcription } = await scribeTranscribe({
-      audioBlobBuffer: buffer,
-      mimeType: audioBlob.type,
+      audioDataUri,
     });
     
     // 4. Save metadata to Firestore
