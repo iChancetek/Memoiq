@@ -32,7 +32,7 @@ export type ScheduleAppointmentInput = z.infer<
 const ScheduleAppointmentOutputSchema = z.object({
   isPossible: z
     .boolean()
-    .describe('Whether the requested appointment time could be found.'),
+    .describe('Whether a possible appointment time could be found (either the one requested or a suggestion).'),
   title: z.string().describe('The concise title of the appointment.'),
   suggestedDate: z
     .string()
@@ -45,7 +45,7 @@ const ScheduleAppointmentOutputSchema = z.object({
   reasoning: z
     .string()
     .describe(
-      'A brief explanation of the result, confirming the time or explaining the conflict.'
+      'A brief explanation of the result, confirming the time or explaining the conflict and suggestion.'
     ),
 });
 export type ScheduleAppointmentOutput = z.infer<
@@ -64,7 +64,7 @@ const prompt = ai.definePrompt({
   input: {schema: ScheduleAppointmentInputSchema},
   output: {schema: ScheduleAppointmentOutputSchema},
   model: gpt4o,
-  prompt: `You are an intelligent scheduling assistant. Your goal is to parse a user's appointment request, check their calendar for conflicts, and determine if the slot is available.
+  prompt: `You are an intelligent scheduling assistant. Your goal is to parse a user's appointment request, check their calendar for conflicts, and schedule the appointment or suggest an alternative.
 
 Current Date: ${format(new Date(), 'EEEE, MMMM do, yyyy')}
 
@@ -78,15 +78,15 @@ Existing Tasks with due dates (JSON):
 
 CRITICAL INSTRUCTIONS:
 1.  **Source of Truth**: You MUST only use the provided 'Existing Calendar Events' and 'Existing Tasks' as the source of truth for the user's schedule. **Do not invent, assume, or hallucinate any other events or appointments.**
-2.  **Parse Request**: Analyze the user's request to determine the desired title, date, time, and duration. If duration is not specified, assume a default of 1 hour.
-3.  **Conflict Definition**: A conflict exists ONLY if the requested time range for the new event OVERLAPS with an existing event's time range. An event on the same day but at a different, non-overlapping time is NOT a conflict.
-4.  **Working Hours**: The user's working hours are 9:00 AM to 5:00 PM on weekdays. Only schedule appointments within these hours unless the user specifically requests a time outside of them.
-5.  **Scheduling Logic**:
-    a. **No Conflict**: If the requested time is available (no overlap with existing events), set 'isPossible' to true. Provide the requested date and time. State clearly in the 'reasoning' that the time is available.
-    b. **Conflict Found**: If the requested time directly conflicts (overlaps) with an existing event, set 'isPossible' to false. State clearly in the 'reasoning' which existing event it conflicts with. Do not suggest another time.
+2.  **Parse Request**: Analyze the user's request to determine the desired title, date, and time. If duration is not specified, assume a default of 1 hour.
+3.  **Working Hours**: The user's working hours are 9:00 AM to 5:00 PM on weekdays. Only schedule appointments within these hours unless the user specifically requests a time outside of them.
+4.  **Scheduling Logic**:
+    a. **No Conflict**: If the requested time is available (no overlap with existing events), set 'isPossible' to true. Provide the requested date and time, and state clearly in the 'reasoning' that the time is available.
+    b. **Conflict Found**: If the requested time directly conflicts (overlaps) with an existing event, first state clearly in the 'reasoning' which event it conflicts with. Then, scan the rest of the day within working hours to find the next available 1-hour slot.
+    c. **Suggestion Found**: If you find an alternative available slot on the same day, set 'isPossible' to true. Set 'suggestedDate' and 'suggestedTime' to this new slot. In the 'reasoning', explain the original conflict and clearly state that this is a suggested alternative time.
+    d. **No Alternative Found**: If there is a conflict and no other available slots are found on that day, set 'isPossible' to false. State the conflict in the 'reasoning' and explain that no other times are available on that day.
 
-Provide a clear 'reasoning' for your decision, either confirming the time is free or explaining the direct conflict.
-`,
+Provide a clear 'reasoning' for your decision, either confirming the time is free, or explaining the conflict and providing an alternative if available.`,
 });
 
 const scheduleAppointmentFlow = ai.defineFlow(
