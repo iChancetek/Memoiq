@@ -32,9 +32,8 @@ type RecordingState = 'idle' | 'recording' | 'processing';
 
 export function QuickAdd() {
   const { tasks, addTask, loading: tasksLoading } = useTasks();
-  const { addContact, loading: contactsLoading } = useContacts();
+  const { addContact, loading: contactsLoading, contacts } = useContacts();
   const { addEvent, events } = useCalendar();
-  const { contacts } = useContacts();
   const [isParsing, setIsParsing] = React.useState(false);
   const [recordingState, setRecordingState] = React.useState<RecordingState>('idle');
   const [eventRequest, setEventRequest] = React.useState('');
@@ -362,5 +361,3 @@ export function QuickAdd() {
     </Sheet>
   );
 }
-
-    

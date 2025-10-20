@@ -13,7 +13,7 @@ import { TaskSchema, ContactSchema, CalendarEventSchema, MemoSchema, ScribeEntry
 import { format } from 'date-fns';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { adminApp } from '@/lib/firebase-admin';
-import { Part } from '@genkit-ai/googleai';
+import { Part, MessageData } from '@genkit-ai/googleai';
 import { gpt4o } from 'genkitx-openai';
 
 const db = getFirestore(adminApp);
@@ -143,35 +143,13 @@ export const getScribeEntries = ai.defineTool(
   }
 );
 
-
-const PartSchema = z.union([
-  z.object({ text: z.string() }),
-  z.object({
-    toolRequest: z.object({
-      name: z.string(),
-      input: z.any(),
-    }),
-  }),
-  z.object({
-    toolResponse: z.object({
-      name: z.string(),
-      output: z.any(),
-    }),
-  }),
-]);
-
-const MessageSchema = z.object({
-  role: z.enum(['user', 'model', 'tool']),
-  content: z.array(PartSchema),
-});
-
 const GetRagResponseInputSchema = z.object({
-  history: z.array(MessageSchema).describe('The conversation history, including the latest user message.'),
+  history: z.array(z.any()).describe('The conversation history, including the latest user message.'),
   userId: z.string().describe("The current user's ID to fetch data for."),
 });
 
 const GetRagResponseOutputSchema = z.object({
-  history: z.array(MessageSchema),
+  history: z.array(z.any()),
   text: z.string(),
 });
 
@@ -210,13 +188,35 @@ Your capabilities:
 
 Today's date is ${format(new Date(), 'EEEE, MMMM d, yyyy')}.
 `,
-      history: history as any[], // Cast to any to handle Genkit's internal types
+      history: history.map(msg => ({...msg, content: msg.content.map((c: any) => {
+        // Convert client-side toolResponse to what Genkit expects
+        if (c.toolResponse) {
+            return {
+                toolResult: {
+                    name: c.toolResponse.name,
+                    result: c.toolResponse.output
+                }
+            };
+        }
+        return c;
+    })})) as MessageData[],
     });
 
-    const responseHistory = response.history as { role: 'user' | 'model' | 'tool', content: Part[] }[];
+    const finalHistory = response.history.map(msg => ({...msg, content: msg.content.map(c => {
+        // Convert Genkit's toolResult back to what the client expects
+        if (c.toolResult) {
+            return {
+                toolResponse: {
+                    name: c.toolResult.name,
+                    output: c.toolResult.result
+                }
+            };
+        }
+        return c;
+    })}));
 
     return {
-      history: responseHistory,
+      history: finalHistory,
       text: response.text,
     };
   }
