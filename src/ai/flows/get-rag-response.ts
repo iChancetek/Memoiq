@@ -17,7 +17,7 @@ import { getFirestore } from 'firebase/firestore';
 import { collection, query as firestoreQuery, where, getDocs, orderBy } from 'firebase/firestore';
 import { firebaseApp } from '@/lib/firebase';
 import { gpt4o } from 'genkitx-openai';
-import { type GenerateRequest, type Message, Candidate } from '@genkit-ai/core';
+import { type Message } from '@genkit-ai/core';
 
 
 const db = getFirestore(firebaseApp);
@@ -147,13 +147,24 @@ export const getScribeEntries = ai.defineTool(
   }
 );
 
+// Note: The client-side Message type and Genkit's Message type may differ.
+// The client sends its `history` which is an array of objects.
+// We need to convert it to Genkit's `Message[]` type.
+const ClientMessageContentPartSchema = z.object({
+  text: z.string().optional(),
+  toolRequest: z.any().optional(), // Keep as any to avoid schema validation issues on client side
+});
+const ClientMessageSchema = z.object({
+  role: z.enum(['user', 'model', 'tool', 'system']),
+  content: z.array(ClientMessageContentPartSchema),
+});
+
 const GetRagResponseInputSchema = z.object({
-  history: z.array(z.any()).describe('The conversation history, including the latest user message.'),
+  history: z.array(ClientMessageSchema).describe('The conversation history, including the latest user message.'),
   userId: z.string().describe("The current user's ID to fetch data for."),
 });
 
 const GetRagResponseOutputSchema = z.object({
-  history: z.array(z.any()),
   text: z.string(),
 });
 
@@ -167,50 +178,6 @@ export async function getRagResponse(
   return getRagResponseFlow(input);
 }
 
-// Helper to convert client-side history to Genkit-compatible history
-function toGenkitHistory(history: any[]): Message[] {
-    return history.map(msg => ({
-      role: msg.role,
-      content: msg.content.map((c: any) => {
-        if (c.toolResponse) {
-          return {
-            toolResult: {
-              name: c.toolResponse.name,
-              result: c.toolResponse.output,
-            },
-          };
-        }
-        return c;
-      }),
-    }));
-}
-
-// Helper to convert Genkit response history back to client-side format
-function fromGenkitHistory(history: Message[]): any[] {
-    return history.map(msg => {
-      const content = msg.content.map(c => {
-        if (c.toolResult) {
-          return {
-            toolResponse: {
-              name: c.toolResult.name,
-              output: c.toolResult.result,
-            },
-          };
-        }
-        // Handle toolRequest if needed
-        if (c.toolRequest) {
-            return {
-                toolRequest: {
-                    name: c.toolRequest.name,
-                    input: c.toolRequest.input
-                }
-            }
-        }
-        return c;
-      });
-      return { role: msg.role, content };
-    });
-}
 
 const getRagResponseFlow = ai.defineFlow(
   {
@@ -220,11 +187,28 @@ const getRagResponseFlow = ai.defineFlow(
   },
   async ({ history, userId }) => {
 
-    const genkitHistory = toGenkitHistory(history);
+    const tools = [getTasks, getContacts, getCalendarEvents, getMemos, getScribeEntries];
+
+    // Inject userId into tool inputs if a tool call is being made
+    const genkitHistory = history.map(msg => ({
+      ...msg,
+      content: msg.content.map(part => {
+        if (part.toolRequest) {
+          return {
+            toolRequest: {
+              ...part.toolRequest,
+              input: { ...part.toolRequest.input, userId },
+            },
+          };
+        }
+        return part;
+      }),
+    })) as Message[];
+
 
     const response = await ai.generate({
       model: gpt4o,
-      tools: [getTasks, getContacts, getCalendarEvents, getMemos, getScribeEntries],
+      tools: tools,
       system: `You are iSkylar, a friendly and highly intelligent AI Assistant for the MemoIQ platform.
 
 Your capabilities:
@@ -234,22 +218,17 @@ Your capabilities:
     - 'getCalendarEvents': To answer about the user's schedule, calendar, or appointments.
     - 'getMemos': To retrieve and answer questions about the user's voice memos.
     - 'getScribeEntries': To get information from the user's transcribed recordings from AI Scribe.
-2.  **Intelligent Responses**: You must decide when to use a tool based on the user's query. Pass the userId to the tools.
+2.  **Intelligent Responses**: You must decide when to use a tool based on the user's query. You must pass the userId to any tool you call.
 3.  **Feature Support**: You are also an expert on how to use the MemoIQ application itself. Answer questions about app functionality clearly and concisely. You can explain what the Dashboard, Voice Memos, AI Scribe, Tasks, Calendar, Appointments, Contacts, and AI Companion pages do.
 4.  **Conversational Tone**: Your tone should be warm, helpful, and professional.
 
 Today's date is ${format(new Date(), 'EEEE, MMMM d, yyyy')}.
+The user's ID is ${userId}. You must pass this to all tools.
 `,
       history: genkitHistory,
     });
     
-    // Manually construct the new history
-    const newHistory: Message[] = [...genkitHistory, response.toMessage()];
-    
-    const finalHistoryForClient = fromGenkitHistory(newHistory);
-
     return {
-      history: finalHistoryForClient,
       text: response.text,
     };
   }

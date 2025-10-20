@@ -6,24 +6,22 @@ import clsx from 'clsx';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Send, Sparkles, Bot, User, X, ChevronUp, Volume2, StopCircle, Mic } from 'lucide-react';
+import { Loader2, Send, Sparkles, X, ChevronUp, Volume2, StopCircle, Mic } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getRagResponse } from '@/ai/flows/get-rag-response';
-import { callTool } from '@/ai/flows/call-tool';
 import { textToSpeech } from '@/ai/flows/text-to-speech';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { transcribeAudio } from '@/ai/flows/transcribe-audio';
 import { useAuth } from '@/contexts/auth-context';
+import { User } from 'lucide-react';
 
 interface Part {
   text?: string;
-  toolRequest?: { name: string; input: any; };
-  toolResponse?: { name: string; output: any; };
 }
 
 interface Message {
-  role: 'user' | 'model' | 'tool';
+  role: 'user' | 'model';
   content: Part[];
 }
 
@@ -75,61 +73,7 @@ export function AIAssistantWidget() {
         }
     }
   }, [messages, loading]);
-
-  const runConversation = React.useCallback(async (history: Message[]) => {
-      setLoading(true);
-
-      if (!user) {
-          toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.'});
-          setLoading(false);
-          return;
-      }
-      
-      try {
-        const response = await getRagResponse({ history, userId: user.uid });
-        const lastMessage = response.history[response.history.length - 1];
-        
-        setMessages(response.history);
-
-        const toolRequest = lastMessage.content.find(part => part.toolRequest);
-        if (toolRequest && toolRequest.toolRequest) {
-            const toolResponse = await callTool({
-                name: toolRequest.toolRequest.name,
-                input: { ...toolRequest.toolRequest.input, userId: user.uid },
-            });
-
-            const newHistory: Message[] = [
-                ...response.history,
-                { role: 'tool', content: [{ toolResponse }] },
-            ];
-            setMessages(newHistory);
-            runConversation(newHistory); // Continue conversation
-        } else {
-            const textResponse = response.text;
-            if (textResponse) {
-                const { audioDataUri } = await textToSpeech({ text: textResponse });
-                if (audioDataUri) {
-                    const newAudio = new Audio(audioDataUri);
-                    setAudio(newAudio);
-                    newAudio.play().catch(console.error);
-                    newAudio.onended = () => setAudio(null);
-                }
-            }
-            setLoading(false);
-        }
-      } catch (err) {
-           console.error('Error with AI Assistant:', err);
-            toast({
-                variant: 'destructive',
-                title: 'Assistant Error',
-                description: 'Failed to get a response from iSkylar.',
-            });
-            setLoading(false);
-      }
-
-  }, [user, toast]);
-
-
+  
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
@@ -141,8 +85,40 @@ export function AIAssistantWidget() {
     
     setMessages(newHistory);
     setInput('');
+    setLoading(true);
 
-    await runConversation(newHistory);
+    if (!user) {
+        toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in.'});
+        setLoading(false);
+        return;
+    }
+      
+    try {
+        const response = await getRagResponse({ history: newHistory as any, userId: user.uid });
+        
+        const assistantMessage: Message = { role: 'model', content: [{ text: response.text }] };
+        setMessages(prev => [...prev, assistantMessage]);
+
+        const textResponse = response.text;
+        if (textResponse) {
+            const { audioDataUri } = await textToSpeech({ text: textResponse });
+            if (audioDataUri) {
+                const newAudio = new Audio(audioDataUri);
+                setAudio(newAudio);
+                newAudio.play().catch(console.error);
+                newAudio.onended = () => setAudio(null);
+            }
+        }
+    } catch (err) {
+            console.error('Error with AI Assistant:', err);
+            toast({
+                variant: 'destructive',
+                title: 'Assistant Error',
+                description: 'Failed to get a response from iSkylar.',
+            });
+    } finally {
+        setLoading(false);
+    }
   };
 
   const handleStartRecording = async () => {
@@ -208,7 +184,7 @@ export function AIAssistantWidget() {
                 <CardHeader className="flex flex-row items-center justify-between border-b">
                     <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10 border-2 border-primary">
-                            <AvatarImage src="https://placehold.co/100x100.png" data-ai-hint="woman face" />
+                            <AvatarImage src="https://picsum.photos/seed/1/100/100" data-ai-hint="woman face" />
                             <AvatarFallback>AI</AvatarFallback>
                         </Avatar>
                         <div>
@@ -229,7 +205,7 @@ export function AIAssistantWidget() {
                                     <div key={index} className={`flex items-start gap-3 ${message.role === 'user' ? 'justify-end' : ''}`}>
                                         {message.role === 'model' && (
                                             <Avatar className="h-8 w-8">
-                                                <AvatarImage src="https://placehold.co/100x100.png" data-ai-hint="woman face" />
+                                                <AvatarImage src="https://picsum.photos/seed/1/100/100" data-ai-hint="woman face" />
                                                 <AvatarFallback>AI</AvatarFallback>
                                             </Avatar>
                                         )}
@@ -247,7 +223,7 @@ export function AIAssistantWidget() {
                             {loading && (
                                 <div className="flex items-start gap-3">
                                     <Avatar className="h-8 w-8">
-                                        <AvatarImage src="https://placehold.co/100x100.png" data-ai-hint="woman face" />
+                                        <AvatarImage src="https://picsum.photos/seed/1/100/100" data-ai-hint="woman face" />
                                         <AvatarFallback>AI</AvatarFallback>
                                     </Avatar>
                                     <div className="rounded-lg p-3 max-w-sm text-sm bg-muted flex items-center gap-2">
