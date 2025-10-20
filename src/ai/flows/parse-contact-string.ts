@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Parses a natural language string into a structured contact object.
@@ -9,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { gpt4o } from 'genkitx-openai';
 
 const ParseContactStringInputSchema = z.object({
   contactString: z.string().describe('The natural language description of the contact.'),
@@ -34,7 +36,7 @@ const prompt = ai.definePrompt({
   name: 'parseContactStringPrompt',
   input: {schema: ParseContactStringInputSchema},
   output: {schema: ParseContactStringOutputSchema},
-  model: 'googleai/gemini-1.5-flash',
+  model: gpt4o,
   prompt: `You are an expert at parsing contact information from natural language. Analyze the user's request and convert it into a structured contact object.
 
 User Request: "{{contactString}}"
