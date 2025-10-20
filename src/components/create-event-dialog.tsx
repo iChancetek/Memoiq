@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -103,7 +104,7 @@ function AIScheduler() {
   const handleStartRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({audio: true});
-      mediaRecorderRef.current = new MediaRecorder(stream);
+      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
       audioChunksRef.current = [];
       mediaRecorderRef.current.ondataavailable = event => {
         audioChunksRef.current.push(event.data);

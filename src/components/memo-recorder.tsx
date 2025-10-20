@@ -1,3 +1,4 @@
+
 'use client';
 import * as React from 'react';
 import {
@@ -34,7 +35,7 @@ export function MemoRecorder({onSave, onFinish}: MemoRecorderProps) {
   const handleStartRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({audio: true});
-      mediaRecorderRef.current = new MediaRecorder(stream);
+      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
 
       mediaRecorderRef.current.ondataavailable = event => {
         audioChunksRef.current.push(event.data);

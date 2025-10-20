@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -189,7 +190,7 @@ export function QuickAdd() {
   const handleStartRecording = async (setter: (text: string) => void) => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({audio: true});
-      mediaRecorderRef.current = new MediaRecorder(stream);
+      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
       audioChunksRef.current = [];
       mediaRecorderRef.current.ondataavailable = event => {
         audioChunksRef.current.push(event.data);

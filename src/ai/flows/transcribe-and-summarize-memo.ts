@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A voice memo transcription and summarization AI agent.
@@ -9,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { gpt4o, whisper1 } from 'genkitx-openai';
 
 const TranscribeAndSummarizeMemoInputSchema = z.object({
   audioDataUri: z
@@ -33,6 +35,7 @@ const transcribeMemoPrompt = ai.definePrompt({
   name: 'transcribeMemoPrompt',
   input: {schema: TranscribeAndSummarizeMemoInputSchema},
   output: {schema: z.object({transcription: z.string()})},
+  model: whisper1,
   prompt: `You are a transcription expert. Please transcribe the following audio memo to text.\\n\\nAudio: {{media url=audioDataUri}}`,
 });
 
@@ -40,6 +43,7 @@ const summarizeMemoPrompt = ai.definePrompt({
   name: 'summarizeMemoPrompt',
   input: {schema: z.object({transcription: z.string()})},
   output: {schema: z.object({summary: z.string()})},
+  model: gpt4o,
   prompt: `You are a summarization expert. Please summarize the following text to its key points.\\n\\nText: {{{transcription}}}`,
 });
 
