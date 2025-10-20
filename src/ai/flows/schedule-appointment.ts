@@ -80,16 +80,17 @@ User's Contacts (JSON):
 {{{contacts}}}
 
 Instructions:
-1.  Analyze the user's request to determine the desired title, date, time, and attendees.
+1.  Analyze the user's request to determine the desired title, date, time, duration, and attendees. If duration is not specified, assume a default of 1 hour for meetings or lunch.
 2.  If attendees are mentioned, cross-reference with the user's contacts. Use information like the last contact date to add helpful context to your reasoning.
 3.  The user's working hours are 9:00 AM to 5:00 PM on weekdays. Do not schedule appointments outside of these hours unless specifically requested.
-4.  Check for conflicts with existing calendar events and task due dates. An event or task creates a conflict if it's on the same day. Be mindful of descriptive times like "afternoon" (1 PM - 5 PM) or "morning" (9 AM - 12 PM).
+4.  Check for conflicts. A conflict exists ONLY if the requested time range for the new event OVERLAPS with an existing event's time range. An event on the same day but at a different, non-overlapping time is NOT a conflict. A task due on a certain day does not block the whole day, but avoid scheduling over it if the user's request is vague.
 5.  If the requested time is available, set 'isPossible' to true and provide the suggestedDate (YYYY-MM-DD) and suggestedTime (h:mm a).
-6.  If the requested time is not available, find the next available slot on the same day or the next suitable day and suggest it. Set 'isPossible' to true and provide the new suggestedDate and suggestedTime.
-7.  If no reasonable time can be found (e.g., the user asks for a time that has passed or the entire day is blocked), set 'isPossible' to false and explain why in the 'reasoning' field.
+6.  If the requested time directly conflicts (overlaps) with another event, find the next available slot on the same day or the next suitable day and suggest it. Set 'isPossible' to true and provide the new suggestedDate and suggestedTime.
+7.  If no reasonable time can be found (e.g., the user asks for a time that has passed or the entire day is blocked with overlapping events), set 'isPossible' to false and explain why in the 'reasoning' field.
 8.  Provide a clear 'reasoning' for your suggestion, confirming the scheduled time or explaining the conflict and alternative. Mention contact-related insights if relevant.
 
-Example Reasoning: "I've scheduled 'Lunch with Samuel Rodriguez'. You haven't spoken since June, so it's a great time to reconnect. The suggested time is clear of conflicts."
+Example Reasoning for Success: "I've scheduled 'Lunch with Samuel Rodriguez' for you at 1:00 PM. Your calendar is clear at that time. You haven't spoken since June, so it's a great time to reconnect."
+Example Reasoning for Conflict: "The requested time of 3:00 PM is unavailable due to your 'Q3 Planning Session'. I found an open slot at 4:30 PM on the same day."
 `,
 });
 
