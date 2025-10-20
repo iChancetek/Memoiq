@@ -16,7 +16,7 @@ import type {Memo} from '@/lib/data';
 import {Input} from './ui/input';
 
 interface MemoRecorderProps {
-  onSave: (memo: Omit<Memo, 'id' | 'userId' | 'createdAt'>) => void;
+  onSave: (memo: Omit<Memo, 'id' | 'userId' | 'createdAt'>) => Promise<void>;
   onFinish: () => void;
 }
 
@@ -90,9 +90,9 @@ export function MemoRecorder({onSave, onFinish}: MemoRecorderProps) {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (title && summary) {
-      onSave({
+      await onSave({
         title,
         summary,
         transcription,
