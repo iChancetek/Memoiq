@@ -89,8 +89,6 @@ Instructions:
 7.  If no reasonable time can be found (e.g., the user asks for a time that has passed or the entire day is blocked with overlapping events), set 'isPossible' to false and explain why in the 'reasoning' field.
 8.  Provide a clear 'reasoning' for your suggestion, confirming the scheduled time or explaining the conflict and alternative. Mention contact-related insights if relevant.
 
-Example Reasoning for Success: "I've scheduled 'Lunch with Samuel Rodriguez' for you at 1:00 PM. Your calendar is clear at that time. You haven't spoken since June, so it's a great time to reconnect."
-Example Reasoning for Conflict: "The requested time of 3:00 PM is unavailable due to your 'Q3 Planning Session'. I found an open slot at 4:30 PM on the same day."
 `,
 });
 
