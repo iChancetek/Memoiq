@@ -3,13 +3,13 @@
  * @fileOverview Analyzes a user's calendar and tasks to provide strategic insights.
  *
  * - getCalendarAnalysis - A function that generates a high-level analysis of the user's schedule.
- * - GetCalendarAnalysisInput - The input type for the getCalendarAnalysis function.
+ * - GetCalendarAnalysisInput - The input type for the getCalendarAnalysis functionूं
  * - GetCalendarAnalysisOutput - The return type for the getCalendarAnalysis function.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import wav from 'wav';
+import { gpt4o, tts1 } from 'genkitx-openai';
 
 const GetCalendarAnalysisInputSchema = z.object({
   calendarEvents: z.string().describe("A JSON string of the user's calendar events, including title and time."),
@@ -36,7 +36,7 @@ const prompt = ai.definePrompt({
   name: 'getCalendarAnalysisPrompt',
   input: {schema: GetCalendarAnalysisInputSchema},
   output: {schema: GetCalendarAnalysisOutputSchema.omit({ audioDataUri: true })},
-  model: 'googleai/gemini-1.5-flash',
+  model: gpt4o,
   prompt: `You are a world-class executive assistant and scheduling expert. Your goal is to analyze a user's calendar and task list to provide a strategic briefing for the upcoming week.
 
 Current Date: {{{currentDate}}}
@@ -55,32 +55,6 @@ Instructions:
 Analyze the provided data and generate the structured output.`,
 });
 
-async function toWav(
-  pcmData: Buffer,
-  channels = 1,
-  rate = 24000,
-  sampleWidth = 2
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const writer = new wav.Writer({
-      channels,
-      sampleRate: rate,
-      bitDepth: sampleWidth * 8,
-    });
-
-    let bufs = [] as any[];
-    writer.on('error', reject);
-    writer.on('data', function (d) {
-      bufs.push(d);
-    });
-    writer.on('end', function () {
-      resolve(Buffer.concat(bufs).toString('base64'));
-    });
-
-    writer.write(pcmData);
-    writer.end();
-  });
-}
 
 const getCalendarAnalysisFlow = ai.defineFlow(
   {
@@ -89,25 +63,8 @@ const getCalendarAnalysisFlow = ai.defineFlow(
     outputSchema: GetCalendarAnalysisOutputSchema,
   },
   async input => {
-    let analysisOutput;
-    let attempts = 0;
-    const maxAttempts = 3;
-
-    while (attempts < maxAttempts) {
-      try {
-        const result = await prompt(input);
-        analysisOutput = result.output;
-        break; // Success
-      } catch (error: any) {
-        attempts++;
-        if (error.message && (error.message.includes('503') || error.message.includes('429')) && attempts < maxAttempts) {
-          console.log(`Calendar analysis attempt ${attempts} failed, retrying...`);
-          await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
-        } else {
-          throw error;
-        }
-      }
-    }
+    const result = await prompt(input);
+    const analysisOutput = result.output;
     
     if (!analysisOutput) {
       throw new Error('Failed to get calendar analysis after multiple attempts.');
@@ -120,44 +77,15 @@ const getCalendarAnalysisFlow = ai.defineFlow(
       Suggestions: ${analysisOutput.suggestions.join('. ')}.
     `;
 
-    let media;
-    attempts = 0; // Reset for TTS
-    while (attempts < maxAttempts) {
-        try {
-            const ttsResponse = await ai.generate({
-                model: 'googleai/gemini-2.5-flash-preview-tts',
-                config: {
-                    responseModalities: ['AUDIO'],
-                    speechConfig: {
-                    voiceConfig: {
-                        prebuiltVoiceConfig: { voiceName: 'Algenib' },
-                    },
-                    },
-                },
-                prompt: readableAnalysis,
-            });
-            media = ttsResponse.media;
-            break; // Success
-        } catch(error: any) {
-            attempts++;
-            if (error.message && (error.message.includes('503') || error.message.includes('429')) && attempts < maxAttempts) {
-                console.log(`TTS generation attempt ${attempts} failed, retrying...`);
-                await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
-            } else {
-                throw error;
-            }
-        }
-    }
+     const { media: audio } = await ai.generate({
+      model: tts1,
+      prompt: readableAnalysis,
+      config: {
+        voice: 'nova'
+      }
+    });
 
-
-     if (!media) {
-      throw new Error('no media returned');
-    }
-    const audioBuffer = Buffer.from(
-      media.url.substring(media.url.indexOf(',') + 1),
-      'base64'
-    );
-    const audioDataUri = 'data:audio/wav;base64,' + (await toWav(audioBuffer));
+    const audioDataUri = audio!.url;
     
     return {
         ...analysisOutput,

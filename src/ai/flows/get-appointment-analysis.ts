@@ -9,7 +9,8 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import wav from 'wav';
+import { gpt4o, tts1 } from 'genkitx-openai';
+
 
 const GetAppointmentAnalysisInputSchema = z.object({
   calendarEvents: z.string().describe("A JSON string of the user's calendar events for the next 7 days."),
@@ -36,7 +37,7 @@ const prompt = ai.definePrompt({
   name: 'getAppointmentAnalysisPrompt',
   input: {schema: GetAppointmentAnalysisInputSchema},
   output: {schema: GetAppointmentAnalysisOutputSchema.omit({ audioDataUri: true })},
-  model: 'googleai/gemini-1.5-flash',
+  model: gpt4o,
   prompt: `You are an expert executive assistant. Your goal is to analyze a user's upcoming appointments for the week and provide a strategic briefing.
 
 Current Date: {{{currentDate}}}
@@ -55,32 +56,6 @@ Instructions:
 Analyze the provided data and generate the structured output.`,
 });
 
-async function toWav(
-  pcmData: Buffer,
-  channels = 1,
-  rate = 24000,
-  sampleWidth = 2
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const writer = new wav.Writer({
-      channels,
-      sampleRate: rate,
-      bitDepth: sampleWidth * 8,
-    });
-
-    let bufs = [] as any[];
-    writer.on('error', reject);
-    writer.on('data', function (d) {
-      bufs.push(d);
-    });
-    writer.on('end', function () {
-      resolve(Buffer.concat(bufs).toString('base64'));
-    });
-
-    writer.write(pcmData);
-    writer.end();
-  });
-}
 
 const getAppointmentAnalysisFlow = ai.defineFlow(
   {
@@ -89,32 +64,9 @@ const getAppointmentAnalysisFlow = ai.defineFlow(
     outputSchema: GetAppointmentAnalysisOutputSchema,
   },
   async input => {
-    let analysisOutput;
-    let attempts = 0;
-    const maxAttempts = 3;
-
-    while (attempts < maxAttempts) {
-      try {
-        const result = await prompt(input);
-        analysisOutput = result.output;
-        if (analysisOutput) {
-            break; // Success
-        }
-        attempts++;
-        if (attempts >= maxAttempts) {
-            throw new Error('AI returned empty output after multiple attempts.');
-        }
-      } catch (error: any) {
-        attempts++;
-        if (error.message && (error.message.includes('503') || error.message.includes('429')) && attempts < maxAttempts) {
-          console.log(`Appointment analysis attempt ${attempts} failed with ${error.message}, retrying...`);
-          await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
-        } else {
-          throw error;
-        }
-      }
-    }
-
+    const result = await prompt(input);
+    const analysisOutput = result.output;
+    
     if (!analysisOutput) {
       throw new Error('Failed to get appointment analysis after multiple attempts.');
     }
@@ -126,48 +78,14 @@ const getAppointmentAnalysisFlow = ai.defineFlow(
       Suggestions: ${analysisOutput.proactiveSuggestions.join('. ')}.
     `;
 
-    let media;
-    attempts = 0; // Reset for TTS
-     while (attempts < maxAttempts) {
-        try {
-            const ttsResponse = await ai.generate({
-                model: 'googleai/gemini-2.5-flash-preview-tts',
-                config: {
-                    responseModalities: ['AUDIO'],
-                    speechConfig: {
-                    voiceConfig: {
-                        prebuiltVoiceConfig: { voiceName: 'Algenib' },
-                    },
-                    },
-                },
-                prompt: readableAnalysis,
-            });
-            media = ttsResponse.media;
-            break; // Success
-        } catch(error: any) {
-            attempts++;
-            if (error.message && (error.message.includes('503') || error.message.includes('429')) && attempts < maxAttempts) {
-                console.log(`TTS generation attempt ${attempts} failed, retrying...`);
-                await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
-            } else {
-                throw error;
-            }
-        }
-    }
+    const { media: audio } = await ai.generate({
+      model: tts1,
+      prompt: readableAnalysis,
+      config: {
+        voice: 'nova'
+      }
+    });
 
+    const audioDataUri = audio!.url;
 
-     if (!media) {
-      throw new Error('no media returned');
-    }
-    const audioBuffer = Buffer.from(
-      media.url.substring(media.url.indexOf(',') + 1),
-      'base64'
-    );
-    const audioDataUri = 'data:audio/wav;base64,' + (await toWav(audioBuffer));
-
-    return {
-        ...analysisOutput,
-        audioDataUri,
-    };
-  }
-);
+    return

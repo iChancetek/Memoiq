@@ -9,7 +9,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import wav from 'wav';
+import { gpt4o, tts1 } from 'genkitx-openai';
 
 const GetContactInsightsInputSchema = z.object({
   contacts: z.string().describe('A JSON string of the user\'s contacts, including name, company, and last contact date.'),
@@ -33,7 +33,7 @@ const prompt = ai.definePrompt({
   name: 'getContactInsightsPrompt',
   input: {schema: GetContactInsightsInputSchema},
   output: {schema: GetContactInsightsOutputSchema.omit({ audioDataUri: true })},
-  model: 'googleai/gemini-1.5-flash',
+  model: gpt4o,
   prompt: `You are a relationship management assistant. Your goal is to help users maintain professional connections by suggesting timely follow-ups.
 
 Current Date: {{{currentDate}}}
@@ -53,32 +53,6 @@ Example output:
 - Olivia Chen: You haven't spoken since late July. Check in on Project Phoenix progress.`,
 });
 
-async function toWav(
-  pcmData: Buffer,
-  channels = 1,
-  rate = 24000,
-  sampleWidth = 2
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const writer = new wav.Writer({
-      channels,
-      sampleRate: rate,
-      bitDepth: sampleWidth * 8,
-    });
-
-    let bufs = [] as any[];
-    writer.on('error', reject);
-    writer.on('data', function (d) {
-      bufs.push(d);
-    });
-    writer.on('end', function () {
-      resolve(Buffer.concat(bufs).toString('base64'));
-    });
-
-    writer.write(pcmData);
-    writer.end();
-  });
-}
 
 const getContactInsightsFlow = ai.defineFlow(
   {
@@ -87,31 +61,8 @@ const getContactInsightsFlow = ai.defineFlow(
     outputSchema: GetContactInsightsOutputSchema,
   },
   async input => {
-    let analysisOutput;
-    let attempts = 0;
-    const maxAttempts = 3;
-
-    while (attempts < maxAttempts) {
-      try {
-        const result = await prompt(input);
-        analysisOutput = result.output;
-        if (analysisOutput) {
-            break; // Success
-        }
-        attempts++;
-        if (attempts >= maxAttempts) {
-            throw new Error('AI returned empty output after multiple attempts.');
-        }
-      } catch (error: any) {
-        attempts++;
-        if (error.message && (error.message.includes('503') || error.message.includes('429')) && attempts < maxAttempts) {
-          console.log(`Contact insights attempt ${attempts} failed with 503, retrying...`);
-          await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
-        } else {
-          throw error;
-        }
-      }
-    }
+    const result = await prompt(input);
+    const analysisOutput = result.output;
 
     if (!analysisOutput) {
       throw new Error('Failed to get contact insights after multiple attempts.');
@@ -122,44 +73,15 @@ const getContactInsightsFlow = ai.defineFlow(
       ${analysisOutput.followUpSuggestions}.
     `;
 
-    let media;
-    attempts = 0; // Reset for TTS
-    while (attempts < maxAttempts) {
-        try {
-            const ttsResponse = await ai.generate({
-                model: 'googleai/gemini-2.5-flash-preview-tts',
-                config: {
-                    responseModalities: ['AUDIO'],
-                    speechConfig: {
-                    voiceConfig: {
-                        prebuiltVoiceConfig: { voiceName: 'Algenib' },
-                    },
-                    },
-                },
-                prompt: readableAnalysis,
-            });
-            media = ttsResponse.media;
-            break; // Success
-        } catch(error: any) {
-            attempts++;
-            if (error.message && (error.message.includes('503') || error.message.includes('429')) && attempts < maxAttempts) {
-                console.log(`TTS generation attempt ${attempts} failed, retrying...`);
-                await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
-            } else {
-                throw error;
-            }
-        }
-    }
+    const { media: audio } = await ai.generate({
+      model: tts1,
+      prompt: readableAnalysis,
+      config: {
+        voice: 'nova'
+      }
+    });
 
-
-     if (!media) {
-      throw new Error('no media returned');
-    }
-    const audioBuffer = Buffer.from(
-      media.url.substring(media.url.indexOf(',') + 1),
-      'base64'
-    );
-    const audioDataUri = 'data:audio/wav;base64,' + (await toWav(audioBuffer));
+    const audioDataUri = audio!.url;
     
     return {
         ...analysisOutput,

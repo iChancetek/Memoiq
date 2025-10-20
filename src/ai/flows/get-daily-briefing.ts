@@ -1,4 +1,3 @@
-
 'use server';
 
 /**
@@ -11,7 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import wav from 'wav';
+import { gpt4o, tts1 } from 'genkitx-openai';
 
 const GetDailyBriefingInputSchema = z.object({
   greeting: z.string().describe("The user's personalized greeting."),
@@ -39,7 +38,7 @@ const briefingPrompt = ai.definePrompt({
   name: 'briefingPrompt',
   input: {schema: GetDailyBriefingInputSchema.omit({ greeting: true })},
   output: {schema: z.object({briefingText: z.string()})},
-  model: 'googleai/gemini-1.5-flash',
+  model: gpt4o,
   prompt: `You are iSkylar, an AI assistant. Generate a concise and friendly daily briefing for the user based on their schedule, in the specified language. Do not include the greeting, just the briefing part.
 
 Language: {{{language}}}
@@ -57,30 +56,6 @@ Instructions:
 Briefing Text (in {{{language}}}):`,
 });
 
-async function toWav(
-  pcmData: Buffer,
-  channels = 1,
-  rate = 24000,
-  sampleWidth = 2
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const writer = new wav.Writer({
-      channels,
-      sampleRate: rate,
-      bitDepth: sampleWidth * 8,
-    });
-    let bufs: any[] = [];
-    writer.on('error', reject);
-    writer.on('data', function (d) {
-      bufs.push(d);
-    });
-    writer.on('end', function () {
-      resolve(Buffer.concat(bufs).toString('base64'));
-    });
-    writer.write(pcmData);
-    writer.end();
-  });
-}
 
 const getDailyBriefingFlow = ai.defineFlow(
   {
@@ -89,69 +64,24 @@ const getDailyBriefingFlow = ai.defineFlow(
     outputSchema: GetDailyBriefingOutputSchema,
   },
   async input => {
-    let result;
-    let attempts = 0;
-    const maxAttempts = 3;
-
-    while (attempts < maxAttempts) {
-        try {
-            result = await briefingPrompt(input);
-            if (result.output) break; // Success, exit loop
-        } catch (error: any) {
-            attempts++;
-            if (error.message.includes('503') || error.message.includes('429') && attempts < maxAttempts) {
-                console.log(`Attempt ${attempts} failed with ${error.message}, retrying after delay...`);
-                await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempts))); // Exponential backoff
-            } else {
-                throw error; // Rethrow other errors or if max attempts reached
-            }
-        }
-    }
+    const result = await briefingPrompt(input);
+    const textOutput = result.output;
       
-    if (!result?.output) {
+    if (!textOutput) {
         throw new Error("Failed to get briefing text from AI after multiple attempts.");
     }
     
-    const combinedBriefingText = `${input.greeting} ${result.output.briefingText}`;
+    const combinedBriefingText = `${input.greeting} ${textOutput.briefingText}`;
 
-    let media;
-    attempts = 0;
-    while (attempts < maxAttempts) {
-        try {
-            const ttsResponse = await ai.generate({
-                model: 'googleai/gemini-2.5-flash-preview-tts',
-                config: {
-                    responseModalities: ['AUDIO'],
-                    speechConfig: {
-                    voiceConfig: {
-                        prebuiltVoiceConfig: { voiceName: 'Algenib' },
-                    },
-                    },
-                },
-                prompt: combinedBriefingText,
-            });
-            media = ttsResponse.media;
-            break; // Success
-        } catch(error: any) {
-            attempts++;
-            if (error.message && (error.message.includes('503') || error.message.includes('429')) && attempts < maxAttempts) {
-                console.log(`TTS generation attempt ${attempts} failed, retrying...`);
-                await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
-            } else {
-                throw error;
-            }
-        }
-    }
+    const { media: audio } = await ai.generate({
+      model: tts1,
+      prompt: combinedBriefingText,
+      config: {
+        voice: 'nova'
+      }
+    });
 
-
-    if (!media) {
-      throw new Error('no media returned');
-    }
-    const audioBuffer = Buffer.from(
-      media.url.substring(media.url.indexOf(',') + 1),
-      'base64'
-    );
-    const briefingAudioDataUri = 'data:audio/wav;base64,' + (await toWav(audioBuffer));
+    const briefingAudioDataUri = audio!.url;
     
     return {
       briefingText: combinedBriefingText,

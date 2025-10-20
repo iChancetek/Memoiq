@@ -9,7 +9,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import wav from 'wav';
+import { gpt4o, tts1 } from 'genkitx-openai';
 
 const GetCompanionResponseInputSchema = z.object({
   history: z.array(z.object({
@@ -35,7 +35,7 @@ const companionPrompt = ai.definePrompt({
   name: 'companionPrompt',
   input: {schema: GetCompanionResponseInputSchema},
   output: {schema: z.object({text: z.string()})},
-  model: 'googleai/gemini-1.5-flash',
+  model: gpt4o,
   prompt: `You are iSkylar, a friendly and empathetic AI Companion. Your purpose is to be a kind, emotionally aware voice that listens, supports, and guides users.
 
 Your tone should be warm, thoughtful, intelligent, and respectful. Never be robotic. Engage users on meaningful topics like self-care, wellness, fitness, mindfulness, and emotional awareness.
@@ -47,33 +47,6 @@ Conversation History:
 assistant:`,
 });
 
-async function toWav(
-  pcmData: Buffer,
-  channels = 1,
-  rate = 24000,
-  sampleWidth = 2
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const writer = new wav.Writer({
-      channels,
-      sampleRate: rate,
-      bitDepth: sampleWidth * 8,
-    });
-
-    let bufs = [] as any[];
-    writer.on('error', reject);
-    writer.on('data', function (d) {
-      bufs.push(d);
-    });
-    writer.on('end', function () {
-      resolve(Buffer.concat(bufs).toString('base64'));
-    });
-
-    writer.write(pcmData);
-    writer.end();
-  });
-}
-
 const getCompanionResponseFlow = ai.defineFlow(
   {
     name: 'getCompanionResponseFlow',
@@ -82,53 +55,18 @@ const getCompanionResponseFlow = ai.defineFlow(
   },
   async (input) => {
     // Generate the text response
-    const {output: textOutput} = await companionPrompt(input);
-    const responseText = textOutput!.text;
+    const result = await companionPrompt(input);
+    const responseText = result.output!.text;
     
-    let media;
-    let attempts = 0;
-    const maxAttempts = 3;
+    const { media: audio } = await ai.generate({
+      model: tts1,
+      prompt: responseText,
+      config: {
+        voice: 'nova'
+      }
+    });
 
-    while (attempts < maxAttempts) {
-        try {
-            const ttsResponse = await ai.generate({
-                model: 'googleai/gemini-2.5-flash-preview-tts',
-                config: {
-                    responseModalities: ['AUDIO'],
-                    speechConfig: {
-                    voiceConfig: {
-                        prebuiltVoiceConfig: { voiceName: 'Algenib' },
-                    },
-                    },
-                },
-                prompt: responseText,
-            });
-            media = ttsResponse.media;
-            break; // Success
-        } catch(error: any) {
-            attempts++;
-            if (error.message && (error.message.includes('503') || error.message.includes('429')) && attempts < maxAttempts) {
-                console.log(`TTS generation attempt ${attempts} failed, retrying...`);
-                await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
-            } else {
-                throw error;
-            }
-        }
-    }
-
-
-    if (!media) {
-      throw new Error('no media returned');
-    }
-    const audioBuffer = Buffer.from(
-      media.url.substring(media.url.indexOf(',') + 1),
-      'base64'
-    );
-    const audioDataUri = 'data:audio/wav;base64,' + (await toWav(audioBuffer));
+    const audioDataUri = audio!.url;
 
     return {
-      text: responseText,
-      audioDataUri,
-    };
-  }
-);
+      text: response

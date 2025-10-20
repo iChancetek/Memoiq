@@ -9,6 +9,7 @@
  */
 
 import {ai} from '@/ai/genkit';
+import { gpt4o } from 'genkitx-openai';
 import {z} from 'genkit';
 
 const PersonalizedInsightsInputSchema = z.object({
@@ -23,40 +24,4 @@ export type PersonalizedInsightsInput = z.infer<
 const PersonalizedInsightsOutputSchema = z.object({
   insights: z.string().describe('Personalized insights and reminders.'),
 });
-export type PersonalizedInsightsOutput = z.infer<
-  typeof PersonalizedInsightsOutputSchema
->;
-
-export async function getPersonalizedInsights(
-  input: PersonalizedInsightsInput
-): Promise<PersonalizedInsightsOutput> {
-  return getPersonalizedInsightsFlow(input);
-}
-
-const prompt = ai.definePrompt({
-  name: 'personalizedInsightsPrompt',
-  input: {schema: PersonalizedInsightsInputSchema},
-  output: {schema: PersonalizedInsightsOutputSchema},
-  model: 'googleai/gemini-1.5-flash',
-  prompt: `You are iSkylar, an AI assistant that provides personalized insights and reminders to users based on their memos, tasks, and calendar events.
-
-  Analyze the following information and provide personalized insights and reminders to help the user stay organized and focused on their priorities.
-
-Memos: {{{memos}}}
-Tasks: {{{tasks}}}
-Calendar Events: {{{calendarEvents}}}
-
-Insights:`,
-});
-
-const getPersonalizedInsightsFlow = ai.defineFlow(
-  {
-    name: 'getPersonalizedInsightsFlow',
-    inputSchema: PersonalizedInsightsInputSchema,
-    outputSchema: PersonalizedInsightsOutputSchema,
-  },
-  async input => {
-    const result = await prompt(input);
-    return result.output!;
-  }
-);
+export type PersonalizedInsightsOutput = z.infe...
