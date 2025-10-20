@@ -36,7 +36,10 @@ const transcribeAudioPrompt = ai.definePrompt({
   input: {schema: TranscribeAudioInputSchema},
   output: {schema: TranscribeAudioOutputSchema},
   model: whisper1,
-  prompt: `You are a transcription expert. Please transcribe the following audio to text in {{language}}.\n\nAudio: {{media url=audioDataUri}}`,
+  prompt: [
+    { text: `You are a transcription expert. Please transcribe the following audio to text in {{language}}.` },
+    { media: { url: '{{audioDataUri}}' } }
+  ],
 });
 
 const transcribeAudioFlow = ai.defineFlow(
@@ -57,9 +60,10 @@ const transcribeAudioFlow = ai.defineFlow(
             if (output) {
                 break; 
             }
+            attempts++;
         } catch (error: any) {
             attempts++;
-            if (error.message.includes('503') && attempts < maxAttempts) {
+            if ((error.message.includes('503') || error.message.includes('429')) && attempts < maxAttempts) {
                 console.log(`Scribe transcription attempt ${attempts} failed, retrying...`);
                 await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
             } else {
