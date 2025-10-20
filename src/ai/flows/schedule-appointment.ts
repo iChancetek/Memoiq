@@ -64,7 +64,7 @@ const prompt = ai.definePrompt({
   input: {schema: ScheduleAppointmentInputSchema},
   output: {schema: ScheduleAppointmentOutputSchema},
   model: gpt4o,
-  prompt: `You are an intelligent scheduling assistant. Your goal is to parse a user's appointment request, check their calendar and tasks for conflicts, and suggest a valid time slot. You also have access to the user's contacts.
+  prompt: `You are an intelligent scheduling assistant. Your goal is to parse a user's appointment request, check their calendar and tasks for conflicts, and suggest a valid time slot.
 
 Current Date: ${format(new Date(), 'EEEE, MMMM do, yyyy')}
 
@@ -79,16 +79,17 @@ Existing Tasks with due dates (JSON):
 User's Contacts (JSON):
 {{{contacts}}}
 
-Instructions:
-1.  Analyze the user's request to determine the desired title, date, time, duration, and attendees. If duration is not specified, assume a default of 1 hour for meetings or lunch.
-2.  If attendees are mentioned, cross-reference with the user's contacts. Use information like the last contact date to add helpful context to your reasoning.
-3.  The user's working hours are 9:00 AM to 5:00 PM on weekdays. Do not schedule appointments outside of these hours unless specifically requested.
-4.  Check for conflicts. A conflict exists ONLY if the requested time range for the new event OVERLAPS with an existing event's time range. An event on the same day but at a different, non-overlapping time is NOT a conflict. A task due on a certain day does not block the whole day, but avoid scheduling over it if the user's request is vague.
-5.  If the requested time is available, set 'isPossible' to true and provide the suggestedDate (YYYY-MM-DD) and suggestedTime (h:mm a).
-6.  If the requested time directly conflicts (overlaps) with another event, find the next available slot on the same day or the next suitable day and suggest it. Set 'isPossible' to true and provide the new suggestedDate and suggestedTime.
-7.  If no reasonable time can be found (e.g., the user asks for a time that has passed or the entire day is blocked with overlapping events), set 'isPossible' to false and explain why in the 'reasoning' field.
-8.  Provide a clear 'reasoning' for your suggestion, confirming the scheduled time or explaining the conflict and alternative. Mention contact-related insights if relevant.
+CRITICAL INSTRUCTIONS:
+1.  **Source of Truth**: You MUST only use the provided 'Existing Calendar Events' and 'Existing Tasks' as the source of truth for the user's schedule. **Do not invent, assume, or hallucinate any other events or appointments.**
+2.  **Parse Request**: Analyze the user's request to determine the desired title, date, time, and duration. If duration is not specified, assume a default of 1 hour for meetings.
+3.  **Conflict Definition**: A conflict exists ONLY if the requested time range for the new event OVERLAPS with an existing event's time range. An event on the same day but at a different, non-overlapping time is NOT a conflict.
+4.  **Working Hours**: The user's working hours are 9:00 AM to 5:00 PM on weekdays. Do not schedule appointments outside these hours unless specifically requested by the user.
+5.  **Scheduling Logic**:
+    a. If the requested time is available (no overlap), set 'isPossible' to true. Provide the suggestedDate (YYYY-MM-DD) and suggestedTime (h:mm a). State clearly that the time is available.
+    b. If the requested time directly conflicts (overlaps) with another event, set 'isPossible' to false. Clearly state which existing event it conflicts with in the 'reasoning'. Do NOT suggest an alternative time.
+    c. If no reasonable time can be found (e.g., the user asks for a time that has passed or the entire day is blocked), set 'isPossible' to false and explain why in the 'reasoning' field.
 
+Provide a clear 'reasoning' for your decision, either confirming the time is free or explaining the direct conflict.
 `,
 });
 
