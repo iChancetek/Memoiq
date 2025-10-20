@@ -59,7 +59,7 @@ const parseTaskStringFlow = ai.defineFlow(
     outputSchema: ParseTaskStringOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    const result = await prompt(input);
+    return result.output!;
   }
 );

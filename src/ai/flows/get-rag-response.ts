@@ -144,24 +144,24 @@ export const getScribeEntries = ai.defineTool(
 
 
 const PartSchema = z.union([
-    z.object({ text: z.string() }),
-    z.object({
-        toolRequest: z.object({
-            name: z.string(),
-            input: z.any(),
-        }),
+  z.object({ text: z.string() }),
+  z.object({
+    toolRequest: z.object({
+      name: z.string(),
+      input: z.any(),
     }),
-    z.object({
-        toolResponse: z.object({
-            name: z.string(),
-            output: z.any(),
-        }),
+  }),
+  z.object({
+    toolResponse: z.object({
+      name: z.string(),
+      output: z.any(),
     }),
+  }),
 ]);
 
 const MessageSchema = z.object({
-    role: z.enum(['user', 'model', 'tool']),
-    content: z.array(PartSchema),
+  role: z.enum(['user', 'model', 'tool']),
+  content: z.array(PartSchema),
 });
 
 const GetRagResponseInputSchema = z.object({
@@ -184,6 +184,24 @@ const getRagResponseFlow = ai.defineFlow(
     outputSchema: z.custom<GenerateResponseData>(),
   },
   async ({ history, userId }) => {
+    // Note: The history received from the client is already in the format
+    // that `ai.generate` expects. We just need to cast it correctly.
+    const genkitHistory: Part[] = history.flatMap(msg => {
+      // The client sends content as an array of parts, so we need to map that.
+      return msg.content.map(part => {
+        if ('text' in part) {
+          return { role: msg.role, content: [{ text: part.text }] };
+        }
+        if ('toolRequest' in part) {
+          return { role: msg.role, content: [{ toolRequest: part.toolRequest }] };
+        }
+        if ('toolResponse' in part) {
+          return { role: msg.role, content: [{ toolResponse: part.toolResponse }] };
+        }
+        return null;
+      }).filter(p => p !== null)
+    }).flat() as Part[];
+
     const response = await ai.generate({
       model: 'googleai/gemini-1.5-pro',
       tools: [getTasks, getContacts, getCalendarEvents, getMemos, getScribeEntries],
@@ -202,7 +220,7 @@ Your capabilities:
 
 Today's date is ${format(new Date(), 'EEEE, MMMM d, yyyy')}.
 `,
-      history: history as Part[],
+      history: genkitHistory,
       context: { userId },
     });
 

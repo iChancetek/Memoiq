@@ -89,15 +89,14 @@ const getDailyBriefingFlow = ai.defineFlow(
     outputSchema: GetDailyBriefingOutputSchema,
   },
   async input => {
-    let textOutput;
+    let result;
     let attempts = 0;
     const maxAttempts = 3;
 
     while (attempts < maxAttempts) {
         try {
-            const result = await briefingPrompt(input);
-            textOutput = result.output;
-            break; // Success, exit loop
+            result = await briefingPrompt(input);
+            if (result.output) break; // Success, exit loop
         } catch (error: any) {
             attempts++;
             if (error.message.includes('503') || error.message.includes('429') && attempts < maxAttempts) {
@@ -109,11 +108,11 @@ const getDailyBriefingFlow = ai.defineFlow(
         }
     }
       
-    if (!textOutput) {
+    if (!result?.output) {
         throw new Error("Failed to get briefing text from AI after multiple attempts.");
     }
     
-    const combinedBriefingText = `${input.greeting} ${textOutput.briefingText}`;
+    const combinedBriefingText = `${input.greeting} ${result.output.briefingText}`;
 
     let media;
     attempts = 0;

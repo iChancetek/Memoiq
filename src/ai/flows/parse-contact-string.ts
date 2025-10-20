@@ -56,7 +56,7 @@ const parseContactStringFlow = ai.defineFlow(
     outputSchema: ParseContactStringOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    const result = await prompt(input);
+    return result.output!;
   }
 );

@@ -33,14 +33,14 @@ const transcribeMemoPrompt = ai.definePrompt({
   name: 'transcribeMemoPrompt',
   input: {schema: TranscribeAndSummarizeMemoInputSchema},
   output: {schema: z.object({transcription: z.string()})},
-  prompt: `You are a transcription expert. Please transcribe the following audio memo to text.\n\nAudio: {{media url=audioDataUri}}`,
+  prompt: `You are a transcription expert. Please transcribe the following audio memo to text.\\n\\nAudio: {{media url=audioDataUri}}`,
 });
 
 const summarizeMemoPrompt = ai.definePrompt({
   name: 'summarizeMemoPrompt',
   input: {schema: z.object({transcription: z.string()})},
   output: {schema: z.object({summary: z.string()})},
-  prompt: `You are a summarization expert. Please summarize the following text to its key points.\n\nText: {{{transcription}}}`,
+  prompt: `You are a summarization expert. Please summarize the following text to its key points.\\n\\nText: {{{transcription}}}`,
 });
 
 const transcribeAndSummarizeMemoFlow = ai.defineFlow(
@@ -50,11 +50,11 @@ const transcribeAndSummarizeMemoFlow = ai.defineFlow(
     outputSchema: TranscribeAndSummarizeMemoOutputSchema,
   },
   async input => {
-    const {output: transcriptionOutput} = await transcribeMemoPrompt(input);
-    const transcription = transcriptionOutput!.transcription;
+    const transcriptionResult = await transcribeMemoPrompt(input);
+    const transcription = transcriptionResult.output!.transcription;
 
-    const {output: summaryOutput} = await summarizeMemoPrompt({transcription});
-    const summary = summaryOutput!.summary;
+    const summaryResult = await summarizeMemoPrompt({transcription});
+    const summary = summaryResult.output!.summary;
 
     return {transcription, summary};
   }
