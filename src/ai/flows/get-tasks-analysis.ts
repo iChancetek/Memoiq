@@ -9,7 +9,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import wav from 'wav';
+import { gpt4o, tts1 } from 'genkitx-openai';
 
 const GetTasksAnalysisInputSchema = z.object({
   tasks: z.string().describe("A JSON string of the user's tasks, including title, due date, and completion status."),
@@ -42,7 +42,7 @@ const prompt = ai.definePrompt({
   name: 'getTasksAnalysisPrompt',
   input: {schema: GetTasksAnalysisInputSchema},
   output: {schema: GetTasksAnalysisOutputSchema.omit({ audioDataUri: true })},
-  model: 'googleai/gemini-1.5-flash',
+  model: gpt4o,
   prompt: `You are a world-class productivity coach and project manager. Your goal is to analyze a user's task list and provide a strategic, intelligent briefing.
 
 Current Date: {{{currentDate}}}
@@ -59,32 +59,6 @@ Instructions:
 Analyze the provided data and generate the structured output.`,
 });
 
-async function toWav(
-  pcmData: Buffer,
-  channels = 1,
-  rate = 24000,
-  sampleWidth = 2
-): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const writer = new wav.Writer({
-      channels,
-      sampleRate: rate,
-      bitDepth: sampleWidth * 8,
-    });
-
-    let bufs = [] as any[];
-    writer.on('error', reject);
-    writer.on('data', function (d) {
-      bufs.push(d);
-    });
-    writer.on('end', function () {
-      resolve(Buffer.concat(bufs).toString('base64'));
-    });
-
-    writer.write(pcmData);
-    writer.end();
-  });
-}
 
 const getTasksAnalysisFlow = ai.defineFlow(
   {
@@ -93,31 +67,8 @@ const getTasksAnalysisFlow = ai.defineFlow(
     outputSchema: GetTasksAnalysisOutputSchema,
   },
   async input => {
-    let analysisOutput;
-    let attempts = 0;
-    const maxAttempts = 3;
-
-    while (attempts < maxAttempts) {
-      try {
-        const result = await prompt(input);
-        analysisOutput = result.output;
-        if (analysisOutput) {
-            break; // Success
-        }
-        attempts++;
-        if (attempts >= maxAttempts) {
-            throw new Error('AI returned empty output after multiple attempts.');
-        }
-      } catch (error: any) {
-        attempts++;
-        if (error.message && (error.message.includes('503') || error.message.includes('429')) && attempts < maxAttempts) {
-          console.log(`Task analysis attempt ${attempts} failed with ${error.message}, retrying...`);
-          await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
-        } else {
-          throw error;
-        }
-      }
-    }
+    const result = await prompt(input);
+    const analysisOutput = result.output;
 
     if (!analysisOutput) {
       throw new Error('Failed to get task analysis after multiple attempts.');
@@ -132,20 +83,16 @@ const getTasksAnalysisFlow = ai.defineFlow(
     `;
 
     let media;
-    attempts = 0; // Reset for TTS
+    let attempts = 0;
+    const maxAttempts = 3;
      while (attempts < maxAttempts) {
         try {
             const ttsResponse = await ai.generate({
-                model: 'googleai/gemini-2.5-flash-preview-tts',
-                config: {
-                    responseModalities: ['AUDIO'],
-                    speechConfig: {
-                    voiceConfig: {
-                        prebuiltVoiceConfig: { voiceName: 'Algenib' },
-                    },
-                    },
-                },
+                model: tts1,
                 prompt: readableAnalysis,
+                config: {
+                    voice: 'nova'
+                }
             });
             media = ttsResponse.media;
             break; // Success
@@ -161,13 +108,10 @@ const getTasksAnalysisFlow = ai.defineFlow(
     }
 
      if (!media) {
-      throw new Error('no media returned');
+      throw new Error('TTS generation failed after multiple attempts.');
     }
-    const audioBuffer = Buffer.from(
-      media.url.substring(media.url.indexOf(',') + 1),
-      'base64'
-    );
-    const audioDataUri = 'data:audio/wav;base64,' + (await toWav(audioBuffer));
+    
+    const audioDataUri = media.url;
 
     return {
       ...analysisOutput,

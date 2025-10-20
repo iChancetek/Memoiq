@@ -9,6 +9,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { whisper1 } from 'genkitx-openai';
 
 const ScribeInputSchema = z.object({
   audioDataUri: z
@@ -32,7 +33,7 @@ export async function scribeTranscribe(
 
 const transcribePrompt = ai.definePrompt({
     name: 'scribeTranscribePrompt',
-    model: 'googleai/gemini-1.5-flash',
+    model: whisper1,
     input: { schema: ScribeInputSchema },
     output: { schema: ScribeOutputSchema },
     prompt: `You are a transcription expert for English. Please transcribe the following audio to text in its original language.\n\nAudio: {{media url=audioDataUri}}`,
@@ -54,7 +55,10 @@ const scribeTranscribeFlow = ai.defineFlow(
         try {
             const result = await transcribePrompt({ audioDataUri });
             transcriptionOutput = result.output;
-            break; // Success
+            if (transcriptionOutput) {
+              break; // Success
+            }
+            attempts++;
         } catch (error: any) {
             attempts++;
             if (error.message.includes('503') && attempts < maxAttempts) {
