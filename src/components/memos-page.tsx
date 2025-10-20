@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -44,7 +45,7 @@ export function MemoProvider({ children }: { children: React.ReactNode }) {
                 return {
                     id: doc.id,
                     ...data,
-                    createdAt: (data.createdAt as Timestamp)?.toDate()
+                    createdAt: (data.createdAt as Timestamp)?.toDate() || new Date()
                 }
             }) as Memo[];
             setMemos(userMemos);

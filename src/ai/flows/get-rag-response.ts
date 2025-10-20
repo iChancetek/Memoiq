@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview A RAG-based AI assistant that can answer questions based on user data.
@@ -9,14 +10,16 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { TaskSchema, ContactSchema, CalendarEventSchema, MemoSchema, ScribeEntrySchema, Task, Contact, CalendarEvent, Memo, ScribeEntry } from '@/lib/data';
+import { TaskSchema, ContactSchema, CalendarEventSchema, MemoSchema, ScribeEntrySchema } from '@/lib/data';
+import type { Task, Contact, CalendarEvent, Memo, ScribeEntry } from '@/lib/data';
 import { format } from 'date-fns';
-import { getFirestore, Timestamp } from 'firebase-admin/firestore';
-import { adminApp } from '@/lib/firebase-admin';
-import { Part, MessageData } from '@genkit-ai/googleai';
+import { getFirestore } from 'firebase/firestore';
+import { collection, query as firestoreQuery, where, getDocs, orderBy } from 'firebase/firestore';
+import { firebaseApp } from '@/lib/firebase';
+import { MessageData } from '@genkit-ai/googleai';
 import { gpt4o } from 'genkitx-openai';
 
-const db = getFirestore(adminApp);
+const db = getFirestore(firebaseApp);
 
 // Define tools for the AI to use
 export const getTasks = ai.defineTool(
@@ -31,11 +34,11 @@ export const getTasks = ai.defineTool(
   },
   async ({userId, status}) => {
     console.log('Tool: getTasks called with status:', status);
-    let query: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = db.collection(`users/${userId}/tasks`);
+    let q = firestoreQuery(collection(db, `users/${userId}/tasks`));
     if (status) {
-        query = query.where('completed', '==', status === 'completed');
+        q = firestoreQuery(q, where('completed', '==', status === 'completed'));
     }
-    const snapshot = await query.get();
+    const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as any) as Task[];
   }
 );
@@ -52,11 +55,11 @@ export const getContacts = ai.defineTool(
   },
   async ({userId, name}) => {
     console.log('Tool: getContacts called with name:', name);
-     let query: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> = db.collection(`users/${userId}/contacts`);
+    let q = firestoreQuery(collection(db, `users/${userId}/contacts`));
     if (name) {
-        query = query.where('name', '==', name);
+        q = firestoreQuery(q, where('name', '==', name));
     }
-    const snapshot = await query.get();
+    const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as any) as Contact[];
   }
 );
@@ -80,18 +83,18 @@ export const getCalendarEvents = ai.defineTool(
     const end = endDate ? new Date(endDate) : new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
     end.setHours(23, 59, 59, 999);
     
-    const snapshot = await db.collection(`users/${userId}/events`)
-        .where('startTime', '>=', start)
-        .where('startTime', '<=', end)
-        .get();
+    const snapshot = await getDocs(firestoreQuery(collection(db, `users/${userId}/events`),
+        where('startTime', '>=', start),
+        where('startTime', '<=', end)
+    ));
 
     return snapshot.docs.map(doc => {
         const data = doc.data();
         return {
             ...data,
             id: doc.id,
-            startTime: (data.startTime as FirebaseFirestore.Timestamp).toDate(),
-            endTime: (data.endTime as FirebaseFirestore.Timestamp).toDate(),
+            startTime: data.startTime.toDate(),
+            endTime: data.endTime.toDate(),
         } as any;
     }) as CalendarEvent[];
   }
@@ -108,13 +111,13 @@ export const getMemos = ai.defineTool(
   },
   async ({ userId }) => {
     console.log('Tool: getMemos called');
-    const snapshot = await db.collection(`users/${userId}/memos`).orderBy('createdAt', 'desc').get();
+    const snapshot = await getDocs(firestoreQuery(collection(db, `users/${userId}/memos`), orderBy('createdAt', 'desc')));
     return snapshot.docs.map(doc => {
       const data = doc.data();
       return {
         ...data,
         id: doc.id,
-        createdAt: (data.createdAt as Timestamp)?.toDate(),
+        createdAt: data.createdAt?.toDate(),
       } as any;
     }) as Memo[];
   }
@@ -131,13 +134,13 @@ export const getScribeEntries = ai.defineTool(
   },
   async ({ userId }) => {
     console.log('Tool: getScribeEntries called');
-    const snapshot = await db.collection(`users/${userId}/scribeEntries`).orderBy('createdAt', 'desc').get();
+    const snapshot = await getDocs(firestoreQuery(collection(db, `users/${userId}/scribeEntries`), orderBy('createdAt', 'desc')));
     return snapshot.docs.map(doc => {
       const data = doc.data();
       return {
         ...data,
         id: doc.id,
-        createdAt: (data.createdAt as Timestamp)?.toDate(),
+        createdAt: data.createdAt?.toDate(),
       } as any;
     }) as ScribeEntry[];
   }
@@ -202,22 +205,24 @@ Today's date is ${format(new Date(), 'EEEE, MMMM d, yyyy')}.
     })})) as MessageData[],
     });
 
-    const finalHistory = response.history.map(msg => ({...msg, content: msg.content.map(c => {
-        // Convert Genkit's toolResult back to what the client expects
-        if (c.toolResult) {
+    const finalHistory = response.history.map(msg => {
+        const content = msg.content.map(c => {
+          if (c.toolResult) {
             return {
-                toolResponse: {
-                    name: c.toolResult.name,
-                    output: c.toolResult.result
-                }
+              toolResponse: {
+                name: c.toolResult.name,
+                output: c.toolResult.result,
+              },
             };
-        }
-        return c;
-    })}));
-
-    return {
-      history: finalHistory,
-      text: response.text,
-    };
+          }
+          return c;
+        });
+        return { role: msg.role, content };
+      });
+  
+      return {
+        history: finalHistory,
+        text: response.text,
+      };
   }
 );
