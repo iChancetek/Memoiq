@@ -31,7 +31,12 @@ export async function callTool(input: CallToolInput) {
     throw new Error(`Tool "${name}" not found.`);
   }
 
-  const output = await tool(toolInput);
+  // The 'run' method is the standard way to execute a Genkit tool/flow object
+  if (typeof tool.run !== 'function') {
+      throw new Error(`Tool "${name}" is not a runnable Genkit action.`);
+  }
+  
+  const output = await tool.run(toolInput);
   
   return {
     name,

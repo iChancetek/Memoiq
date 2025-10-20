@@ -14,8 +14,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { transcribeAudio } from '@/ai/flows/transcribe-audio';
 import { useAuth } from '@/contexts/auth-context';
-import { GenerateResponseData, Part } from '@genkit-ai/googleai';
 
+interface Part {
+  text?: string;
+  toolRequest?: { name: string; input: any; };
+  toolResponse?: { name: string; output: any; };
+}
 
 interface Message {
   role: 'user' | 'model' | 'tool';
@@ -90,7 +94,7 @@ export function AIAssistantWidget() {
         if (toolRequest && toolRequest.toolRequest) {
             const toolResponse = await callTool({
                 name: toolRequest.toolRequest.name,
-                input: toolRequest.toolRequest.input,
+                input: { ...toolRequest.toolRequest.input, userId: user.uid },
             });
 
             const newHistory: Message[] = [
@@ -100,7 +104,7 @@ export function AIAssistantWidget() {
             setMessages(newHistory);
             runConversation(newHistory); // Continue conversation
         } else {
-            const textResponse = lastMessage.content.map(p => p.text).join('');
+            const textResponse = response.text;
             if (textResponse) {
                 const { audioDataUri } = await textToSpeech({ text: textResponse });
                 if (audioDataUri) {

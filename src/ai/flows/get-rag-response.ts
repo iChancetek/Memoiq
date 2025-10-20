@@ -13,7 +13,7 @@ import { TaskSchema, ContactSchema, CalendarEventSchema, MemoSchema, ScribeEntry
 import { format } from 'date-fns';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { adminApp } from '@/lib/firebase-admin';
-import { GenerateResponseData, Part } from '@genkit-ai/googleai';
+import { Part } from '@genkit-ai/googleai';
 import { gpt4o } from 'genkitx-openai';
 
 const db = getFirestore(adminApp);
@@ -169,8 +169,15 @@ const GetRagResponseInputSchema = z.object({
   history: z.array(MessageSchema).describe('The conversation history, including the latest user message.'),
   userId: z.string().describe("The current user's ID to fetch data for."),
 });
+
+const GetRagResponseOutputSchema = z.object({
+  history: z.array(MessageSchema),
+  text: z.string(),
+});
+
+
 export type GetRagResponseInput = z.infer<typeof GetRagResponseInputSchema>;
-export type GetRagResponseOutput = GenerateResponseData;
+export type GetRagResponseOutput = z.infer<typeof GetRagResponseOutputSchema>;
 
 export async function getRagResponse(
   input: GetRagResponseInput
@@ -182,7 +189,7 @@ const getRagResponseFlow = ai.defineFlow(
   {
     name: 'getRagResponseFlow',
     inputSchema: GetRagResponseInputSchema,
-    outputSchema: z.custom<GenerateResponseData>(),
+    outputSchema: GetRagResponseOutputSchema,
   },
   async ({ history, userId }) => {
     const response = await ai.generate({
@@ -203,10 +210,14 @@ Your capabilities:
 
 Today's date is ${format(new Date(), 'EEEE, MMMM d, yyyy')}.
 `,
-      history: history as Part[],
-      context: { userId },
+      history: history as any[], // Cast to any to handle Genkit's internal types
     });
 
-    return response.toJSON();
+    const responseHistory = response.history as { role: 'user' | 'model' | 'tool', content: Part[] }[];
+
+    return {
+      history: responseHistory,
+      text: response.text,
+    };
   }
 );
