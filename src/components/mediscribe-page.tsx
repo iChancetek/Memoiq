@@ -88,8 +88,9 @@ function RecordingItem({ recording, onDelete }: { recording: ScribeEntry, onDele
 
     React.useEffect(() => {
         if(audioUrl) {
-            audioRef.current = new Audio(audioUrl);
-            audioRef.current.onended = () => setIsPlaying(false);
+            const audio = new Audio(audioUrl);
+            audioRef.current = audio;
+            audio.onended = () => setIsPlaying(false);
         }
         return () => {
             audioRef.current?.pause();
@@ -196,15 +197,11 @@ export function MediScribePage() {
     const { scribeEntries, addScribeEntry, deleteScribeEntry, loading } = useMediScribe();
     const { toast } = useToast();
     const [isProcessing, setIsProcessing] = React.useState(false);
-    const { user } = useAuth();
     
-    // @ts-ignore
-    const lang = user?.settings?.language || 'en';
-
     const handleNewRecording = async (audioBlob: Blob) => {
         setIsProcessing(true);
         try {
-            await addScribeEntry(audioBlob, lang);
+            await addScribeEntry(audioBlob);
             toast({
                 title: 'Processing Complete',
                 description: 'Your recording has been transcribed and saved.',

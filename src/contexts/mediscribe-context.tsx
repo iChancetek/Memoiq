@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -36,7 +37,7 @@ export interface ScribeEntry {
 
 interface MediScribeContextType {
   scribeEntries: ScribeEntry[];
-  addScribeEntry: (audioBlob: Blob, lang: 'en' | 'es') => Promise<void>;
+  addScribeEntry: (audioBlob: Blob) => Promise<void>;
   deleteScribeEntry: (entryId: string) => Promise<void>;
   translateScribeEntry: (entryId: string, targetLanguage: 'en' | 'es', text: string) => Promise<void>;
   loading: boolean;
@@ -76,7 +77,7 @@ export function MediScribeProvider({ children }: { children: React.ReactNode }) 
     }
   }, [user]);
 
-  const addScribeEntry = async (audioBlob: Blob, lang: 'en' | 'es') => {
+  const addScribeEntry = async (audioBlob: Blob) => {
     if (!user) throw new Error("User not authenticated");
 
     // 1. Upload audio to Firebase Storage
@@ -84,15 +85,15 @@ export function MediScribeProvider({ children }: { children: React.ReactNode }) 
     const storagePath = `scribe-audio/${user.uid}/${Date.now()}.${fileExtension}`;
     const audioUrl = await uploadFile(storagePath, audioBlob, { contentType: audioBlob.type });
 
-    // 2. Convert blob to data URI for Genkit
-    const reader = new FileReader();
-    reader.readAsDataURL(audioBlob);
-    const audioDataUri = await new Promise<string>((resolve) => {
-        reader.onloadend = () => resolve(reader.result as string);
-    });
+    // 2. Convert Blob to a Buffer-like object for the server action
+    const arrayBuffer = await audioBlob.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
 
     // 3. Get transcription
-    const { transcription } = await scribeTranscribe({ audioDataUri });
+    const { transcription } = await scribeTranscribe({
+      audioBlobBuffer: buffer,
+      mimeType: audioBlob.type,
+    });
     
     // 4. Save metadata to Firestore
     await addDoc(collection(db, 'users', user.uid, 'scribeEntries'), {
