@@ -65,7 +65,7 @@ const scribeTranscribeFlow = ai.defineFlow(
             attempts++;
         } catch (error: any) {
             attempts++;
-            if (error.message.includes('503') && attempts < maxAttempts) {
+            if ((error.message.includes('503') || error.message.includes('429')) && attempts < maxAttempts) {
                 console.log(`Scribe transcription attempt ${attempts} failed, retrying...`);
                 await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
             } else {
