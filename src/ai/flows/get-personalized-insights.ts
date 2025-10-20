@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -24,4 +25,46 @@ export type PersonalizedInsightsInput = z.infer<
 const PersonalizedInsightsOutputSchema = z.object({
   insights: z.string().describe('Personalized insights and reminders.'),
 });
-export type PersonalizedInsightsOutput = z.infe...
+export type PersonalizedInsightsOutput = z.infer<
+  typeof PersonalizedInsightsOutputSchema
+>;
+
+export async function getPersonalizedInsights(
+  input: PersonalizedInsightsInput
+): Promise<PersonalizedInsightsOutput> {
+  const result = await getPersonalizedInsightsFlow(input);
+  return {insights: result.insights};
+}
+
+const getPersonalizedInsightsFlow = ai.defineFlow(
+  {
+    name: 'getPersonalizedInsightsFlow',
+    inputSchema: PersonalizedInsightsInputSchema,
+    outputSchema: PersonalizedInsightsOutputSchema,
+  },
+  async ({memos, tasks, calendarEvents}) => {
+    const prompt = `
+      You are an AI assistant that provides personalized insights and reminders based on the user's memos, tasks, and calendar events.
+
+      Memos:
+      ${memos}
+
+      Tasks:
+      ${tasks}
+
+      Calendar Events:
+      ${calendarEvents}
+
+      Generate a few key insights or reminders for the user.
+    `;
+    const llmResponse = await ai.generate({
+      model: gpt4o,
+      prompt: prompt,
+      output: {
+        schema: PersonalizedInsightsOutputSchema,
+      },
+    });
+
+    return llmResponse.output!;
+  }
+);
