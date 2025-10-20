@@ -81,8 +81,8 @@ CRITICAL INSTRUCTIONS:
 2.  **Parse Request**: Analyze the user's request to determine the desired title, date, and time. If duration is not specified, assume a default of 1 hour.
 3.  **Working Hours**: The user's working hours are 9:00 AM to 5:00 PM on weekdays. Only schedule appointments within these hours unless the user specifically requests a time outside of them.
 4.  **Scheduling Logic**:
-    a. **No Conflict**: If the requested time is available (no overlap with existing events), set 'isPossible' to true. Provide the requested date and time, and state clearly in the 'reasoning' that the time is available.
-    b. **Conflict Found**: If the requested time directly conflicts (overlaps) with an existing event, first state clearly in the 'reasoning' which event it conflicts with. Then, scan the rest of the day within working hours to find the next available 1-hour slot.
+    a. **No Conflict**: If the requested time is available (no direct time overlap with existing events), set 'isPossible' to true. Provide the requested date and time, and state clearly in the 'reasoning' that the time is available.
+    b. **Conflict Found**: If the requested time directly conflicts (the time ranges overlap) with an existing event, first state clearly in the 'reasoning' which event it conflicts with. Then, scan the rest of the day within working hours to find the next available 1-hour slot.
     c. **Suggestion Found**: If you find an alternative available slot on the same day, set 'isPossible' to true. Set 'suggestedDate' and 'suggestedTime' to this new slot. In the 'reasoning', explain the original conflict and clearly state that this is a suggested alternative time.
     d. **No Alternative Found**: If there is a conflict and no other available slots are found on that day, set 'isPossible' to false. State the conflict in the 'reasoning' and explain that no other times are available on that day.
 
