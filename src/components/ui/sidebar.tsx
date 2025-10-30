@@ -293,7 +293,7 @@ const SidebarRail = React.forwardRef<
   const { toggleSidebar } = useSidebar()
 
   return (
-    <button
+    <Button
       ref={ref}
       data-sidebar="rail"
       aria-label="Toggle Sidebar"
@@ -452,9 +452,9 @@ SidebarGroupLabel.displayName = "SidebarGroupLabel"
 
 const SidebarGroupAction = React.forwardRef<
   HTMLButtonElement,
-  React.ComponentProps<"button"> & { asChild?: boolean }
+  React.ComponentProps<typeof Button> & { asChild?: boolean }
 >(({ className, asChild = false, ...props }, ref) => {
-  const Comp = asChild ? Slot : "button"
+  const Comp = asChild ? Slot : Button
 
   return (
     <Comp
@@ -536,7 +536,7 @@ const sidebarMenuButtonVariants = cva(
 
 const SidebarMenuButton = React.forwardRef<
   HTMLButtonElement,
-  React.ComponentProps<"button"> & {
+  React.ComponentProps<typeof Button> & {
     asChild?: boolean
     isActive?: boolean
     tooltip?: string | React.ComponentProps<typeof TooltipContent>
@@ -554,7 +554,7 @@ const SidebarMenuButton = React.forwardRef<
     },
     ref
   ) => {
-    const Comp = asChild ? Slot : "button"
+    const Comp = asChild ? Slot : Button
     const { isMobile, state } = useSidebar()
 
     const button = (
@@ -595,12 +595,12 @@ SidebarMenuButton.displayName = "SidebarMenuButton"
 
 const SidebarMenuAction = React.forwardRef<
   HTMLButtonElement,
-  React.ComponentProps<"button"> & {
+  React.ComponentProps<typeof Button> & {
     asChild?: boolean
     showOnHover?: boolean
   }
 >(({ className, asChild = false, showOnHover = false, ...props }, ref) => {
-  const Comp = asChild ? Slot : "button"
+  const Comp = asChild ? Slot : Button
 
   return (
     <Comp
