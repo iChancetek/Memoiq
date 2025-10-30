@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -73,7 +74,7 @@ export function AuthPage() {
         </div>
       </div>
       <footer className="text-center p-4 text-xs text-muted-foreground">
-        Developed by iSynera LLC | ChanceTEK LLC
+        @ MemoIQ 2025. Developed by ChanceTEK LLC I iChanceTEK I Chancellor Minus
       </footer>
     </div>
   );
