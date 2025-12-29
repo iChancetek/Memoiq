@@ -16,7 +16,7 @@ import {
   deleteDoc,
   Timestamp,
 } from 'firebase/firestore';
-import { firebaseApp } from '@/lib/firebase';
+import { initializeFirebase } from '@/firebase';
 import { useStorage } from './storage-context';
 import { transcribeAudio } from '@/ai/flows/transcribe-audio';
 import { translateText } from '@/ai/flows/translate-text';
@@ -45,7 +45,7 @@ interface ScribeContextType {
 }
 
 const ScribeContext = React.createContext<ScribeContextType | undefined>(undefined);
-const db = getFirestore(firebaseApp);
+const { firestore: db } = initializeFirebase();
 
 export function ScribeProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();

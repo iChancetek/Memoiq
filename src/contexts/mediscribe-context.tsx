@@ -16,7 +16,7 @@ import {
   deleteDoc,
   Timestamp,
 } from 'firebase/firestore';
-import { firebaseApp } from '@/lib/firebase';
+import { initializeFirebase } from '@/firebase';
 import { useStorage } from './storage-context';
 import { scribeTranscribe } from '@/ai/flows/scribe-transcribe-and-translate';
 import { translateText } from '@/ai/flows/translate-text';
@@ -45,7 +45,7 @@ interface MediScribeContextType {
 }
 
 const MediScribeContext = React.createContext<MediScribeContextType | undefined>(undefined);
-const db = getFirestore(firebaseApp);
+const { firestore: db } = initializeFirebase();
 
 export function MediScribeProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();

@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject, type UploadMetadata } from 'firebase/storage';
-import { firebaseApp } from '@/lib/firebase';
+import { initializeFirebase } from '@/firebase';
 import { useAuth } from './auth-context';
 
 interface StorageContextType {
@@ -12,6 +12,7 @@ interface StorageContextType {
 }
 
 const StorageContext = React.createContext<StorageContextType | undefined>(undefined);
+const { firebaseApp } = initializeFirebase();
 const storage = getStorage(firebaseApp);
 
 export function StorageProvider({ children }: { children: React.ReactNode }) {

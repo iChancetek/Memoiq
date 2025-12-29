@@ -17,8 +17,10 @@ import {
   signInAnonymously,
 } from 'firebase/auth';
 import { getFirestore, doc, setDoc, serverTimestamp, getDoc, updateDoc } from 'firebase/firestore';
-import { firebaseApp } from '@/lib/firebase';
+import { initializeFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
+
+const { auth, firestore } = initializeFirebase();
 
 export interface AppUser extends User {
     settings?: {
@@ -53,8 +55,6 @@ interface AuthContextType {
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 
-const auth = getAuth(firebaseApp);
-const firestore = getFirestore(firebaseApp);
 const googleProvider = new GoogleAuthProvider();
 // Request access to Google Calendar and Contacts APIs
 googleProvider.addScope('https://www.googleapis.com/auth/calendar.readonly');
@@ -179,7 +179,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       await updateDoc(doc(firestore, 'users', userCredential.user.uid), { lastLogin: serverTimestamp() });
       await handleAuthSuccess(userCredential);
-    } catch (err) {
+    } catch (err: any) {
       handleAuthError(err);
     } finally {
       setLoading(false);
@@ -195,7 +195,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser({ ...userCredential.user, displayName, ...firestoreData } as AppUser);
       router.push('/');
       setError(null);
-    } catch (err) {
+    } catch (err: any) {
       handleAuthError(err);
     } finally {
       setLoading(false);
@@ -209,7 +209,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const firebaseUser = userCredential.user;
       
       // Ensure Firestore document exists before proceeding
-      await createUserInFirestore(firebaseUser);
+      await createUserInFirestore(firebaseUser, firebaseUser.displayName);
       
       const additionalInfo = getAdditionalUserInfo(userCredential);
       const accessToken = (additionalInfo?.credential as any)?.accessToken;
@@ -235,7 +235,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       router.push('/');
       setError(null);
 
-    } catch (err) {
+    } catch (err: any) {
       handleAuthError(err);
     } finally {
       setLoading(false);
@@ -258,7 +258,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           await updateDoc(userRef, { integrations: updatedIntegrations });
           setUser(prev => ({...prev!, integrations: updatedIntegrations} as AppUser));
           setError(null);
-      } catch (err) {
+      } catch (err: any) {
           handleAuthError(err);
       } finally {
           setLoading(false);
@@ -273,7 +273,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             await setDoc(doc(firestore, 'users', user.uid), profile, { merge: true });
             setUser({ ...user, ...profile });
             setError(null);
-        } catch (err) {
+        } catch (err: any) {
             handleAuthError(err);
         } finally {
             setLoading(false);
@@ -287,7 +287,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
             await updatePassword(user, newPassword);
             setError(null);
-        } catch (err) {
+        } catch (err: any) {
             handleAuthError(err);
             throw err; // Re-throw to be caught in the component
         } finally {
@@ -304,7 +304,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               await updateDoc(userRef, { settings: { ...user.settings, ...settings} });
               setUser(prevUser => ({ ...prevUser!, settings: { ...prevUser!.settings, ...settings } }));
               setError(null);
-          } catch (err) {
+          } catch (err: any) {
               handleAuthError(err);
           } finally {
               setLoading(false);
@@ -319,7 +319,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       router.push('/auth');
       setUser(null);
       setError(null);
-    } catch (err) {
+    } catch (err: any) {
       handleAuthError(err);
     } finally {
       setLoading(false);

@@ -16,7 +16,7 @@ import {
   orderBy,
   deleteDoc,
 } from 'firebase/firestore';
-import { firebaseApp } from '@/lib/firebase';
+import { initializeFirebase } from '@/firebase';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface ContactContextType {
@@ -28,7 +28,7 @@ interface ContactContextType {
 }
 
 const ContactContext = React.createContext<ContactContextType | undefined>(undefined);
-const db = getFirestore(firebaseApp);
+const { firestore: db } = initializeFirebase();
 
 export function ContactProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();

@@ -18,12 +18,12 @@ import type {Memo} from '@/lib/data';
 import {useToast} from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
 import { getFirestore, collection, addDoc, query, onSnapshot, serverTimestamp, orderBy, Timestamp } from 'firebase/firestore';
-import { firebaseApp } from '@/lib/firebase';
+import { initializeFirebase } from '@/firebase';
 import { Skeleton } from './ui/skeleton';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 
-const db = getFirestore(firebaseApp);
+const { firestore: db } = initializeFirebase();
 
 // Create a context to provide memos throughout the app
 const MemoContext = React.createContext<{ memos: Memo[]; loading: boolean }>({ memos: [], loading: true });

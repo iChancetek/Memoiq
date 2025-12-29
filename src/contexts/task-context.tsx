@@ -16,7 +16,7 @@ import {
   orderBy,
   deleteDoc,
 } from 'firebase/firestore';
-import { firebaseApp } from '@/lib/firebase';
+import { initializeFirebase } from '@/firebase';
 import { setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface TaskContextType {
@@ -30,7 +30,7 @@ interface TaskContextType {
 }
 
 const TaskContext = React.createContext<TaskContextType | undefined>(undefined);
-const db = getFirestore(firebaseApp);
+const { firestore: db } = initializeFirebase();
 
 export function TaskProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
