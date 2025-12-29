@@ -20,6 +20,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { getFirestore, collection, addDoc, query, onSnapshot, serverTimestamp, orderBy, Timestamp } from 'firebase/firestore';
 import { firebaseApp } from '@/lib/firebase';
 import { Skeleton } from './ui/skeleton';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 
 const db = getFirestore(firebaseApp);
@@ -83,7 +84,8 @@ export function MemosPage() {
         return;
     }
     try {
-        await addDoc(collection(db, 'users', user.uid, 'memos'), {
+        const collectionRef = collection(db, 'users', user.uid, 'memos');
+        addDocumentNonBlocking(collectionRef, {
             ...newMemo,
             userId: user.uid,
             createdAt: serverTimestamp(),

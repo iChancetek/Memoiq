@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -17,6 +18,7 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { firebaseApp } from '@/lib/firebase';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface CalendarContextType {
   events: CalendarEvent[];
@@ -68,7 +70,8 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
 
   const addEvent = async (event: Omit<CalendarEvent, 'id' | 'userId' | 'createdAt'>) => {
     if (!user) throw new Error("User not authenticated");
-    await addDoc(collection(db, 'users', user.uid, 'events'), {
+    const collectionRef = collection(db, 'users', user.uid, 'events');
+    addDocumentNonBlocking(collectionRef, {
       ...event,
       userId: user.uid,
       createdAt: serverTimestamp(),
@@ -78,13 +81,13 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
   const updateEvent = async (eventId: string, updates: Partial<CalendarEvent>) => {
     if (!user) return;
     const eventRef = doc(db, 'users', user.uid, 'events', eventId);
-    await updateDoc(eventRef, updates);
+    updateDocumentNonBlocking(eventRef, updates);
   };
   
   const deleteEvent = async (eventId: string) => {
     if (!user) return;
     const eventRef = doc(db, 'users', user.uid, 'events', eventId);
-    await deleteDoc(eventRef);
+    deleteDocumentNonBlocking(eventRef);
   }
 
   const value = { events, addEvent, updateEvent, deleteEvent, loading };

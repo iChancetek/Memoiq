@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -20,6 +21,7 @@ import { useStorage } from './storage-context';
 import { transcribeAudio } from '@/ai/flows/transcribe-audio';
 import { translateText } from '@/ai/flows/translate-text';
 import { textToSpeech } from '@/ai/flows/text-to-speech';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export interface ScribeEntry {
     id: string;
@@ -95,7 +97,8 @@ export function ScribeProvider({ children }: { children: React.ReactNode }) {
     const { transcription } = await transcribeAudio({ audioDataUri, language: lang });
     
     // 4. Save metadata to Firestore
-    await addDoc(collection(db, 'users', user.uid, 'scribeEntries'), {
+    const collectionRef = collection(db, 'users', user.uid, 'scribeEntries');
+    addDocumentNonBlocking(collectionRef, {
       userId: user.uid,
       title: `Recording - ${new Date().toLocaleString()}`,
       audioUrl_en: audioUrl,
@@ -117,7 +120,7 @@ export function ScribeProvider({ children }: { children: React.ReactNode }) {
     if (entry.storagePath_es) await deleteFile(entry.storagePath_es);
     
     const entryRef = doc(db, 'users', user.uid, 'scribeEntries', entryId);
-    await deleteDoc(entryRef);
+    deleteDocumentNonBlocking(entryRef);
   }
 
   const translateScribeEntry = async (entryId: string, targetLanguage: 'en' | 'es', text: string) => {
@@ -140,7 +143,7 @@ export function ScribeProvider({ children }: { children: React.ReactNode }) {
       };
       
       const entryRef = doc(db, 'users', user.uid, 'scribeEntries', entryId);
-      await updateDoc(entryRef, updates);
+      updateDocumentNonBlocking(entryRef, updates);
   }
 
   const value = { scribeEntries, addScribeEntry, deleteScribeEntry, translateScribeEntry, loading };

@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -16,6 +17,7 @@ import {
   deleteDoc,
 } from 'firebase/firestore';
 import { firebaseApp } from '@/lib/firebase';
+import { setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface TaskContextType {
   tasks: Task[];
@@ -63,7 +65,8 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const addTask = async (task: Omit<Task, 'id' | 'userId' | 'completed' | 'createdAt'>) => {
     if (!user) throw new Error("User not authenticated");
     const { title, dueDate, subtasks, contactIds } = task;
-    await addDoc(collection(db, 'users', user.uid, 'tasks'), {
+    const collectionRef = collection(db, 'users', user.uid, 'tasks');
+    addDocumentNonBlocking(collectionRef, {
       title,
       dueDate,
       subtasks: subtasks || [],
@@ -77,13 +80,13 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   const updateTask = async (taskId: string, updates: Partial<Task>) => {
     if (!user) return;
     const taskRef = doc(db, 'users', user.uid, 'tasks', taskId);
-    await updateDoc(taskRef, updates);
+    updateDocumentNonBlocking(taskRef, updates);
   };
   
   const deleteTask = async (taskId: string) => {
     if (!user) return;
     const taskRef = doc(db, 'users', user.uid, 'tasks', taskId);
-    await deleteDoc(taskRef);
+    deleteDocumentNonBlocking(taskRef);
   }
 
   const toggleTask = (taskId: string) => {

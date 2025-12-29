@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -16,6 +17,7 @@ import {
   deleteDoc,
 } from 'firebase/firestore';
 import { firebaseApp } from '@/lib/firebase';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface ContactContextType {
   contacts: Contact[];
@@ -60,7 +62,8 @@ export function ContactProvider({ children }: { children: React.ReactNode }) {
 
   const addContact = async (contact: Omit<Contact, 'id' | 'userId' | 'createdAt'>) => {
     if (!user) throw new Error("User not authenticated");
-    await addDoc(collection(db, 'users', user.uid, 'contacts'), {
+    const collectionRef = collection(db, 'users', user.uid, 'contacts');
+    addDocumentNonBlocking(collectionRef, {
       ...contact,
       userId: user.uid,
       createdAt: serverTimestamp(),
@@ -70,13 +73,13 @@ export function ContactProvider({ children }: { children: React.ReactNode }) {
   const updateContact = async (contactId: string, updates: Partial<Contact>) => {
     if (!user) return;
     const contactRef = doc(db, 'users', user.uid, 'contacts', contactId);
-    await updateDoc(contactRef, updates);
+    updateDocumentNonBlocking(contactRef, updates);
   };
   
   const deleteContact = async (contactId: string) => {
     if (!user) return;
     const contactRef = doc(db, 'users', user.uid, 'contacts', contactId);
-    await deleteDoc(contactRef);
+    deleteDocumentNonBlocking(contactRef);
   }
 
   const value = { contacts, addContact, updateContact, deleteContact, loading };
