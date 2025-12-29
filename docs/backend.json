@@ -1,0 +1,282 @@
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the MemoIQ application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity."
+        },
+        "username": {
+          "type": "string",
+          "description": "User's username."
+        },
+        "email": {
+          "type": "string",
+          "description": "User's email address.",
+          "format": "email"
+        },
+        "googleCalendarId": {
+          "type": "string",
+          "description": "Reference to Google Calendar. (Relationship: User 1:1 GoogleCalendar)"
+        },
+        "googleContactsId": {
+          "type": "string",
+          "description": "Reference to Google Contacts. (Relationship: User 1:1 GoogleContacts)"
+        }
+      },
+      "required": [
+        "id",
+        "username",
+        "email"
+      ]
+    },
+    "GoogleCalendar": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "GoogleCalendar",
+      "type": "object",
+      "description": "Represents a Google Calendar associated with a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the GoogleCalendar entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:1 GoogleCalendar)"
+        },
+        "calendarName": {
+          "type": "string",
+          "description": "Name of the Google Calendar."
+        },
+        "syncToken": {
+          "type": "string",
+          "description": "The sync token for incremental synchronization."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "calendarName"
+      ]
+    },
+    "GoogleContacts": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "GoogleContacts",
+      "type": "object",
+      "description": "Represents Google Contacts associated with a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the GoogleContacts entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:1 GoogleContacts)"
+        },
+        "lastSyncDate": {
+          "type": "string",
+          "description": "Date of last synchronization.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId"
+      ]
+    },
+    "Appointment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Appointment",
+      "type": "object",
+      "description": "Represents an appointment or event.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Appointment entity."
+        },
+        "googleCalendarId": {
+          "type": "string",
+          "description": "Reference to GoogleCalendar. (Relationship: GoogleCalendar 1:N Appointment)"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the appointment."
+        },
+        "startTime": {
+          "type": "string",
+          "description": "Start time of the appointment.",
+          "format": "date-time"
+        },
+        "endTime": {
+          "type": "string",
+          "description": "End time of the appointment.",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the appointment."
+        }
+      },
+      "required": [
+        "id",
+        "googleCalendarId",
+        "title",
+        "startTime",
+        "endTime"
+      ]
+    },
+    "Contact": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Contact",
+      "type": "object",
+      "description": "Represents a contact.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Contact entity."
+        },
+        "googleContactsId": {
+          "type": "string",
+          "description": "Reference to GoogleContacts. (Relationship: GoogleContacts 1:N Contact)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the contact."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the contact.",
+          "format": "email"
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "Phone number of the contact."
+        }
+      },
+      "required": [
+        "id",
+        "googleContactsId",
+        "name"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profiles. User documents are created upon user registration.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/calendars/{calendarId}",
+        "definition": {
+          "entityName": "GoogleCalendar",
+          "schema": {
+            "$ref": "#/backend/entities/GoogleCalendar"
+          },
+          "description": "Stores Google Calendar details for each user. Includes 'userId' to ensure authorization independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "calendarId",
+              "description": "The unique identifier of the Google Calendar."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/contacts_lists/{contactsId}",
+        "definition": {
+          "entityName": "GoogleContacts",
+          "schema": {
+            "$ref": "#/backend/entities/GoogleContacts"
+          },
+          "description": "Stores Google Contacts details for each user. Includes 'userId' to ensure authorization independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "contactsId",
+              "description": "The unique identifier of the Google Contacts."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/calendars/{calendarId}/appointments/{appointmentId}",
+        "definition": {
+          "entityName": "Appointment",
+          "schema": {
+            "$ref": "#/backend/entities/Appointment"
+          },
+          "description": "Stores appointments associated with a Google Calendar. Includes 'googleCalendarId' which contains the userId for authorization independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "calendarId",
+              "description": "The unique identifier of the Google Calendar."
+            },
+            {
+              "name": "appointmentId",
+              "description": "The unique identifier of the appointment."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/contacts_lists/{contactsId}/contacts/{contactId}",
+        "definition": {
+          "entityName": "Contact",
+          "schema": {
+            "$ref": "#/backend/entities/Contact"
+          },
+          "description": "Stores contacts associated with Google Contacts. Includes 'googleContactsId' which contains the userId for authorization independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user."
+            },
+            {
+              "name": "contactsId",
+              "description": "The unique identifier of the Google Contacts."
+            },
+            {
+              "name": "contactId",
+              "description": "The unique identifier of the contact."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "This Firestore structure is designed to support the MemoIQ application, with a focus on integrating Google Calendar and Contacts. The structure emphasizes authorization independence and supports secure list operations (QAPs). It utilizes path-based ownership for user-specific data and follows a consistent naming convention for clarity and debuggability.\n\nAuthorization Independence is achieved by avoiding `get()` calls in security rules. Specifically:\n\n*   For `GoogleCalendar`, `GoogleContacts`, `Appointment`, and `Contact` collections, the `userId` is explicitly present in each document. This allows security rules to validate ownership based solely on `request.auth.uid` without needing to fetch parent document data. This also allows atomic batch creation of a User and Calendar/Contacts without timing issues or security rule violations.\n\nThis design supports the required QAPs by:\n\n*   Structural Segregation: User data (Calendars, Contacts, Appointments, Contacts) is stored under the `/users/{userId}` path, ensuring that only the authenticated user has access to their data. The access is based on path-based ownership which is simple to reason about and highly performant.\n*   Consistent Naming: Using a consistent naming pattern (`/users/{userId}/calendars/{calendarId}`) ensures that all documents within a collection have the same security requirements, further simplifying rules.\n"
+  }
+}
