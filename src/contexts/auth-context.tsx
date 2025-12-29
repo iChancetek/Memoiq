@@ -44,6 +44,7 @@ interface AuthContextType {
   signup: (email: string, password: string, displayName: string) => Promise<void>;
   logout: () => Promise<void>;
   loginWithGoogle: () => Promise<void>;
+  disconnectGoogle: () => Promise<void>;
   updateUserProfile: (profile: { displayName?: string; photoURL?: string }) => Promise<void>;
   updateUserPassword: (newPassword: string) => Promise<void>;
   updateUserSettings: (settings: object) => Promise<void>;
@@ -227,6 +228,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     }
   };
+
+  const disconnectGoogle = async () => {
+      if (!user) return;
+      setLoading(true);
+      try {
+          const userRef = doc(firestore, 'users', user.uid);
+          const updatedIntegrations = {
+              ...user.integrations,
+              google: {
+                  calendar: 'disconnected',
+                  contacts: 'disconnected',
+                  accessToken: null,
+              }
+          };
+          await updateDoc(userRef, { integrations: updatedIntegrations });
+          setUser(prev => ({...prev!, integrations: updatedIntegrations} as AppUser));
+          setError(null);
+      } catch (err) {
+          handleAuthError(err);
+      } finally {
+          setLoading(false);
+      }
+  };
   
   const updateUserProfile = async (profile: { displayName?: string; photoURL?: string }) => {
     if (user) {
@@ -297,6 +321,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signup,
     logout,
     loginWithGoogle,
+    disconnectGoogle,
     updateUserProfile,
     updateUserPassword,
     updateUserSettings,
@@ -312,3 +337,5 @@ export function useAuth() {
   }
   return context;
 }
+
+    

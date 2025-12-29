@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Moon, Sun, CheckCircle } from 'lucide-react';
+import { Loader2, Moon, Sun, CheckCircle, RefreshCw } from 'lucide-react';
 import { Switch } from './ui/switch';
 import { useTheme } from 'next-themes';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
@@ -26,7 +26,7 @@ const OutlookIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
-function IntegrationRow({ name, service, status, onConnect, loading }: { name: string; service: 'Google' | 'Outlook'; status: 'connected' | 'disconnected'; onConnect: () => void; loading: boolean; }) {
+function IntegrationRow({ name, service, status, onConnect, onDisconnect, onSync, loading }: { name: string; service: 'Google' | 'Outlook'; status: 'connected' | 'disconnected'; onConnect: () => void; onDisconnect: () => void; onSync: () => void; loading: boolean; }) {
   const isConnected = status === 'connected';
 
   return (
@@ -38,24 +38,30 @@ function IntegrationRow({ name, service, status, onConnect, loading }: { name: s
           <p className="text-sm text-muted-foreground capitalize">{isConnected ? "Connected" : "Not Connected"}</p>
         </div>
       </div>
-      {isConnected ? (
-        <div className="flex items-center gap-2 text-green-600">
-            <CheckCircle className="h-5 w-5" />
-            <span className="font-medium">Connected</span>
-        </div>
-      ) : (
-        <Button onClick={onConnect} variant="secondary" disabled={loading}>
-          {loading ? <Loader2 className="animate-spin mr-2" /> : null}
-          Connect
-        </Button>
-      )}
+      <div className="flex items-center gap-2">
+        {isConnected ? (
+            <>
+                <Button onClick={onSync} variant="outline" size="sm" disabled={loading}>
+                    <RefreshCw className="mr-2 h-4 w-4" /> Sync Now
+                </Button>
+                <Button onClick={onDisconnect} variant="destructive" size="sm" disabled={loading}>
+                    Disconnect
+                </Button>
+            </>
+        ) : (
+            <Button onClick={onConnect} variant="secondary" disabled={loading}>
+            {loading ? <Loader2 className="animate-spin mr-2" /> : null}
+            Connect
+            </Button>
+        )}
+       </div>
     </div>
   );
 }
 
 function IntegrationsCard() {
     const { toast } = useToast();
-    const { user, loginWithGoogle, loading: authLoading } = useAuth();
+    const { user, loginWithGoogle, disconnectGoogle, loading: authLoading } = useAuth();
     
     const integrations = user?.integrations;
 
@@ -65,6 +71,13 @@ function IntegrationsCard() {
             description: `${service} integration is not yet available.`,
         });
     };
+    
+    const handleSync = (service: string) => {
+         toast({
+            title: 'Sync Feature Coming Soon',
+            description: `Syncing with ${service} is not yet implemented.`,
+        });
+    }
 
     return (
         <Card>
@@ -82,6 +95,8 @@ function IntegrationsCard() {
                         service="Google"
                         status={integrations?.google?.calendar || 'disconnected'}
                         onConnect={loginWithGoogle}
+                        onDisconnect={disconnectGoogle}
+                        onSync={() => handleSync('Google Calendar')}
                         loading={authLoading}
                     />
                     <IntegrationRow
@@ -89,6 +104,8 @@ function IntegrationsCard() {
                         service="Google"
                         status={integrations?.google?.contacts || 'disconnected'}
                         onConnect={loginWithGoogle}
+                        onDisconnect={disconnectGoogle}
+                        onSync={() => handleSync('Google Contacts')}
                         loading={authLoading}
                     />
                 </div>
@@ -99,6 +116,8 @@ function IntegrationsCard() {
                         service="Outlook"
                         status={'disconnected'}
                         onConnect={() => handleOutlookConnect('Outlook Calendar')}
+                        onDisconnect={() => {}}
+                        onSync={() => {}}
                         loading={authLoading}
                     />
                     <IntegrationRow
@@ -106,6 +125,8 @@ function IntegrationsCard() {
                         service="Outlook"
                         status={'disconnected'}
                         onConnect={() => handleOutlookConnect('Outlook Contacts')}
+                        onDisconnect={() => {}}
+                        onSync={() => {}}
                         loading={authLoading}
                     />
                 </div>
@@ -336,3 +357,5 @@ export function SettingsPage() {
     </div>
   );
 }
+
+    
