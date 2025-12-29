@@ -78,7 +78,7 @@ export function MainLayout({children}: {children: React.ReactNode}) {
       case '/ai-companion':
         return t('aiCompanion');
        case '/mediscribe':
-        return t('aiScribe'); // Keep t('aiScribe') for now, will update json later
+        return t('aiScribe');
       case '/settings':
         return t('settings');
       default:

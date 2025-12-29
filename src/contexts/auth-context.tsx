@@ -73,7 +73,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (userDoc.exists()) {
              setUser({ ...user, ...userDoc.data() } as AppUser);
         } else {
-             setUser(user);
+             // This case can happen if the user document creation failed previously
+             // We can try to create it again here.
+             try {
+                const firestoreUser = await createUserInFirestore(user, user.displayName || '');
+                setUser({ ...user, ...firestoreUser } as AppUser);
+             } catch (e) {
+                console.error("Failed to create user document for existing auth user:", e);
+                setUser(user); // Set basic user object anyway
+             }
         }
       } else {
         setUser(null);
@@ -84,12 +92,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const handleAuthSuccess = async (userCredential: any) => {
-    const userDocRef = doc(firestore, 'users', userCredential.user.uid);
+    const firebaseUser = userCredential.user;
+    const userDocRef = doc(firestore, 'users', firebaseUser.uid);
     const userDoc = await getDoc(userDocRef);
     if (userDoc.exists()) {
-      setUser({ ...userCredential.user, ...userDoc.data() } as AppUser);
+      setUser({ ...firebaseUser, ...userDoc.data() } as AppUser);
     } else {
-      setUser(userCredential.user);
+      // This is a fallback, createUserInFirestore should have been called already
+      const firestoreData = await createUserInFirestore(firebaseUser, firebaseUser.displayName);
+      setUser({ ...firebaseUser, ...firestoreData } as AppUser);
     }
     router.push('/');
     setError(null);
@@ -118,47 +129,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
   
-  const createUserInFirestore = async (user: User, displayName?: string) => {
+  const createUserInFirestore = async (user: User, displayName?: string | null) => {
       const userRef = doc(firestore, 'users', user.uid);
       const userDoc = await getDoc(userRef);
 
-      if (!userDoc.exists()) {
-          const newUser = {
-              uid: user.uid,
-              email: user.email,
-              displayName: displayName || user.displayName,
-              createdAt: serverTimestamp(),
-              lastLogin: serverTimestamp(),
-              workspaceId: user.uid, // Simple 1-to-1 mapping
-              settings: {
-                  theme: 'dark',
-                  language: 'en', // For AI
-                  uiLanguage: 'en', // For UI
-                  notifications: true,
-                  enableVoiceGreeting: true,
-              },
-              integrations: {
-                google: {
-                  calendar: 'disconnected',
-                  contacts: 'disconnected',
-                }
-              }
-          };
-          await setDoc(userRef, newUser);
-          if (displayName && user.displayName !== displayName) {
-              await updateProfile(user, { displayName });
-          }
-          return newUser;
+      if (userDoc.exists()) {
+          // If document exists, just update last login
+          await updateDoc(userRef, { lastLogin: serverTimestamp() });
+          return userDoc.data();
       }
-      return userDoc.data();
+
+      const newUserPayload = {
+          id: user.uid, // Explicitly set id to satisfy security rule
+          uid: user.uid,
+          email: user.email,
+          displayName: displayName || user.displayName || 'User',
+          createdAt: serverTimestamp(),
+          lastLogin: serverTimestamp(),
+          settings: {
+              theme: 'dark',
+              language: 'en', // For AI
+              uiLanguage: 'en', // For UI
+              notifications: true,
+              enableVoiceGreeting: true,
+          },
+          integrations: {
+            google: {
+              calendar: 'disconnected',
+              contacts: 'disconnected',
+            }
+          }
+      };
+      await setDoc(userRef, newUserPayload);
+
+      // Ensure auth profile matches firestore profile
+      if (displayName && user.displayName !== displayName) {
+          await updateProfile(user, { displayName });
+      }
+      
+      return newUserPayload;
   }
 
   const login = async (email: string, password: string) => {
     setLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      await setDoc(doc(firestore, 'users', userCredential.user.uid), { lastLogin: serverTimestamp() }, { merge: true });
-      handleAuthSuccess(userCredential);
+      await updateDoc(doc(firestore, 'users', userCredential.user.uid), { lastLogin: serverTimestamp() });
+      await handleAuthSuccess(userCredential);
     } catch (err) {
       handleAuthError(err);
     } finally {
@@ -170,9 +187,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const firestoreUser = await createUserInFirestore(userCredential.user, displayName);
       await updateProfile(userCredential.user, { displayName });
-      handleAuthSuccess({ ...userCredential, user: { ...userCredential.user, ...firestoreUser }});
+      await createUserInFirestore(userCredential.user, displayName);
+      await handleAuthSuccess(userCredential);
     } catch (err) {
       handleAuthError(err);
     } finally {
@@ -189,30 +206,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const additionalInfo = getAdditionalUserInfo(userCredential);
       const accessToken = (additionalInfo?.credential as any)?.accessToken;
 
-      if (accessToken) {
-        const userRef = doc(firestore, 'users', userCredential.user.uid);
-        await updateDoc(userRef, {
-            'integrations.google.calendar': 'connected',
-            'integrations.google.contacts': 'connected',
-            'integrations.google.accessToken': accessToken,
-        });
-        
-        setUser(prevUser => ({
-            ...prevUser!,
-            ...userCredential.user,
-            ...firestoreUser,
-            integrations: {
-                ...prevUser?.integrations,
-                google: {
-                    calendar: 'connected',
-                    contacts: 'connected',
-                    accessToken: accessToken,
-                }
-            }
-        }));
-      }
+      const updatedIntegrations = {
+          ...firestoreUser.integrations,
+          google: {
+              calendar: 'connected',
+              contacts: 'connected',
+              accessToken: accessToken || null,
+          }
+      };
+      
+      await updateDoc(doc(firestore, 'users', userCredential.user.uid), {
+          integrations: updatedIntegrations
+      });
+      
+      await handleAuthSuccess(userCredential);
 
-      handleAuthSuccess({ ...userCredential, user: { ...userCredential.user, ...firestoreUser }});
     } catch (err) {
       handleAuthError(err);
     } finally {
