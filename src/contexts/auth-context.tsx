@@ -14,6 +14,7 @@ import {
   updatePassword,
   getAdditionalUserInfo,
   type User,
+  signInAnonymously,
 } from 'firebase/auth';
 import { getFirestore, doc, setDoc, serverTimestamp, getDoc, updateDoc } from 'firebase/firestore';
 import { firebaseApp } from '@/lib/firebase';
@@ -56,7 +57,7 @@ const auth = getAuth(firebaseApp);
 const firestore = getFirestore(firebaseApp);
 const googleProvider = new GoogleAuthProvider();
 // Request access to Google Calendar and Contacts APIs
-googleProvider.addScope('https://www.googleapis.com/auth/calendar');
+googleProvider.addScope('https://www.googleapis.com/auth/calendar.readonly');
 googleProvider.addScope('https://www.googleapis.com/auth/contacts.readonly');
 
 
@@ -68,6 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setLoading(true);
       if (user) {
         const userDocRef = doc(firestore, 'users', user.uid);
         const userDoc = await getDoc(userDocRef);
@@ -81,7 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setUser({ ...user, ...firestoreUser } as AppUser);
              } catch (e) {
                 console.error("Failed to create user document for existing auth user:", e);
-                setUser(user); // Set basic user object anyway
+                setUser(user as AppUser); // Set basic user object anyway
              }
         }
       } else {
@@ -189,8 +191,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName });
-      await createUserInFirestore(userCredential.user, displayName);
-      await handleAuthSuccess(userCredential);
+      const firestoreData = await createUserInFirestore(userCredential.user, displayName);
+      setUser({ ...userCredential.user, ...firestoreData } as AppUser);
+      router.push('/');
+      setError(null);
     } catch (err) {
       handleAuthError(err);
     } finally {
@@ -202,13 +206,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     try {
       const userCredential = await signInWithPopup(auth, googleProvider);
-      const firestoreUser = await createUserInFirestore(userCredential.user);
+      const firebaseUser = userCredential.user;
+      
+      const firestoreUserData = await createUserInFirestore(firebaseUser);
       
       const additionalInfo = getAdditionalUserInfo(userCredential);
       const accessToken = (additionalInfo?.credential as any)?.accessToken;
 
       const updatedIntegrations = {
-          ...firestoreUser.integrations,
+          ...firestoreUserData.integrations,
           google: {
               calendar: 'connected',
               contacts: 'connected',
@@ -216,11 +222,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
       };
       
-      await updateDoc(doc(firestore, 'users', userCredential.user.uid), {
+      await updateDoc(doc(firestore, 'users', firebaseUser.uid), {
           integrations: updatedIntegrations
       });
       
-      await handleAuthSuccess(userCredential);
+      // Update local state immediately
+      setUser({ ...firebaseUser, ...firestoreUserData, integrations: updatedIntegrations } as AppUser);
+      router.push('/');
+      setError(null);
 
     } catch (err) {
       handleAuthError(err);
@@ -235,7 +244,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
           const userRef = doc(firestore, 'users', user.uid);
           const updatedIntegrations = {
-              ...user.integrations,
+              ...(user.integrations || {}),
               google: {
                   calendar: 'disconnected',
                   contacts: 'disconnected',
@@ -337,5 +346,3 @@ export function useAuth() {
   }
   return context;
 }
-
-    
