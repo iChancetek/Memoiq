@@ -17,7 +17,7 @@ import {MemoRecorder} from '@/components/memo-recorder';
 import type {Memo} from '@/lib/data';
 import {useToast} from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
-import { getFirestore, collection, addDoc, query, onSnapshot, serverTimestamp, orderBy, Timestamp } from 'firebase/firestore';
+import { getFirestore, collection, query, onSnapshot, serverTimestamp, orderBy, Timestamp } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
 import { Skeleton } from './ui/skeleton';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -25,7 +25,6 @@ import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 const { firestore: db } = initializeFirebase();
 
-// Create a context to provide memos throughout the app
 const MemoContext = React.createContext<{ memos: Memo[]; loading: boolean }>({ memos: [], loading: true });
 
 export function MemoProvider({ children }: { children: React.ReactNode }) {
@@ -143,7 +142,7 @@ export function MemosPage() {
                 <Card key={memo.id} className="flex flex-col">
                     <CardHeader>
                     <CardTitle className="truncate">{memo.title}</CardTitle>
-                    <CardDescription>{new Date(memo.date).toLocaleDateString()}</CardDescription>
+                    <CardDescription>{memo.createdAt ? new Date(memo.createdAt as any).toLocaleDateString() : new Date(memo.date).toLocaleDateString()}</CardDescription>
                     </CardHeader>
                     <CardContent className="flex-grow">
                     <p className="text-sm text-muted-foreground line-clamp-4">
@@ -170,3 +169,5 @@ export function MemosPage() {
     </div>
   );
 }
+
+    
