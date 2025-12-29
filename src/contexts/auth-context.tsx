@@ -109,8 +109,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
   }
 
-  const handleAuthError = (error: any) => {
-     switch (error.code) {
+  const handleAuthError = (err: any) => {
+     switch (err.code) {
       case 'auth/user-not-found':
         setError('No account found with this email.');
         break;
@@ -128,7 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         break;
       default:
         setError('An unexpected error occurred. Please try again.');
-        console.error(error);
+        console.error(err);
     }
   }
   
@@ -190,9 +190,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(true);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      await updateProfile(userCredential.user, { displayName });
+      // We create the firestore doc first, which also updates the auth profile
       const firestoreData = await createUserInFirestore(userCredential.user, displayName);
-      setUser({ ...userCredential.user, ...firestoreData } as AppUser);
+      setUser({ ...userCredential.user, displayName, ...firestoreData } as AppUser);
       router.push('/');
       setError(null);
     } catch (err) {
@@ -208,13 +208,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userCredential = await signInWithPopup(auth, googleProvider);
       const firebaseUser = userCredential.user;
       
-      const firestoreUserData = await createUserInFirestore(firebaseUser);
+      // Ensure Firestore document exists before proceeding
+      await createUserInFirestore(firebaseUser);
       
       const additionalInfo = getAdditionalUserInfo(userCredential);
       const accessToken = (additionalInfo?.credential as any)?.accessToken;
 
+      const userRef = doc(firestore, 'users', firebaseUser.uid);
       const updatedIntegrations = {
-          ...firestoreUserData.integrations,
           google: {
               calendar: 'connected',
               contacts: 'connected',
@@ -222,12 +223,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
       };
       
-      await updateDoc(doc(firestore, 'users', firebaseUser.uid), {
-          integrations: updatedIntegrations
+      await updateDoc(userRef, {
+          integrations: updatedIntegrations,
+          lastLogin: serverTimestamp(),
       });
       
-      // Update local state immediately
-      setUser({ ...firebaseUser, ...firestoreUserData, integrations: updatedIntegrations } as AppUser);
+      // Fetch the complete, updated user document to set the state
+      const updatedUserDoc = await getDoc(userRef);
+      setUser({ ...firebaseUser, ...updatedUserDoc.data() } as AppUser);
+      
       router.push('/');
       setError(null);
 
