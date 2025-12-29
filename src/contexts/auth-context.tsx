@@ -12,6 +12,7 @@ import {
   signInWithPopup,
   updateProfile,
   updatePassword,
+  getAdditionalUserInfo,
   type User,
 } from 'firebase/auth';
 import { getFirestore, doc, setDoc, serverTimestamp, getDoc, updateDoc } from 'firebase/firestore';
@@ -25,6 +26,13 @@ export interface AppUser extends User {
         uiLanguage?: 'en' | 'es';
         notifications?: boolean;
         enableVoiceGreeting?: boolean;
+    },
+    integrations?: {
+        google?: {
+            calendar: 'connected' | 'disconnected',
+            contacts: 'connected' | 'disconnected',
+            accessToken?: string,
+        }
     }
 }
 
@@ -46,6 +54,10 @@ const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 const auth = getAuth(firebaseApp);
 const firestore = getFirestore(firebaseApp);
 const googleProvider = new GoogleAuthProvider();
+// Request access to Google Calendar and Contacts APIs
+googleProvider.addScope('https://www.googleapis.com/auth/calendar');
+googleProvider.addScope('https://www.googleapis.com/auth/contacts.readonly');
+
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = React.useState<AppUser | null>(null);
@@ -124,6 +136,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   uiLanguage: 'en', // For UI
                   notifications: true,
                   enableVoiceGreeting: true,
+              },
+              integrations: {
+                google: {
+                  calendar: 'disconnected',
+                  contacts: 'disconnected',
+                }
               }
           };
           await setDoc(userRef, newUser);
@@ -167,6 +185,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const userCredential = await signInWithPopup(auth, googleProvider);
       const firestoreUser = await createUserInFirestore(userCredential.user);
+      
+      const additionalInfo = getAdditionalUserInfo(userCredential);
+      const accessToken = (additionalInfo?.credential as any)?.accessToken;
+
+      if (accessToken) {
+        const userRef = doc(firestore, 'users', userCredential.user.uid);
+        await updateDoc(userRef, {
+            'integrations.google.calendar': 'connected',
+            'integrations.google.contacts': 'connected',
+            'integrations.google.accessToken': accessToken,
+        });
+        
+        setUser(prevUser => ({
+            ...prevUser!,
+            ...userCredential.user,
+            ...firestoreUser,
+            integrations: {
+                ...prevUser?.integrations,
+                google: {
+                    calendar: 'connected',
+                    contacts: 'connected',
+                    accessToken: accessToken,
+                }
+            }
+        }));
+      }
+
       handleAuthSuccess({ ...userCredential, user: { ...userCredential.user, ...firestoreUser }});
     } catch (err) {
       handleAuthError(err);

@@ -26,13 +26,13 @@ const OutlookIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
-function IntegrationRow({ name, service, status, onConnect }: { name: string; service: 'Google' | 'Outlook'; status: 'connected' | 'disconnected'; onConnect: () => void; }) {
+function IntegrationRow({ name, service, status, onConnect, loading }: { name: string; service: 'Google' | 'Outlook'; status: 'connected' | 'disconnected'; onConnect: () => void; loading: boolean; }) {
   const isConnected = status === 'connected';
 
   return (
     <div className="flex items-center justify-between p-4 border rounded-lg">
       <div className="flex items-center gap-3">
-        {service === 'Google' ? <GoogleIcon className="h-5 w-5" /> : <OutlookIcon className="h-5 w-5" />}
+        {service === 'Google' ? <GoogleIcon className="h-5 w-5 fill-current" /> : <OutlookIcon className="h-5 w-5" />}
         <div>
           <p className="font-medium">{name}</p>
           <p className="text-sm text-muted-foreground capitalize">{isConnected ? "Connected" : "Not Connected"}</p>
@@ -44,7 +44,8 @@ function IntegrationRow({ name, service, status, onConnect }: { name: string; se
             <span className="font-medium">Connected</span>
         </div>
       ) : (
-        <Button onClick={onConnect} variant="secondary">
+        <Button onClick={onConnect} variant="secondary" disabled={loading}>
+          {loading ? <Loader2 className="animate-spin mr-2" /> : null}
           Connect
         </Button>
       )}
@@ -54,15 +55,11 @@ function IntegrationRow({ name, service, status, onConnect }: { name: string; se
 
 function IntegrationsCard() {
     const { toast } = useToast();
-    // In a real app, this state would come from a context or API call
-    const [integrations, setIntegrations] = React.useState({
-        googleCalendar: 'disconnected',
-        googleContacts: 'disconnected',
-        outlookCalendar: 'disconnected',
-        outlookContacts: 'disconnected',
-    });
+    const { user, loginWithGoogle, loading: authLoading } = useAuth();
+    
+    const integrations = user?.integrations;
 
-    const handleConnect = (service: string) => {
+    const handleOutlookConnect = (service: string) => {
         toast({
             title: 'Feature Coming Soon',
             description: `${service} integration is not yet available.`,
@@ -83,16 +80,16 @@ function IntegrationsCard() {
                     <IntegrationRow
                         name="Google Calendar"
                         service="Google"
-                        // @ts-ignore
-                        status={integrations.googleCalendar}
-                        onConnect={() => handleConnect('Google Calendar')}
+                        status={integrations?.google?.calendar || 'disconnected'}
+                        onConnect={loginWithGoogle}
+                        loading={authLoading}
                     />
                     <IntegrationRow
                         name="Google Contacts"
                         service="Google"
-                        // @ts-ignore
-                        status={integrations.googleContacts}
-                        onConnect={() => handleConnect('Google Contacts')}
+                        status={integrations?.google?.contacts || 'disconnected'}
+                        onConnect={loginWithGoogle}
+                        loading={authLoading}
                     />
                 </div>
                 <div className="space-y-2">
@@ -100,16 +97,16 @@ function IntegrationsCard() {
                     <IntegrationRow
                         name="Outlook Calendar"
                         service="Outlook"
-                        // @ts-ignore
-                        status={integrations.outlookCalendar}
-                        onConnect={() => handleConnect('Outlook Calendar')}
+                        status={'disconnected'}
+                        onConnect={() => handleOutlookConnect('Outlook Calendar')}
+                        loading={authLoading}
                     />
                     <IntegrationRow
                         name="Outlook Contacts"
                         service="Outlook"
-                        // @ts-ignore
-                        status={integrations.outlookContacts}
-                        onConnect={() => handleConnect('Outlook Contacts')}
+                        status={'disconnected'}
+                        onConnect={() => handleOutlookConnect('Outlook Contacts')}
+                        loading={authLoading}
                     />
                 </div>
             </CardContent>
