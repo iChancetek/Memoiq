@@ -110,7 +110,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const handleAuthError = (err: any) => {
-     switch (err.code) {
+     if (err.code === 'auth/popup-closed-by-user') {
+        // This is not a real error, the user just closed the login popup.
+        // We can safely ignore it.
+        return;
+    }
+    switch (err.code) {
       case 'auth/user-not-found':
         setError('No account found with this email.');
         break;
