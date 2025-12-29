@@ -13,6 +13,7 @@ import { Switch } from './ui/switch';
 import { useTheme } from 'next-themes';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { useLanguage } from '@/contexts/language-context';
+import { syncGoogleContacts, syncGoogleCalendar } from '@/services/google-sync';
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {...props}>
@@ -26,8 +27,15 @@ const OutlookIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
-function IntegrationRow({ name, service, status, onConnect, onDisconnect, onSync, loading }: { name: string; service: 'Google' | 'Outlook'; status: 'connected' | 'disconnected'; onConnect: () => void; onDisconnect: () => void; onSync: () => void; loading: boolean; }) {
+function IntegrationRow({ name, service, status, onConnect, onDisconnect, onSync, loading: authLoading }: { name: string; service: 'Google' | 'Outlook'; status: 'connected' | 'disconnected'; onConnect: () => void; onDisconnect: () => void; onSync: () => Promise<void>; loading: boolean; }) {
+  const [isSyncing, setIsSyncing] = React.useState(false);
   const isConnected = status === 'connected';
+
+  const handleSync = async () => {
+      setIsSyncing(true);
+      await onSync();
+      setIsSyncing(false);
+  }
 
   return (
     <div className="flex items-center justify-between p-4 border rounded-lg">
@@ -41,16 +49,17 @@ function IntegrationRow({ name, service, status, onConnect, onDisconnect, onSync
       <div className="flex items-center gap-2">
         {isConnected ? (
             <>
-                <Button onClick={onSync} variant="outline" size="sm" disabled={loading}>
-                    <RefreshCw className="mr-2 h-4 w-4" /> Sync Now
+                <Button onClick={handleSync} variant="outline" size="sm" disabled={authLoading || isSyncing}>
+                    {isSyncing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                    {isSyncing ? 'Syncing...' : 'Sync Now'}
                 </Button>
-                <Button onClick={onDisconnect} variant="destructive" size="sm" disabled={loading}>
-                    Disconnect
+                <Button onClick={onDisconnect} variant="destructive" size="sm" disabled={authLoading}>
+                    {authLoading ? <Loader2 className="animate-spin" /> : 'Disconnect'}
                 </Button>
             </>
         ) : (
-            <Button onClick={onConnect} variant="secondary" disabled={loading}>
-            {loading ? <Loader2 className="animate-spin mr-2" /> : null}
+            <Button onClick={onConnect} variant="secondary" disabled={authLoading}>
+            {authLoading ? <Loader2 className="animate-spin mr-2" /> : null}
             Connect
             </Button>
         )}
@@ -64,6 +73,7 @@ function IntegrationsCard() {
     const { user, loginWithGoogle, disconnectGoogle, loading: authLoading } = useAuth();
     
     const integrations = user?.integrations;
+    const googleToken = user?.integrations?.google?.accessToken;
 
     const handleOutlookConnect = (service: string) => {
         toast({
@@ -72,11 +82,34 @@ function IntegrationsCard() {
         });
     };
     
-    const handleSync = (service: string) => {
-         toast({
-            title: 'Sync Feature Coming Soon',
-            description: `Syncing with ${service} is not yet implemented.`,
-        });
+    const handleSync = async (service: 'Google Calendar' | 'Google Contacts') => {
+        if (!googleToken) {
+            toast({
+                variant: 'destructive',
+                title: 'Authentication Error',
+                description: 'Google access token is missing. Please try reconnecting your account.'
+            });
+            return;
+        }
+
+        try {
+            if (service === 'Google Calendar') {
+                await syncGoogleCalendar(googleToken);
+            } else {
+                await syncGoogleContacts(googleToken);
+            }
+            toast({
+                title: 'Sync Successful',
+                description: `${service} have been synced to your MemoIQ account.`
+            });
+        } catch (error) {
+            console.error(`Error syncing ${service}:`, error);
+            toast({
+                variant: 'destructive',
+                title: 'Sync Failed',
+                description: `Could not sync your ${service}. Please try again.`
+            });
+        }
     }
 
     return (
@@ -117,7 +150,7 @@ function IntegrationsCard() {
                         status={'disconnected'}
                         onConnect={() => handleOutlookConnect('Outlook Calendar')}
                         onDisconnect={() => {}}
-                        onSync={() => {}}
+                        onSync={async () => handleOutlookConnect('Outlook Calendar')}
                         loading={authLoading}
                     />
                     <IntegrationRow
@@ -126,7 +159,7 @@ function IntegrationsCard() {
                         status={'disconnected'}
                         onConnect={() => handleOutlookConnect('Outlook Contacts')}
                         onDisconnect={() => {}}
-                        onSync={() => {}}
+                        onSync={async () => handleOutlookConnect('Outlook Contacts')}
                         loading={authLoading}
                     />
                 </div>
@@ -357,5 +390,3 @@ export function SettingsPage() {
     </div>
   );
 }
-
-    
