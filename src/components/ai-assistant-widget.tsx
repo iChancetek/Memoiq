@@ -179,7 +179,7 @@ export function AIAssistantWidget() {
 
   return (
     <div className="fixed bottom-4 right-4 z-50">
-        <div className={clsx("transition-all duration-300 ease-in-out", { 'opacity-100 translate-y-0': isOpen, 'opacity-0 translate-y-10 pointer-events-none': !isOpen })}>
+        <div className={clsx("transition-opacity duration-300 ease-in-out", { 'opacity-100': isOpen, 'opacity-0 hidden': !isOpen })}>
            <Card className="w-[400px] h-[600px] flex flex-col shadow-2xl">
                 <CardHeader className="flex flex-row items-center justify-between border-b">
                     <div className="flex items-center gap-3">
@@ -282,3 +282,5 @@ export function AIAssistantWidget() {
     </div>
   );
 }
+
+    
