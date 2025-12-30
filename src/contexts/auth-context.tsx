@@ -57,8 +57,8 @@ const googleProvider = new GoogleAuthProvider();
 googleProvider.addScope('https://www.googleapis.com/auth/calendar.readonly');
 googleProvider.addScope('https://www.googleapis.com/auth/contacts.readonly');
 googleProvider.setCustomParameters({
-  prompt: 'consent',
   access_type: 'offline', // Request a refresh token
+  prompt: 'consent',
 });
 
 
@@ -194,26 +194,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     try {
         const userCredential = await signInWithPopup(auth, googleProvider);
-        const additionalInfo = getAdditionalUserInfo(userCredential);
-        // @ts-ignore - 'refreshToken' is not in the type, but it is available for offline access
-        const refreshToken = additionalInfo?.profile?.refreshToken || userCredential._tokenResponse.refreshToken;
+        
+        // This is an internal property but the only reliable way to get the RT on the client
+        // @ts-ignore
+        const refreshToken = userCredential?._tokenResponse?.refreshToken;
 
         const userRef = doc(firestore, 'users', userCredential.user.uid);
-        const userDoc = await getDoc(userRef);
-
-        const integrationsUpdate = refreshToken ? {
-            'integrations.google': {
+        
+        // Prepare the update payload. Only update if we get a refresh token.
+        const integrationsUpdate: any = {};
+        if (refreshToken) {
+            integrationsUpdate['integrations.google'] = {
                 calendar: 'connected',
                 contacts: 'connected',
                 refreshToken: refreshToken,
-            }
-        } : {};
-
-        if (userDoc.exists()) {
-             await updateDoc(userRef, { lastLogin: serverTimestamp(), ...integrationsUpdate });
+            };
+        } else {
+             integrationsUpdate['integrations.google.calendar'] = 'connected';
+             integrationsUpdate['integrations.google.contacts'] = 'connected';
         }
-        
-        await handleAuthSuccess(userCredential, integrationsUpdate);
+
+        await updateDoc(userRef, { lastLogin: serverTimestamp(), ...integrationsUpdate });
+
+        await handleAuthSuccess(userCredential);
 
     } catch (err: any) {
         handleAuthError(err);
