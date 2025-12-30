@@ -52,15 +52,14 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
       });
       return () => unsubscribe();
-    } else {
+    } else if (!user) {
       setTasks([]);
       setLoading(false);
     }
   }, [user, db]);
 
   const addTask = async (task: Omit<Task, 'id' | 'userId' | 'completed' | 'createdAt'>) => {
-    if (!user) throw new Error("User not authenticated");
-    if (!db) throw new Error("Firestore not initialized");
+    if (!user || !db) throw new Error("User not authenticated or DB not initialized");
     const { title, dueDate, subtasks, contactIds } = task;
     const collectionRef = collection(db, 'users', user.uid, 'tasks');
     addDocumentNonBlocking(collectionRef, {

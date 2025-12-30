@@ -50,15 +50,14 @@ export function ContactProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
       });
       return () => unsubscribe();
-    } else {
+    } else if (!user) {
       setContacts([]);
       setLoading(false);
     }
   }, [user, db]);
 
   const addContact = async (contact: Omit<Contact, 'id' | 'userId' | 'createdAt'>) => {
-    if (!user) throw new Error("User not authenticated");
-    if (!db) throw new Error("Firestore not initialized");
+    if (!user || !db) throw new Error("User not authenticated or DB not initialized");
     const collectionRef = collection(db, 'users', user.uid, 'contacts');
     addDocumentNonBlocking(collectionRef, {
       ...contact,

@@ -58,15 +58,14 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
       });
       return () => unsubscribe();
-    } else {
+    } else if (!user) {
       setEvents([]);
       setLoading(false);
     }
   }, [user, db]);
 
   const addEvent = async (event: Omit<CalendarEvent, 'id' | 'userId' | 'createdAt'>) => {
-    if (!user) throw new Error("User not authenticated");
-    if (!db) throw new Error("Firestore not initialized");
+    if (!user || !db) throw new Error("User not authenticated or DB not initialized");
     const collectionRef = collection(db, 'users', user.uid, 'events');
     addDocumentNonBlocking(collectionRef, {
       ...event,

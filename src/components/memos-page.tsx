@@ -33,25 +33,25 @@ export function MemoProvider({ children }: { children: React.ReactNode }) {
 
     React.useEffect(() => {
         if (user && db) {
-        setLoading(true);
-        const q = query(
-            collection(db, 'users', user.uid, 'memos'),
-            orderBy('createdAt', 'desc')
-        );
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const userMemos = snapshot.docs.map(doc => {
-                const data = doc.data();
-                return {
-                    id: doc.id,
-                    ...data,
-                    createdAt: (data.createdAt as Timestamp)?.toDate() || new Date()
-                }
-            }) as Memo[];
-            setMemos(userMemos);
-            setLoading(false);
-        });
-        return () => unsubscribe();
-        } else {
+            setLoading(true);
+            const q = query(
+                collection(db, 'users', user.uid, 'memos'),
+                orderBy('createdAt', 'desc')
+            );
+            const unsubscribe = onSnapshot(q, (snapshot) => {
+                const userMemos = snapshot.docs.map(doc => {
+                    const data = doc.data();
+                    return {
+                        id: doc.id,
+                        ...data,
+                        createdAt: (data.createdAt as Timestamp)?.toDate() || new Date()
+                    }
+                }) as Memo[];
+                setMemos(userMemos);
+                setLoading(false);
+            });
+            return () => unsubscribe();
+        } else if (!user) {
             setMemos([]);
             setLoading(false);
         }
@@ -74,7 +74,7 @@ export function MemosPage() {
   const { firestore: db } = useFirebase();
 
   const addMemo = async (newMemo: Omit<Memo, 'id' | 'userId' | 'createdAt'>) => {
-    if (!user) {
+    if (!user || !db) {
         toast({
             variant: 'destructive',
             title: 'Authentication Error',
@@ -82,14 +82,7 @@ export function MemosPage() {
         });
         return;
     }
-    if (!db) {
-        toast({
-            variant: 'destructive',
-            title: 'Database Error',
-            description: 'Firestore is not available.',
-        });
-        return;
-    }
+
     try {
         const collectionRef = collection(db, 'users', user.uid, 'memos');
         addDocumentNonBlocking(collectionRef, {

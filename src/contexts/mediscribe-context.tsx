@@ -68,15 +68,14 @@ export function MediScribeProvider({ children }: { children: React.ReactNode }) 
         setLoading(false);
       });
       return () => unsubscribe();
-    } else {
+    } else if (!user) {
       setScribeEntries([]);
       setLoading(false);
     }
   }, [user, db]);
 
   const addScribeEntry = async (audioBlob: Blob) => {
-    if (!user) throw new Error("User not authenticated");
-    if (!db) throw new Error("Firestore not initialized");
+    if (!user || !db) throw new Error("User not authenticated or DB not initialized");
 
     // 1. Upload audio to Firebase Storage
     const fileExtension = audioBlob.type.split('/')[1] || 'webm';
