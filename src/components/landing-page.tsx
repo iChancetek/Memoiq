@@ -18,6 +18,14 @@ const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode; titl
 );
 
 export function LandingPage() {
+  const handleLearnMoreClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    const featuresSection = document.getElementById('features');
+    if (featuresSection) {
+      featuresSection.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+  
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -60,8 +68,8 @@ export function LandingPage() {
                   Get Started Free <ArrowRight className="ml-2" />
                 </Link>
               </Button>
-              <Button size="lg" variant="outline">
-                Learn More
+              <Button size="lg" variant="outline" asChild>
+                <a href="#features" onClick={handleLearnMoreClick}>Learn More</a>
               </Button>
             </div>
           </div>
