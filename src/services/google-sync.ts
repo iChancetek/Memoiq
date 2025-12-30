@@ -1,12 +1,10 @@
 
 'use server';
 
-import { getFirestore, collection, writeBatch, serverTimestamp, doc, getDoc } from 'firebase/firestore';
-import { initializeFirebase } from '@/firebase';
+import { collection, writeBatch, serverTimestamp, doc, getDoc } from 'firebase/firestore';
+import { firestore } from '@/lib/firebase-admin';
 import type { Contact, CalendarEvent } from '@/lib/data';
 import fetch from 'node-fetch';
-
-const { firestore } = initializeFirebase();
 
 
 /**
@@ -39,7 +37,7 @@ async function getAccessToken(userId: string): Promise<string> {
     }
     const accessToken = userDoc.data()?.integrations?.google?.accessToken;
     if (!accessToken) {
-        throw new Error('Google access token is missing from user profile.');
+        throw new Error('Google access token is missing. Please try reconnecting your account');
     }
     return accessToken;
 }

@@ -15,3 +15,4 @@ if (!admin.apps.length) {
 }
 
 export const adminApp = admin.apps[0] || admin.initializeApp();
+export const firestore = admin.firestore();
