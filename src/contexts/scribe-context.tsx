@@ -16,7 +16,7 @@ import {
   deleteDoc,
   Timestamp,
 } from 'firebase/firestore';
-import { initializeFirebase } from '@/firebase';
+import { useFirebase } from '@/firebase';
 import { useStorage } from './storage-context';
 import { transcribeAudio } from '@/ai/flows/transcribe-audio';
 import { translateText } from '@/ai/flows/translate-text';
@@ -45,16 +45,16 @@ interface ScribeContextType {
 }
 
 const ScribeContext = React.createContext<ScribeContextType | undefined>(undefined);
-const { firestore: db } = initializeFirebase();
 
 export function ScribeProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const { firestore: db } = useFirebase();
   const { uploadFile, deleteFile } = useStorage();
   const [scribeEntries, setScribeEntries] = React.useState<ScribeEntry[]>([]);
   const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
-    if (user) {
+    if (user && db) {
       setLoading(true);
       const q = query(
         collection(db, 'users', user.uid, 'scribeEntries'),
@@ -76,10 +76,11 @@ export function ScribeProvider({ children }: { children: React.ReactNode }) {
       setScribeEntries([]);
       setLoading(false);
     }
-  }, [user]);
+  }, [user, db]);
 
   const addScribeEntry = async (audioBlob: Blob, lang: 'en' | 'es') => {
     if (!user) throw new Error("User not authenticated");
+    if (!db) throw new Error("Firestore not initialized");
 
     // 1. Upload audio to Firebase Storage
     const fileExtension = audioBlob.type.split('/')[1] || 'webm';
@@ -112,7 +113,7 @@ export function ScribeProvider({ children }: { children: React.ReactNode }) {
   };
   
   const deleteScribeEntry = async (entryId: string) => {
-    if (!user) return;
+    if (!user || !db) return;
     const entry = scribeEntries.find(e => e.id === entryId);
     if (!entry) return;
 
@@ -124,7 +125,7 @@ export function ScribeProvider({ children }: { children: React.ReactNode }) {
   }
 
   const translateScribeEntry = async (entryId: string, targetLanguage: 'en' | 'es', text: string) => {
-      if (!user) throw new Error("User not authenticated");
+      if (!user || !db) throw new Error("User not authenticated or DB not initialized");
       const entry = scribeEntries.find(e => e.id === entryId);
       if (!entry) throw new Error("Scribe entry not found");
 
