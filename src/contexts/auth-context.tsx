@@ -14,6 +14,7 @@ import {
   getAdditionalUserInfo,
   type User,
   type Auth,
+  type UserCredential,
 } from 'firebase/auth';
 import { getFirestore, doc, setDoc, serverTimestamp, getDoc, updateDoc, type Firestore } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
@@ -67,65 +68,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { auth, firestore } = useFirebase();
 
-  const getOrCreateUserInFirestore = async (user: User, accessToken?: string, additionalData: object = {}) => {
-    const userRef = doc(firestore, 'users', user.uid);
-    const userDoc = await getDoc(userRef);
-
-    const integrationsUpdate = accessToken ? {
-        'integrations.google': {
-            calendar: 'connected',
-            contacts: 'connected',
-            accessToken: accessToken,
-        }
-    } : {};
-
-    if (userDoc.exists()) {
-        // For existing users, update last login and integrations.
-        const updateData = {
-            lastLogin: serverTimestamp(),
-            ...integrationsUpdate,
-        };
-        await updateDoc(userRef, updateData);
-        return { ...userDoc.data(), ...updateData };
-    } else {
-        // For new users, create the full document.
-        const newUserPayload = {
-            uid: user.uid,
-            email: user.email,
-            displayName: user.displayName || 'User',
-            createdAt: serverTimestamp(),
-            lastLogin: serverTimestamp(),
-            settings: {
-                theme: 'dark',
-                language: 'en',
-                uiLanguage: 'en',
-                notifications: true,
-                enableVoiceGreeting: true,
-            },
-            integrations: {
-              google: {
-                calendar: 'disconnected',
-                contacts: 'disconnected',
-                accessToken: null,
-              }
-            },
-            ...additionalData,
-        };
-
-        // Manually merge integration data for new user creation
-        if (accessToken) {
-            newUserPayload.integrations.google = {
-                calendar: 'connected',
-                contacts: 'connected',
-                accessToken: accessToken,
-            };
-        }
-
-        await setDoc(userRef, newUserPayload);
-        return newUserPayload;
-    }
-  };
-
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setLoading(true);
@@ -134,9 +76,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (userDoc.exists()) {
              setUser({ ...user, ...userDoc.data() } as AppUser);
         } else {
-             // This case handles users who were authenticated but didn't have a firestore doc
-             const firestoreUser = await getOrCreateUserInFirestore(user);
-             setUser({ ...user, ...firestoreUser } as AppUser);
+             // This case is for a user that exists in Auth but not Firestore.
+             // It can happen if document creation fails. We'll attempt to create it.
+             // However, the main creation path is now in handleAuthSuccess.
+             await handleAuthSuccess({ user } as UserCredential);
         }
       } else {
         setUser(null);
@@ -170,14 +113,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       case 'auth/requires-recent-login':
         setError('Please log out and log back in to complete this action.');
         break;
+      case 'permission-denied':
+         setError('Missing or insufficient permissions.');
+         break;
       default:
         setError('An unexpected error occurred. Please try again.');
     }
   }
 
-  const handleAuthSuccess = async (userCredential: any, accessToken?: string, additionalData = {}) => {
-      const firestoreUser = await getOrCreateUserInFirestore(userCredential.user, accessToken, additionalData);
-      setUser({ ...userCredential.user, ...firestoreUser } as AppUser);
+  const handleAuthSuccess = async (userCredential: UserCredential, additionalData = {}) => {
+      const user = userCredential.user;
+      const userRef = doc(firestore, 'users', user.uid);
+      
+      const additionalInfo = getAdditionalUserInfo(userCredential);
+
+      // Only create a new document if the user is new.
+      if (additionalInfo?.isNewUser) {
+          const newUserPayload = {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName || 'User',
+            createdAt: serverTimestamp(),
+            lastLogin: serverTimestamp(),
+            settings: {
+                theme: 'dark',
+                language: 'en',
+                uiLanguage: 'en',
+                notifications: true,
+                enableVoiceGreeting: true,
+            },
+            integrations: {
+              google: {
+                calendar: 'disconnected',
+                contacts: 'disconnected',
+                accessToken: null,
+              }
+            },
+            ...additionalData,
+        };
+        await setDoc(userRef, newUserPayload);
+        setUser({ ...user, ...newUserPayload } as AppUser);
+      } else {
+        // For existing users, just fetch their data as the onAuthStateChanged will handle it.
+        const userDoc = await getDoc(userRef);
+        if (userDoc.exists()){
+            setUser({ ...user, ...userDoc.data()} as AppUser)
+        }
+      }
+
       router.push('/');
       setLoading(false);
   }
@@ -199,7 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName });
-      await handleAuthSuccess(userCredential, undefined, { displayName });
+      await handleAuthSuccess(userCredential, { displayName });
     } catch (err) {
       handleAuthError(err);
     }
@@ -208,15 +191,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginWithGoogle = async () => {
     setLoading(true);
     setError(null);
-    signInWithPopup(auth, googleProvider).catch((err: any) => {
-      if (err.code !== 'auth/popup-closed-by-user') {
+    try {
+        const userCredential = await signInWithPopup(auth, googleProvider);
+        const credential = GoogleAuthProvider.credentialFromResult(userCredential);
+        const accessToken = credential?.accessToken;
+
+        const userRef = doc(firestore, 'users', userCredential.user.uid);
+        const userDoc = await getDoc(userRef);
+
+        const integrationsUpdate = accessToken ? {
+            'integrations.google': {
+                calendar: 'connected',
+                contacts: 'connected',
+                accessToken: accessToken,
+            }
+        } : {};
+
+        if (userDoc.exists()) {
+             await updateDoc(userRef, { lastLogin: serverTimestamp(), ...integrationsUpdate });
+        }
+        
+        await handleAuthSuccess(userCredential, integrationsUpdate);
+
+    } catch (err: any) {
         handleAuthError(err);
-      }
-    }).finally(() => {
-        // The onAuthStateChanged listener will handle success cases.
-        // We only need to manage loading state for non-success outcomes here.
-        setLoading(false);
-    });
+    }
   };
 
   const disconnectGoogle = async () => {
