@@ -4,7 +4,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Check, Rocket, Mic, CheckSquare, CalendarCheck, Bot, ArrowLeft, PenSquare, Calendar, Users, Briefcase, Smile } from 'lucide-react';
+import { Rocket, Mic, CheckSquare, CalendarCheck, Bot, ArrowLeft, PenSquare, Calendar, Users, Briefcase, Smile } from 'lucide-react';
 import { Logo } from './logo';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 
@@ -42,7 +42,8 @@ export function LearnMorePage() {
             <div className="container text-center">
                 <h1 className="text-4xl md:text-5xl font-bold tracking-tight">MemoIQ — AI-Powered Productivity, Seamlessly Connected</h1>
                 <p className="mt-6 max-w-3xl mx-auto text-lg md:text-xl text-muted-foreground">
-                    MemoIQ is a next-generation productivity platform where every feature is powered by advanced Artificial Intelligence. AI is embedded across the entire experience to help users work faster, stay organized, and reduce manual effort—whether through voice, automation, or intelligent assistance.
+                    MemoIQ is a next-generation productivity platform where every feature is powered by advanced Artificial Intelligence.
+AI is embedded across the entire experience to help users work faster, stay organized, and reduce manual effort—whether through voice, automation, or intelligent assistance.
                 </p>
             </div>
         </section>
@@ -56,32 +57,32 @@ export function LearnMorePage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-12">
               <FeatureDetailCard
                 icon={<Mic />}
-                title="Voice Memos"
+                title="Voice Memos (AI-Powered)"
                 description="Capture thoughts naturally using voice. AI automatically transcribes, organizes, summarizes, and converts voice memos into actionable insights, tasks, or appointments."
               />
               <FeatureDetailCard
                 icon={<PenSquare />}
-                title="MediScribe"
+                title="MediScribe (AI-Powered)"
                 description="An intelligent AI scribe that transforms voice or text into structured, accurate documentation—designed for clarity, speed, and professional workflows."
               />
               <FeatureDetailCard
                 icon={<CheckSquare />}
-                title="Tasks"
+                title="Tasks (AI-Powered)"
                 description="Create and manage tasks using natural language. AI helps prioritize, categorize, suggest deadlines, and keep work moving forward."
               />
               <FeatureDetailCard
                 icon={<Calendar />}
-                title="Calendar"
+                title="Calendar (AI-Powered)"
                 description="AI intelligently manages your calendar by understanding availability, detecting conflicts, and helping you schedule efficiently across connected services."
               />
               <FeatureDetailCard
                 icon={<CalendarCheck />}
-                title="Appointments"
+                title="Appointments (AI-Powered)"
                 description="Schedule, reschedule, and manage appointments effortlessly. AI assists with time optimization, reminders, and conflict prevention."
               />
               <FeatureDetailCard
                 icon={<Users />}
-                title="Contacts"
+                title="Contacts (AI-Powered)"
                 description="Manage contacts smarter. AI helps organize, deduplicate, and enrich contact information for faster access and stronger relationships."
               />
             </div>
@@ -94,7 +95,7 @@ export function LearnMorePage() {
                 <div className="text-center mb-16">
                     <h2 className="text-3xl md:text-4xl font-bold">Seamless Integrations</h2>
                     <p className="mt-4 text-lg text-muted-foreground">
-                        MemoIQ integrates with Google Calendar and Google Contacts, allowing users to synchronize schedules and contacts effortlessly across platforms. Microsoft 365 integration is coming soon, expanding compatibility with Outlook Calendar and Contacts for an even more connected productivity experience.
+                       MemoIQ integrates with Google Calendar and Google Contacts, allowing users to synchronize schedules and contacts effortlessly across platforms. Microsoft 365 integration is coming soon, expanding compatibility with Outlook Calendar and Contacts for an even more connected productivity experience.
                     </p>
                     <p className="mt-2 text-sm text-muted-foreground italic">
                         All integrations are optional, secure, and fully controlled by the user.
@@ -129,10 +130,10 @@ export function LearnMorePage() {
                         </CardHeader>
                         <CardContent>
                             <ul className="space-y-2 text-sm text-muted-foreground">
-                                <li className="flex items-center gap-2"><Briefcase className="h-4 w-4" /> <strong>Tasks Manager:</strong> AI prioritizes, tracks, and organizes tasks.</li>
-                                <li className="flex items-center gap-2"><Briefcase className="h-4 w-4" /> <strong>Calendar Manager:</strong> AI monitors availability, conflicts, and scheduling efficiency.</li>
-                                <li className="flex items-center gap-2"><Briefcase className="h-4 w-4" /> <strong>Appointment Manager:</strong> AI handles booking logic, reminders, and updates.</li>
-                                <li className="flex items-center gap-2"><Briefcase className="h-4 w-4" /> <strong>Contacts Manager:</strong> AI maintains clean, organized, and up-to-date contacts.</li>
+                                <li className="flex items-center gap-2"><Briefcase className="h-4 w-4" /> <strong>Tasks Manager</strong> – AI prioritizes, tracks, and organizes tasks</li>
+                                <li className="flex items-center gap-2"><Briefcase className="h-4 w-4" /> <strong>Calendar Manager</strong> – AI monitors availability, conflicts, and scheduling efficiency</li>
+                                <li className="flex items-center gap-2"><Briefcase className="h-4 w-4" /> <strong>Appointment Manager</strong> – AI handles booking logic, reminders, and updates</li>
+                                <li className="flex items-center gap-2"><Briefcase className="h-4 w-4" /> <strong>Contacts Manager</strong> – AI maintains clean, organized, and up-to-date contacts</li>
                             </ul>
                         </CardContent>
                      </Card>
