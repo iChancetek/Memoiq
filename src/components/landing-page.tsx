@@ -42,7 +42,7 @@ export function LandingPage() {
         <section className="relative py-20 md:py-32 bg-background">
            <div className="absolute top-0 left-0 -z-10 h-full w-full animated-gradient" />
           <div className="container text-center">
-            <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
+            <h1 className="text-4xl md:text-6xl font-bold tracking-tight bg-gradient-to-br from-primary via-primary/80 to-accent-foreground bg-clip-text text-transparent">
               MemoIQ — Intelligent Productivity, Reimagined
             </h1>
             <div className="mt-6 max-w-3xl mx-auto text-lg md:text-xl text-muted-foreground space-y-4">
