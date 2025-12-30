@@ -1,12 +1,59 @@
+
 'use server';
 
 import { getServerFirebase } from '@/firebase/server';
 
 /**
- * Fetches data from a Google API endpoint.
+ * Exchanges a refresh token for a new access token from Google.
  */
-async function fetchGoogleApi(url: string, accessToken: string) {
+async function refreshAccessToken(userId: string): Promise<string> {
+    const { firestore } = getServerFirebase();
     const fetch = (await import('node-fetch')).default;
+    
+    const userDoc = await firestore.collection('users').doc(userId).get();
+    
+    if (!userDoc.exists) {
+        throw new Error('User document not found.');
+    }
+    
+    const refreshToken = userDoc.data()?.integrations?.google?.refreshToken;
+    if (!refreshToken) {
+        throw new Error('Google refresh token is missing. Please try reconnecting your account.');
+    }
+
+    const response = await fetch('https://oauth2.googleapis.com/token', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+            client_id: process.env.GOOGLE_CLIENT_ID!,
+            client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+            refresh_token: refreshToken,
+            grant_type: 'refresh_token',
+        }),
+    });
+
+    const tokenData = await response.json();
+
+    if (!response.ok) {
+        console.error('Failed to refresh access token:', tokenData);
+        throw new Error('Could not refresh Google access token.');
+    }
+
+    return tokenData.access_token;
+}
+
+
+/**
+ * Fetches data from a Google API endpoint, handling token refresh implicitly.
+ */
+async function fetchGoogleApi(userId: string, url: string) {
+    const fetch = (await import('node-fetch')).default;
+    
+    // Get a fresh access token for every API call
+    const accessToken = await refreshAccessToken(userId);
+
     const response = await fetch(url, {
         headers: {
             'Authorization': `Bearer ${accessToken}`,
@@ -22,23 +69,6 @@ async function fetchGoogleApi(url: string, accessToken: string) {
     return response.json();
 }
 
-async function getAccessToken(userId: string): Promise<string> {
-    const { firestore } = getServerFirebase();
-    
-    // ✅ Admin SDK uses different syntax - no doc() function needed
-    const userDoc = await firestore.collection('users').doc(userId).get();
-    
-    if (!userDoc.exists) {
-        throw new Error('User document not found.');
-    }
-    
-    const accessToken = userDoc.data()?.integrations?.google?.accessToken;
-    if (!accessToken) {
-        throw new Error('Google access token is missing. Please try reconnecting your account');
-    }
-    return accessToken;
-}
-
 /**
  * Syncs Google Contacts to Firestore.
  */
@@ -46,17 +76,14 @@ export async function syncGoogleContacts(userId: string) {
     const { firestore } = getServerFirebase();
   
     try {
-        const accessToken = await getAccessToken(userId);
-        
         const contactsUrl = 'https://people.googleapis.com/v1/people/me/connections?personFields=names,emailAddresses,organizations,phoneNumbers,biographies';
-        const data: any = await fetchGoogleApi(contactsUrl, accessToken);
+        const data: any = await fetchGoogleApi(userId, contactsUrl);
         
         if (!data.connections || data.connections.length === 0) {
             console.log('No Google Contacts to sync.');
             return;
         }
         
-        // ✅ Admin SDK uses collection().doc() syntax
         const contactsRef = firestore.collection('users').doc(userId).collection('contacts');
         const batch = firestore.batch();
 
@@ -72,10 +99,9 @@ export async function syncGoogleContacts(userId: string) {
                 title: person.organizations?.[0]?.title || '',
                 notes: person.biographies?.[0]?.value || '',
                 lastContact: new Date().toISOString().split('T')[0],
-                createdAt: new Date(), // ✅ Admin SDK uses new Date() instead of serverTimestamp()
+                createdAt: new Date(),
             };
             
-            // ✅ Create a new document reference
             const docRef = contactsRef.doc();
             batch.set(docRef, contactData);
         });
@@ -95,17 +121,14 @@ export async function syncGoogleCalendar(userId: string) {
     const { firestore } = getServerFirebase();
 
     try {
-        const accessToken = await getAccessToken(userId);
-
         const calendarUrl = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${new Date().toISOString()}&maxResults=100&singleEvents=true&orderBy=startTime`;
-        const data: any = await fetchGoogleApi(calendarUrl, accessToken);
+        const data: any = await fetchGoogleApi(userId, calendarUrl);
 
         if (!data.items || data.items.length === 0) {
             console.log('No Google Calendar events to sync.');
             return;
         }
 
-        // ✅ Admin SDK syntax
         const eventsRef = firestore.collection('users').doc(userId).collection('events');
         const batch = firestore.batch();
 
@@ -121,7 +144,7 @@ export async function syncGoogleCalendar(userId: string) {
                 startTime: new Date(event.start.dateTime),
                 endTime: new Date(event.end.dateTime),
                 location: event.location || '',
-                createdAt: new Date(), // ✅ Admin SDK uses new Date()
+                createdAt: new Date(),
                 googleEventId: event.id
             });
         });

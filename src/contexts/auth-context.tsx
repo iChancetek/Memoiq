@@ -32,7 +32,7 @@ export interface AppUser extends User {
         google?: {
             calendar: 'connected' | 'disconnected',
             contacts: 'connected' | 'disconnected',
-            accessToken?: string | null,
+            refreshToken?: string | null,
         }
     }
 }
@@ -57,7 +57,8 @@ const googleProvider = new GoogleAuthProvider();
 googleProvider.addScope('https://www.googleapis.com/auth/calendar.readonly');
 googleProvider.addScope('https://www.googleapis.com/auth/contacts.readonly');
 googleProvider.setCustomParameters({
-  prompt: 'consent'
+  prompt: 'consent',
+  access_type: 'offline', // Request a refresh token
 });
 
 
@@ -146,7 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               google: {
                 calendar: 'disconnected',
                 contacts: 'disconnected',
-                accessToken: null,
+                refreshToken: null,
               }
             },
             ...additionalData,
@@ -193,17 +194,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     try {
         const userCredential = await signInWithPopup(auth, googleProvider);
-        const credential = GoogleAuthProvider.credentialFromResult(userCredential);
-        const accessToken = credential?.accessToken;
+        const additionalInfo = getAdditionalUserInfo(userCredential);
+        // @ts-ignore - 'refreshToken' is not in the type, but it is available for offline access
+        const refreshToken = additionalInfo?.profile?.refreshToken || userCredential._tokenResponse.refreshToken;
 
         const userRef = doc(firestore, 'users', userCredential.user.uid);
         const userDoc = await getDoc(userRef);
 
-        const integrationsUpdate = accessToken ? {
+        const integrationsUpdate = refreshToken ? {
             'integrations.google': {
                 calendar: 'connected',
                 contacts: 'connected',
-                accessToken: accessToken,
+                refreshToken: refreshToken,
             }
         } : {};
 
@@ -227,7 +229,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const updatedIntegrations = {
               calendar: 'disconnected',
               contacts: 'disconnected',
-              accessToken: null,
+              refreshToken: null,
           };
           await updateDoc(userRef, { 'integrations.google': updatedIntegrations });
           
