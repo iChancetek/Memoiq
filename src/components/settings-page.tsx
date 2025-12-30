@@ -27,9 +27,8 @@ const OutlookIcon = (props: React.SVGProps<SVGSVGElement>) => (
     </svg>
 );
 
-function IntegrationRow({ name, service, status, onConnect, onDisconnect, onSync, loading: authLoading }: { name: string; service: 'Google' | 'Outlook'; status: 'connected' | 'disconnected'; onConnect: () => void; onDisconnect: () => void; onSync: () => Promise<void>; loading: boolean; }) {
+function IntegrationRow({ name, service, isConnected, onConnect, onDisconnect, onSync, loading: authLoading }: { name: string; service: 'Google' | 'Outlook'; isConnected: boolean; onConnect: () => void; onDisconnect: () => void; onSync: () => Promise<void>; loading: boolean; }) {
   const [isSyncing, setIsSyncing] = React.useState(false);
-  const isConnected = status === 'connected';
 
   const handleSync = async () => {
       setIsSyncing(true);
@@ -72,8 +71,9 @@ function IntegrationsCard() {
     const { toast } = useToast();
     const { user, loginWithGoogle, disconnectGoogle, loading: authLoading } = useAuth();
     
-    const integrations = user?.integrations;
     const googleToken = user?.integrations?.google?.accessToken;
+    const isGoogleCalendarConnected = user?.integrations?.google?.calendar === 'connected';
+    const isGoogleContactsConnected = user?.integrations?.google?.contacts === 'connected';
 
     const handleOutlookConnect = (service: string) => {
         toast({
@@ -126,7 +126,7 @@ function IntegrationsCard() {
                     <IntegrationRow
                         name="Google Calendar"
                         service="Google"
-                        status={integrations?.google?.calendar || 'disconnected'}
+                        isConnected={isGoogleCalendarConnected}
                         onConnect={loginWithGoogle}
                         onDisconnect={disconnectGoogle}
                         onSync={() => handleSync('Google Calendar')}
@@ -135,7 +135,7 @@ function IntegrationsCard() {
                     <IntegrationRow
                         name="Google Contacts"
                         service="Google"
-                        status={integrations?.google?.contacts || 'disconnected'}
+                        isConnected={isGoogleContactsConnected}
                         onConnect={loginWithGoogle}
                         onDisconnect={disconnectGoogle}
                         onSync={() => handleSync('Google Contacts')}
@@ -147,7 +147,7 @@ function IntegrationsCard() {
                     <IntegrationRow
                         name="Outlook Calendar"
                         service="Outlook"
-                        status={'disconnected'}
+                        isConnected={false}
                         onConnect={() => handleOutlookConnect('Outlook Calendar')}
                         onDisconnect={() => {}}
                         onSync={async () => handleOutlookConnect('Outlook Calendar')}
@@ -156,7 +156,7 @@ function IntegrationsCard() {
                     <IntegrationRow
                         name="Outlook Contacts"
                         service="Outlook"
-                        status={'disconnected'}
+                        isConnected={false}
                         onConnect={() => handleOutlookConnect('Outlook Contacts')}
                         onDisconnect={() => {}}
                         onSync={async () => handleOutlookConnect('Outlook Contacts')}

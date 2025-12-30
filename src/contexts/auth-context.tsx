@@ -74,14 +74,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (userDoc.exists()) {
              setUser({ ...user, ...userDoc.data() } as AppUser);
         } else {
-             // This case can happen if a user is authenticated but their Firestore doc was deleted.
-             // We'll re-create it.
              try {
                 const firestoreUser = await createUserInFirestore(user, user.displayName || '');
                 setUser({ ...user, ...firestoreUser } as AppUser);
              } catch (e) {
                 console.error("Failed to create user document for existing auth user:", e);
-                setUser(user as AppUser); // Fallback to auth user object
+                setUser(user as AppUser);
              }
         }
       } else {
@@ -94,8 +92,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const handleAuthError = (err: any) => {
     setLoading(false);
-    // This error code means the user closed the pop-up.
-    // It's not a true "error" we need to show the user.
     if (err.code === 'auth/popup-closed-by-user') {
         return;
     }
@@ -125,13 +121,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userRef = doc(firestore, 'users', user.uid);
       const userDoc = await getDoc(userRef);
 
-      // If the user document already exists, just update the last login time.
       if (userDoc.exists()) {
           await updateDoc(userRef, { lastLogin: serverTimestamp() });
           return userDoc.data();
       }
 
-      // If the document doesn't exist, create it with default settings.
       const newUserPayload = {
           id: user.uid,
           uid: user.uid,
@@ -155,7 +149,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
       await setDoc(userRef, newUserPayload);
 
-      // Also ensure the auth profile's display name is consistent.
       if (displayName && user.displayName !== displayName) {
           await updateProfile(user, { displayName });
       }
@@ -167,10 +160,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const firebaseUser = userCredential.user;
     let firestoreData = await createUserInFirestore(firebaseUser, firebaseUser.displayName);
 
-    // If it's a Google sign-in, update integrations.
     const additionalInfo = getAdditionalUserInfo(userCredential);
-    if (additionalInfo?.providerId === 'google.com') {
-      const accessToken = (additionalInfo?.credential as any)?.accessToken;
+    if (additionalInfo?.providerId === 'google.com' && additionalInfo.credential) {
+      const accessToken = (additionalInfo.credential as any).accessToken;
       const updatedIntegrations = {
         google: {
           calendar: 'connected',
@@ -207,7 +199,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      // We need to update the profile displayName right after creation.
       await updateProfile(userCredential.user, { displayName });
       await handleAuthSuccess(userCredential);
     } catch (err) {
@@ -232,7 +223,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setError(null);
       try {
           const userRef = doc(firestore, 'users', user.uid);
-          // Create the update payload specifically for the google integration part
           const updatedIntegrations = {
               calendar: 'disconnected',
               contacts: 'disconnected',
@@ -240,7 +230,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           };
           await updateDoc(userRef, { 'integrations.google': updatedIntegrations });
           
-          // Update local user state to reflect the change immediately
           setUser(prevUser => {
               if (!prevUser) return null;
               const newIntegrationsState = {

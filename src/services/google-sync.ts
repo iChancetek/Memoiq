@@ -1,7 +1,7 @@
 
 'use server';
 
-import { getFirestore, collection, writeBatch, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
+import { getFirestore, collection, writeBatch, serverTimestamp, doc } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
 import { getAuth } from 'firebase/auth';
 import type { Contact, CalendarEvent } from '@/lib/data';
