@@ -49,11 +49,19 @@ export function LandingPage() {
           />
           <div className="container text-center">
             <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
-              Unlock Your Mind's Potential
+              MemoIQ — Intelligent Productivity, Reimagined
             </h1>
-            <p className="mt-6 max-w-3xl mx-auto text-lg md:text-xl text-muted-foreground">
-              MemoIQ is your intelligent assistant to capture thoughts, manage tasks, and organize your life—all powered by cutting-edge AI.
-            </p>
+            <div className="mt-6 max-w-3xl mx-auto text-lg md:text-xl text-muted-foreground space-y-4">
+                <p>
+                    MemoIQ is a next-generation, AI-powered productivity platform designed to simplify how you manage your time, tasks, and information. Every feature is driven by advanced artificial intelligence—working seamlessly behind the scenes to turn voice into action, schedules into clarity, and daily workflows into effortless organization.
+                </p>
+                <p>
+                    From AI voice memos and intelligent task management to smart calendars, appointments, contacts, and a personal AI companion, MemoIQ brings everything together in one unified experience. With built-in Google Calendar and Google Contacts integration—and Microsoft 365 compatibility coming soon—MemoIQ keeps your work and life perfectly in sync across platforms.
+                </p>
+                <p className="font-semibold text-foreground/90">
+                    Powerful yet intuitive. Intelligent by design. MemoIQ helps you focus on what matters most—while AI handles the rest.
+                </p>
+            </div>
             <div className="mt-8 flex justify-center gap-4">
               <Button size="lg" asChild>
                 <Link href="/auth">
