@@ -74,7 +74,7 @@ export function AuthPage() {
         </div>
       </div>
       <footer className="text-center p-4 text-xs text-muted-foreground">
-        @ MemoIQ 2025. Developed by ChanceTEK LLC I iChanceTEK I Chancellor Minus
+        @ MemoIQ 2026. Developed by ChanceTEK LLC I iChanceTEK I Chancellor Minus
       </footer>
     </div>
   );
