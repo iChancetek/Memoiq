@@ -2,13 +2,10 @@
 'use server';
 
 import { collection, writeBatch, serverTimestamp, doc, getDoc } from 'firebase/firestore';
-import { getServerFirebase } from '@/firebase/server';
+import { getServerFirebase } from '@/firebase/server'; // ✅ Use server version
 
 /**
  * Fetches data from a Google API endpoint.
- * @param url The Google API URL to fetch.
- * @param accessToken The user's Google OAuth2 access token.
- * @returns The JSON response from the API.
  */
 async function fetchGoogleApi(url: string, accessToken: string) {
     const fetch = (await import('node-fetch')).default;
@@ -28,7 +25,7 @@ async function fetchGoogleApi(url: string, accessToken: string) {
 }
 
 async function getAccessToken(userId: string): Promise<string> {
-    const { firestore } = getServerFirebase();
+    const { firestore } = getServerFirebase(); // ✅ Use server version
     const userDocRef = doc(firestore, 'users', userId);
     const userDoc = await getDoc(userDocRef);
     if (!userDoc.exists()) {
@@ -43,10 +40,9 @@ async function getAccessToken(userId: string): Promise<string> {
 
 /**
  * Syncs Google Contacts to Firestore.
- * @param userId The ID of the user to sync contacts for.
  */
 export async function syncGoogleContacts(userId: string) {
-    const { firestore } = getServerFirebase();
+    const { firestore } = getServerFirebase(); // ✅ Use server version
   
     try {
         const accessToken = await getAccessToken(userId);
@@ -64,7 +60,7 @@ export async function syncGoogleContacts(userId: string) {
 
         data.connections.forEach((person: any) => {
             const name = person.names?.[0]?.displayName;
-            if (!name) return; // Skip contacts without a name
+            if (!name) return;
 
             const contactData: Omit<Contact, 'id'> = {
                 userId: userId,
@@ -73,7 +69,7 @@ export async function syncGoogleContacts(userId: string) {
                 company: person.organizations?.[0]?.name || '',
                 title: person.organizations?.[0]?.title || '',
                 notes: person.biographies?.[0]?.value || '',
-                lastContact: new Date().toISOString().split('T')[0], // Default to today
+                lastContact: new Date().toISOString().split('T')[0],
                 createdAt: serverTimestamp(),
             };
             
@@ -85,16 +81,15 @@ export async function syncGoogleContacts(userId: string) {
         console.log(`✅ Synced ${data.connections.length} contacts`);
     } catch (error) {
         console.error('❌ Error syncing contacts:', error);
+        throw error;
     }
 }
 
-
 /**
  * Syncs Google Calendar events to Firestore.
- * @param userId The ID of the user to sync events for.
  */
 export async function syncGoogleCalendar(userId: string) {
-    const { firestore } = getServerFirebase();
+    const { firestore } = getServerFirebase(); // ✅ Use server version
 
     try {
         const accessToken = await getAccessToken(userId);
@@ -112,7 +107,7 @@ export async function syncGoogleCalendar(userId: string) {
 
         data.items.forEach((event: any) => {
             if (!event.start?.dateTime || !event.end?.dateTime) {
-                return; // Skip all-day events for now
+                return;
             }
             
             const docRef = doc(eventsRef);
@@ -131,6 +126,7 @@ export async function syncGoogleCalendar(userId: string) {
         console.log(`✅ Synced ${data.items.length} calendar events`);
     } catch (error) {
         console.error('❌ Error syncing calendar:', error);
+        throw error;
     }
 }
 
