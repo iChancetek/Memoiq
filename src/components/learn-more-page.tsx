@@ -4,16 +4,19 @@
 import React from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Check, Rocket, Mic, CheckSquare, CalendarCheck, Bot, ArrowLeft } from 'lucide-react';
+import { Check, Rocket, Mic, CheckSquare, CalendarCheck, Bot, ArrowLeft, PenSquare, Calendar, Users, Briefcase, Smile } from 'lucide-react';
 import { Logo } from './logo';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 
-const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode; title: string; description: string; }) => (
-  <div className="p-6 bg-card rounded-lg shadow-md border border-border/50">
-    <div className="flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary mb-4">
+const FeatureDetailCard = ({ icon, title, description }: { icon: React.ReactNode; title: string; description: string; }) => (
+  <div className="flex items-start gap-4">
+    <div className="flex items-center justify-center h-10 w-10 rounded-full bg-primary/10 text-primary mt-1 shrink-0">
       {icon}
     </div>
-    <h3 className="text-xl font-bold mb-2">{title}</h3>
-    <p className="text-muted-foreground">{description}</p>
+    <div>
+      <h4 className="text-lg font-semibold">{title}</h4>
+      <p className="text-muted-foreground">{description}</p>
+    </div>
   </div>
 );
 
@@ -34,100 +37,120 @@ export function LearnMorePage() {
       </header>
 
       <main className="flex-1">
-        {/* Features Section */}
-        <section id="features" className="py-20 md:py-28 bg-muted/50">
-          <div className="container">
-            <div className="text-center max-w-3xl mx-auto mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold">An Assistant for Every Part of Your Life</h2>
-              <p className="mt-4 text-lg text-muted-foreground">
-                From voice notes to smart scheduling, MemoIQ integrates seamlessly into your workflow.
-              </p>
+        {/* Hero Section */}
+        <section className="py-16 md:py-24 bg-muted/30">
+            <div className="container text-center">
+                <h1 className="text-4xl md:text-5xl font-bold tracking-tight">MemoIQ — AI-Powered Productivity, Seamlessly Connected</h1>
+                <p className="mt-6 max-w-3xl mx-auto text-lg md:text-xl text-muted-foreground">
+                    MemoIQ is a next-generation productivity platform where every feature is powered by advanced Artificial Intelligence. AI is embedded across the entire experience to help users work faster, stay organized, and reduce manual effort—whether through voice, automation, or intelligent assistance.
+                </p>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              <FeatureCard
+        </section>
+
+        {/* Features Section */}
+        <section id="features" className="py-20 md:py-28">
+          <div className="container max-w-5xl">
+            <div className="text-center mb-16">
+              <h2 className="text-3xl md:text-4xl font-bold">AI-Powered Features</h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-12">
+              <FeatureDetailCard
                 icon={<Mic />}
                 title="Voice Memos"
-                description="Instantly capture your thoughts with your voice. Our AI transcribes and summarizes them for you."
+                description="Capture thoughts naturally using voice. AI automatically transcribes, organizes, summarizes, and converts voice memos into actionable insights, tasks, or appointments."
               />
-              <FeatureCard
+              <FeatureDetailCard
+                icon={<PenSquare />}
+                title="MediScribe"
+                description="An intelligent AI scribe that transforms voice or text into structured, accurate documentation—designed for clarity, speed, and professional workflows."
+              />
+              <FeatureDetailCard
                 icon={<CheckSquare />}
-                title="AI Task Management"
-                description="Turn natural language into structured tasks with due dates, subtasks, and assigned contacts."
+                title="Tasks"
+                description="Create and manage tasks using natural language. AI helps prioritize, categorize, suggest deadlines, and keep work moving forward."
               />
-              <FeatureCard
+              <FeatureDetailCard
+                icon={<Calendar />}
+                title="Calendar"
+                description="AI intelligently manages your calendar by understanding availability, detecting conflicts, and helping you schedule efficiently across connected services."
+              />
+              <FeatureDetailCard
                 icon={<CalendarCheck />}
-                title="Intelligent Scheduling"
-                description="Let your AI assistant find the perfect time for your appointments, checking for conflicts automatically."
+                title="Appointments"
+                description="Schedule, reschedule, and manage appointments effortlessly. AI assists with time optimization, reminders, and conflict prevention."
               />
-              <FeatureCard
-                icon={<Bot />}
-                title="iSkylar Companion"
-                description="Get personalized briefings, strategic advice, and empathetic support from your friendly AI companion."
+              <FeatureDetailCard
+                icon={<Users />}
+                title="Contacts"
+                description="Manage contacts smarter. AI helps organize, deduplicate, and enrich contact information for faster access and stronger relationships."
               />
             </div>
           </div>
         </section>
 
         {/* Integrations Section */}
-        <section id="integrations" className="py-20 md:py-28">
-            <div className="container">
-                <div className="text-center max-w-3xl mx-auto mb-12">
+        <section id="integrations" className="py-20 md:py-28 bg-muted/30">
+            <div className="container max-w-5xl">
+                <div className="text-center mb-16">
                     <h2 className="text-3xl md:text-4xl font-bold">Seamless Integrations</h2>
                     <p className="mt-4 text-lg text-muted-foreground">
-                        MemoIQ includes native integration with Google services, allowing users to seamlessly connect their productivity workflow across platforms.
+                        MemoIQ integrates with Google Calendar and Google Contacts, allowing users to synchronize schedules and contacts effortlessly across platforms. Microsoft 365 integration is coming soon, expanding compatibility with Outlook Calendar and Contacts for an even more connected productivity experience.
                     </p>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-                    <div className="p-8 bg-card rounded-lg border">
-                        <h3 className="text-2xl font-bold mb-4">Currently Available</h3>
-                        <ul className="space-y-4">
-                            <li className="flex items-start gap-3">
-                                <Check className="h-6 w-6 text-green-500 mt-1 shrink-0" />
-                                <div>
-                                    <h4 className="font-semibold">Google Calendar Integration</h4>
-                                    <p className="text-sm text-muted-foreground">Create, view, and manage appointments directly from MemoIQ. Sync events between MemoIQ and Google Calendar with user permission.</p>
-                                </div>
-                            </li>
-                            <li className="flex items-start gap-3">
-                                <Check className="h-6 w-6 text-green-500 mt-1 shrink-0" />
-                                <div>
-                                    <h4 className="font-semibold">Google Contacts Integration</h4>
-                                    <p className="text-sm text-muted-foreground">Save, update, and manage contacts between MemoIQ and Google Contacts. Prevent duplicate contacts with intelligent matching.</p>
-                                </div>
-                            </li>
-                        </ul>
-                    </div>
-                     <div className="p-8 bg-card rounded-lg border border-dashed">
-                        <h3 className="text-2xl font-bold mb-4">Coming Soon</h3>
-                        <ul className="space-y-4">
-                            <li className="flex items-start gap-3">
-                                <Rocket className="h-6 w-6 text-primary mt-1 shrink-0" />
-                                <div>
-                                    <h4 className="font-semibold">Microsoft 365 Compatibility</h4>
-                                    <ul className="list-disc list-inside text-sm text-muted-foreground mt-1 space-y-1">
-                                        <li>Outlook Calendar integration</li>
-                                        <li>Outlook Contacts integration</li>
-                                        <li>Seamless cross-platform scheduling and contact sync</li>
-                                    </ul>
-                                </div>
-                            </li>
-                        </ul>
-                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground italic">
+                        All integrations are optional, secure, and fully controlled by the user.
+                    </p>
                 </div>
             </div>
         </section>
 
-        {/* Call to Action Section */}
-        <section className="py-20 md:py-28 bg-muted/50">
-            <div className="container text-center">
-                <h2 className="text-3xl md:text-4xl font-bold">Ready to Get Organized?</h2>
-                <p className="mt-4 text-lg text-muted-foreground">
-                    Start your journey towards a more productive and mindful life today.
-                </p>
-                <div className="mt-8">
-                    <Button size="lg" asChild>
+        {/* Companions & Managers Section */}
+        <section className="py-20 md:py-28">
+            <div className="container max-w-5xl">
+                <div className="text-center mb-16">
+                    <h2 className="text-3xl md:text-4xl font-bold">AI Companions & Intelligent Managers</h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                     <Card>
+                        <CardHeader>
+                            <div className="flex items-center gap-3 mb-2">
+                                <Smile className="h-8 w-8 text-primary" />
+                                <CardTitle>AI Companion</CardTitle>
+                            </div>
+                            <CardDescription>Your personal AI assistant that understands context, remembers preferences, and helps you navigate tasks, schedules, and information through natural conversation.</CardDescription>
+                        </CardHeader>
+                     </Card>
+                     <Card>
+                        <CardHeader>
+                           <div className="flex items-center gap-3 mb-2">
+                                <Bot className="h-8 w-8 text-primary" />
+                                <CardTitle>Managers (AI-Powered Automation Layer)</CardTitle>
+                            </div>
+                            <CardDescription>MemoIQ includes intelligent AI managers that work behind the scenes to automate and optimize your workflow:</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <ul className="space-y-2 text-sm text-muted-foreground">
+                                <li className="flex items-center gap-2"><Briefcase className="h-4 w-4" /> <strong>Tasks Manager:</strong> AI prioritizes, tracks, and organizes tasks.</li>
+                                <li className="flex items-center gap-2"><Briefcase className="h-4 w-4" /> <strong>Calendar Manager:</strong> AI monitors availability, conflicts, and scheduling efficiency.</li>
+                                <li className="flex items-center gap-2"><Briefcase className="h-4 w-4" /> <strong>Appointment Manager:</strong> AI handles booking logic, reminders, and updates.</li>
+                                <li className="flex items-center gap-2"><Briefcase className="h-4 w-4" /> <strong>Contacts Manager:</strong> AI maintains clean, organized, and up-to-date contacts.</li>
+                            </ul>
+                        </CardContent>
+                     </Card>
+                </div>
+            </div>
+        </section>
+
+        {/* Final Message Section */}
+        <section className="py-20 md:py-24 bg-primary text-primary-foreground">
+            <div className="container text-center max-w-4xl">
+                 <h3 className="text-2xl font-semibold">The MemoIQ Difference</h3>
+                 <p className="mt-4 text-lg text-primary-foreground/80">
+                    All MemoIQ features are AI-powered by design, working together as a unified system to reduce friction, save time, and enhance productivity—while seamlessly integrating with the tools you already use.
+                 </p>
+                 <div className="mt-8">
+                    <Button size="lg" variant="secondary" asChild>
                         <Link href="/auth">
-                            Sign Up Now
+                            Get Started Now
                         </Link>
                     </Button>
                 </div>
