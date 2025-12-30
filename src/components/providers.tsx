@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -10,7 +11,7 @@ import { MediScribeProvider } from '@/contexts/mediscribe-context';
 import { StorageProvider } from '@/contexts/storage-context';
 import { MemoProvider } from './memos-page';
 import { LanguageProvider } from '@/contexts/language-context';
-import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { FirebaseClientProvider } from '@/firebase';
 
 export function Providers({ children }: { children: React.ReactNode }) {
     return (

@@ -13,10 +13,11 @@ import {
   updatePassword,
   getAdditionalUserInfo,
   type User,
+  type Auth,
 } from 'firebase/auth';
-import { getFirestore, doc, setDoc, serverTimestamp, getDoc, updateDoc } from 'firebase/firestore';
-import { useFirebase } from '@/firebase';
+import { getFirestore, doc, setDoc, serverTimestamp, getDoc, updateDoc, type Firestore } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
+import { useFirebase } from '@/firebase';
 
 export interface AppUser extends User {
     settings?: {
