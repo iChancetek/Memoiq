@@ -14,6 +14,8 @@ import { LanguageProvider } from '@/contexts/language-context';
 import { FirebaseClientProvider } from '@/firebase';
 
 export function Providers({ children }: { children: React.ReactNode }) {
+    // This is now only wrapping the main app content, not the entire HTML document.
+    // The ThemeProvider is in the root layout.
     return (
         <FirebaseClientProvider>
             <AuthProvider>
