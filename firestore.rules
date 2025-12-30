@@ -1,163 +1,197 @@
 /**
- * Core Philosophy:
- * This ruleset enforces a strict user-ownership model where all data is private
- * to the user who created it. Access is granted based on the user's
- * authenticated UID matching the {userId} parameter in the document path. This
- * approach ensures that users can only ever access their own data tree.
+ * @fileoverview Firestore Security Rules for the MemoIQ application.
  *
- * Data Structure:
- * The data is organized hierarchically. All user-specific data, including
- * calendars, contacts, and their nested appointments and contacts, is stored
- * within a subcollection under the corresponding user's document in the
- * top-level `/users` collection.
+ * @description
+ * This ruleset enforces a strict user-ownership model where all data is private
+ * to the user who created it. The security model is designed for simplicity,
+ * performance, and robust authorization during the prototyping phase.
+ *
+ * @philosophy
+ * Core Philosophy: A user-centric security model. Users have complete control
+ * over their own data and no access to anyone else's.
+ *
+ * Data Structure: All user-specific data, including Memos, Tasks, Contacts,
+ * Events, and Tags, is stored in dedicated subcollections under the
+ * `/users/{userId}` path. This hierarchical structure is the foundation of the
+ * security model.
  *
  * Key Security Decisions:
- * - User Isolation: All rules are scoped to `/users/{userId}`, preventing any
- *   user from accessing another user's data.
- * - No Public Data: There are no publicly readable collections. A user must be
- *   signed in and be the owner to access any document.
- * - User Listing Disabled: Listing documents from the top-level `/users`
- *   collection is explicitly disallowed to protect user privacy and prevent
- *   enumeration attacks.
- * - Performant Rules: The rules avoid `get()` and `exists()` calls by relying on
- *   the path structure for authorization. This makes security checks faster
- *   and more cost-effective.
+ * - User Isolation: Users can only read and write data within their own
+ *   document tree (i.e., `/users/{their-own-userId}/...`).
+ * - No Public Data: There are no publicly readable collections.
+ * - User Enumeration Disabled: Listing documents in the top-level `/users`
+ *   collection is explicitly forbidden to protect user privacy.
  *
- * Denormalization for Authorization:
- * This ruleset relies on a path-based ownership model (`/users/{userId}/...`).
- * To ensure relational integrity, documents in subcollections (like `calendars`
- * and `contacts_lists`) must contain a `userId` field that matches the {userId}
- * from the path. This is validated on document creation and enforced as
-*  immutable on update, preventing data from being moved between users.
+ * Denormalization for Authorization: The rules leverage path-based security,
+ * where the `{userId}` wildcard in the path is the primary means of
+ * authorization. This is highly performant as it avoids the need for extra
+ * document reads (`get()` calls) to verify ownership.
  *
- * Structural Segregation:
- * The data model inherently uses structural segregation. By placing all of a
- * user's private data within their own document tree (e.g.,
- * `/users/USER_A/calendars/CAL_1`), we create a secure boundary that prevents
- * USER_B from ever querying or accessing USER_A's data.
+ * Structural Segregation: Each collection has a uniform security requirement.
+ * By nesting all data under a user's path, we ensure that access rules are
+ * simple and consistently applied.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions to improve readability and reuse of logic.
+    // -------------------------------------------------------------------------
+    // Helper Functions
+    // -------------------------------------------------------------------------
 
     /**
-     * isSignedIn
-     * @description Checks if a user is authenticated.
+     * Checks if the user is authenticated.
      */
     function isSignedIn() {
       return request.auth != null;
     }
 
     /**
-     * isOwner
-     * @description Validates that the requesting user's UID matches the document owner's ID.
-     * @param userId The UID of the user who owns the document.
+     * Checks if the authenticated user's UID matches the provided userId.
+     * This is the primary function for verifying document ownership.
      */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
     /**
-     * isExistingOwner
-     * @description Combines ownership check with a check for document existence.
-     *              Crucial for safe update and delete operations.
-     * @param userId The UID of the user who owns the document.
+     * Checks for ownership on an existing document. Used for update and delete
+     * operations to prevent acting on non-existent data.
      */
     function isExistingOwner(userId) {
       return isOwner(userId) && resource != null;
     }
 
     /**
-     * @description User profile documents. A user can create their own profile,
-     *              but can only read, update, or delete their own existing profile.
-     *              Listing all users is forbidden.
+     * Validates that the 'id' field of a User document being created
+     * matches the document's ID, ensuring path and data consistency.
+     */
+    function hasCorrectIdOnCreate(userId) {
+      return request.resource.data.id == userId;
+    }
+
+    /**
+     * Enforces that the 'id' field of a User document cannot be changed
+     * after creation.
+     */
+    function isIdImmutable() {
+      return request.resource.data.id == resource.data.id;
+    }
+
+    /**
+     * Validates that the 'userId' field of a subcollection document
+     * (e.g., Memo, Task) matches the parent user's ID on creation.
+     */
+    function hasCorrectUserIdOnCreate(userId) {
+      return request.resource.data.userId == userId;
+    }
+
+    /**
+     * Enforces that the 'userId' field on a subcollection document cannot be
+     * changed after creation, preventing documents from being reassigned.
+     */
+    function isUserIdImmutable() {
+      return request.resource.data.userId == resource.data.userId;
+    }
+
+
+    // -------------------------------------------------------------------------
+    // User Profiles
+    // -------------------------------------------------------------------------
+
+    /**
+     * @description Manages user profile documents.
      * @path /users/{userId}
-     * @allow (create) An authenticated user creating their own user document:
-     *        `auth.uid == 'user_abc'`, `create /users/user_abc`
-     * @deny (list) Any user attempting to list all users:
-     *        `auth.uid == 'user_abc'`, `list /users`
-     * @principle Restricts access to a user's own data tree and enforces self-creation.
+     * @allow A user (auth.uid='user123') can (create) their own profile at `/users/user123`.
+     * @deny An anonymous user cannot (get) any user profile.
+     * @deny A user (auth.uid='user123') cannot (list) profiles at `/users`.
+     * @principle Restricts access to a user's own profile and prevents user enumeration.
      */
     match /users/{userId} {
       allow get: if isOwner(userId);
       allow list: if false;
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow create: if isOwner(userId) && hasCorrectIdOnCreate(userId);
+      allow update: if isExistingOwner(userId) && isIdImmutable();
       allow delete: if isExistingOwner(userId);
+    }
 
-      /**
-       * @description Stores Google Calendar details for a user. Only the user can
-       *              access and manage their own calendar configurations.
-       * @path /users/{userId}/calendars/{calendarId}
-       * @allow (create) An authenticated user creating a calendar for themselves:
-       *        `auth.uid == 'user_abc'`, `create /users/user_abc/calendars/cal_1`
-       * @deny (get) An authenticated user trying to read another user's calendar:
-       *       `auth.uid == 'user_xyz'`, `get /users/user_abc/calendars/cal_1`
-       * @principle Enforces document ownership for all operations within a user's data tree.
-       */
-      match /calendars/{calendarId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-        allow delete: if isExistingOwner(userId);
+    // -------------------------------------------------------------------------
+    // User Subcollections
+    // -------------------------------------------------------------------------
 
-        /**
-         * @description Stores appointments associated with a user's Google Calendar.
-         *              Access is inherited from the parent user document.
-         * @path /users/{userId}/calendars/{calendarId}/appointments/{appointmentId}
-         * @allow (list) The owning user listing their appointments for a calendar:
-         *        `auth.uid == 'user_abc'`, `list /users/user_abc/calendars/cal_1/appointments`
-         * @deny (update) A different user trying to update an appointment:
-         *       `auth.uid == 'user_xyz'`, `update /users/user_abc/calendars/cal_1/appointments/appt_1`
-         * @principle Path-based security ensures that nested subcollections are protected by the owner's identity.
-         */
-        match /appointments/{appointmentId} {
-          allow get: if isOwner(userId);
-          allow list: if isOwner(userId);
-          allow create: if isOwner(userId);
-          allow update: if isExistingOwner(userId);
-          allow delete: if isExistingOwner(userId);
-        }
-      }
+    /**
+     * @description Manages a user's voice memos.
+     * @path /users/{userId}/memos/{memoId}
+     * @allow A user (auth.uid='user123') can (list) their own memos at `/users/user123/memos`.
+     * @deny A user (auth.uid='user123') cannot (get) another user's memo at `/users/user456/memos/abc`.
+     * @principle Enforces strict ownership for all memo data via path-based security.
+     */
+    match /users/{userId}/memos/{memoId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && hasCorrectUserIdOnCreate(userId);
+      allow update: if isExistingOwner(userId) && isUserIdImmutable();
+      allow delete: if isExistingOwner(userId);
+    }
 
-      /**
-       * @description Stores Google Contacts list details for a user. Only the user can
-       *              access and manage their own contact list configurations.
-       * @path /users/{userId}/contacts_lists/{contactsId}
-       * @allow (create) An authenticated user creating a contacts list for themselves:
-       *        `auth.uid == 'user_abc'`, `create /users/user_abc/contacts_lists/cl_1`
-       * @deny (get) An authenticated user trying to read another user's contacts list:
-       *       `auth.uid == 'user_xyz'`, `get /users/user_abc/contacts_lists/cl_1`
-       * @principle Enforces document ownership for all operations within a user's data tree.
-       */
-      match /contacts_lists/{contactsId} {
-        allow get: if isOwner(userId);
-        allow list: if isOwner(userId);
-        allow create: if isOwner(userId) && request.resource.data.userId == userId;
-        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-        allow delete: if isExistingOwner(userId);
+    /**
+     * @description Manages a user's tasks.
+     * @path /users/{userId}/tasks/{taskId}
+     * @allow A user (auth.uid='user123') can (create) a new task in `/users/user123/tasks`.
+     * @deny A user (auth.uid='user123') cannot (update) a task at `/users/user456/tasks/abc`.
+     * @principle Enforces strict ownership for all task data via path-based security.
+     */
+    match /users/{userId}/tasks/{taskId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && hasCorrectUserIdOnCreate(userId);
+      allow update: if isExistingOwner(userId) && isUserIdImmutable();
+      allow delete: if isExistingOwner(userId);
+    }
 
-        /**
-         * @description Stores individual contacts associated with a user's Google Contacts list.
-         *              Access is inherited from the parent user document.
-         * @path /users/{userId}/contacts_lists/{contactsId}/contacts/{contactId}
-         * @allow (list) The owning user listing their contacts:
-         *        `auth.uid == 'user_abc'`, `list /users/user_abc/contacts_lists/cl_1/contacts`
-         * @deny (delete) A different user trying to delete a contact:
-         *       `auth.uid == 'user_xyz'`, `delete /users/user_abc/contacts_lists/cl_1/contacts/person_1`
-         * @principle Path-based security ensures that nested subcollections are protected by the owner's identity.
-         */
-        match /contacts/{contactId} {
-          allow get: if isOwner(userId);
-          allow list: if isOwner(userId);
-          allow create: if isOwner(userId);
-          allow update: if isExistingOwner(userId);
-          allow delete: if isExistingOwner(userId);
-        }
-      }
+    /**
+     * @description Manages a user's contacts.
+     * @path /users/{userId}/contacts/{contactId}
+     * @allow A user (auth.uid='user123') can (delete) their own contact at `/users/user123/contacts/abc`.
+     * @deny An anonymous user cannot (list) contacts from any user.
+     * @principle Enforces strict ownership for all contact data via path-based security.
+     */
+    match /users/{userId}/contacts/{contactId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && hasCorrectUserIdOnCreate(userId);
+      allow update: if isExistingOwner(userId) && isUserIdImmutable();
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Manages a user's events.
+     * @path /users/{userId}/events/{eventId}
+     * @allow A user (auth.uid='user123') can (get) their own event at `/users/user123/events/abc`.
+     * @deny A user (auth.uid='user123') cannot (create) an event for another user at `/users/user456/events`.
+     * @principle Enforces strict ownership for all event data via path-based security.
+     */
+    match /users/{userId}/events/{eventId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && hasCorrectUserIdOnCreate(userId);
+      allow update: if isExistingOwner(userId) && isUserIdImmutable();
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Manages a user's tags for categorizing memos.
+     * @path /users/{userId}/tags/{tagId}
+     * @allow A user (auth.uid='user123') can (list) all their tags at `/users/user123/tags`.
+     * @deny A user (auth.uid='user123') cannot (get) a tag belonging to another user.
+     * @principle Enforces strict ownership for all tag data via path-based security.
+     */
+    match /users/{userId}/tags/{tagId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && hasCorrectUserIdOnCreate(userId);
+      allow update: if isExistingOwner(userId) && isUserIdImmutable();
+      allow delete: if isExistingOwner(userId);
     }
   }
 }

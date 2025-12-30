@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "User": {
@@ -11,142 +10,131 @@
           "type": "string",
           "description": "Unique identifier for the User entity."
         },
-        "username": {
-          "type": "string",
-          "description": "User's username."
-        },
         "email": {
           "type": "string",
-          "description": "User's email address.",
+          "description": "Email address of the user.",
           "format": "email"
         },
-        "googleCalendarId": {
+        "firstName": {
           "type": "string",
-          "description": "Reference to Google Calendar. (Relationship: User 1:1 GoogleCalendar)"
+          "description": "First name of the user."
         },
-        "googleContactsId": {
+        "lastName": {
           "type": "string",
-          "description": "Reference to Google Contacts. (Relationship: User 1:1 GoogleContacts)"
+          "description": "Last name of the user."
         }
       },
       "required": [
         "id",
-        "username",
         "email"
       ]
     },
-    "GoogleCalendar": {
+    "Memo": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "GoogleCalendar",
+      "title": "Memo",
       "type": "object",
-      "description": "Represents a Google Calendar associated with a user.",
+      "description": "Represents a voice memo and its associated data.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the GoogleCalendar entity."
+          "description": "Unique identifier for the Memo entity."
         },
         "userId": {
           "type": "string",
-          "description": "Reference to User. (Relationship: User 1:1 GoogleCalendar)"
+          "description": "Reference to User. (Relationship: User 1:N Memo)"
         },
-        "calendarName": {
+        "audioUrl": {
           "type": "string",
-          "description": "Name of the Google Calendar."
+          "description": "URL of the audio recording.",
+          "format": "uri"
         },
-        "syncToken": {
+        "transcription": {
           "type": "string",
-          "description": "The sync token for incremental synchronization."
+          "description": "Text transcription of the voice memo."
+        },
+        "summary": {
+          "type": "string",
+          "description": "AI-generated summary of the memo."
+        },
+        "tagIds": {
+          "type": "array",
+          "description": "References to Tags. (Relationship: Tag N:N Memo)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp of when the memo was created.",
+          "format": "date-time"
         }
       },
       "required": [
         "id",
         "userId",
-        "calendarName"
+        "audioUrl",
+        "transcription"
       ]
     },
-    "GoogleContacts": {
+    "Task": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "GoogleContacts",
+      "title": "Task",
       "type": "object",
-      "description": "Represents Google Contacts associated with a user.",
+      "description": "Represents a to-do item in the task management system.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the GoogleContacts entity."
+          "description": "Unique identifier for the Task entity."
         },
         "userId": {
           "type": "string",
-          "description": "Reference to User. (Relationship: User 1:1 GoogleContacts)"
-        },
-        "lastSyncDate": {
-          "type": "string",
-          "description": "Date of last synchronization.",
-          "format": "date-time"
-        }
-      },
-      "required": [
-        "id",
-        "userId"
-      ]
-    },
-    "Appointment": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Appointment",
-      "type": "object",
-      "description": "Represents an appointment or event.",
-      "properties": {
-        "id": {
-          "type": "string",
-          "description": "Unique identifier for the Appointment entity."
-        },
-        "googleCalendarId": {
-          "type": "string",
-          "description": "Reference to GoogleCalendar. (Relationship: GoogleCalendar 1:N Appointment)"
+          "description": "Reference to User. (Relationship: User 1:N Task)"
         },
         "title": {
           "type": "string",
-          "description": "Title of the appointment."
-        },
-        "startTime": {
-          "type": "string",
-          "description": "Start time of the appointment.",
-          "format": "date-time"
-        },
-        "endTime": {
-          "type": "string",
-          "description": "End time of the appointment.",
-          "format": "date-time"
+          "description": "Title of the task."
         },
         "description": {
           "type": "string",
-          "description": "Description of the appointment."
+          "description": "Detailed description of the task."
+        },
+        "dueDate": {
+          "type": "string",
+          "description": "Date and time when the task is due.",
+          "format": "date-time"
+        },
+        "completed": {
+          "type": "boolean",
+          "description": "Indicates whether the task is completed."
         }
       },
       "required": [
         "id",
-        "googleCalendarId",
-        "title",
-        "startTime",
-        "endTime"
+        "userId",
+        "title"
       ]
     },
     "Contact": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Contact",
       "type": "object",
-      "description": "Represents a contact.",
+      "description": "Represents a contact in the quick add panel.",
       "properties": {
         "id": {
           "type": "string",
           "description": "Unique identifier for the Contact entity."
         },
-        "googleContactsId": {
+        "userId": {
           "type": "string",
-          "description": "Reference to GoogleContacts. (Relationship: GoogleContacts 1:N Contact)"
+          "description": "Reference to User. (Relationship: User 1:N Contact)"
         },
-        "name": {
+        "firstName": {
           "type": "string",
-          "description": "Name of the contact."
+          "description": "First name of the contact."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "Last name of the contact."
         },
         "email": {
           "type": "string",
@@ -160,7 +148,74 @@
       },
       "required": [
         "id",
-        "googleContactsId",
+        "userId",
+        "firstName",
+        "lastName"
+      ]
+    },
+    "Event": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Event",
+      "type": "object",
+      "description": "Represents an event in the quick add panel and dashboard.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Event entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Event)"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the event."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the event."
+        },
+        "startTime": {
+          "type": "string",
+          "description": "Date and time when the event starts.",
+          "format": "date-time"
+        },
+        "endTime": {
+          "type": "string",
+          "description": "Date and time when the event ends.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "title",
+        "startTime",
+        "endTime"
+      ]
+    },
+    "Tag": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Tag",
+      "type": "object",
+      "description": "Represents a tag for categorizing memos.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Tag entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Tag)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the tag."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
         "name"
       ]
     }
@@ -168,8 +223,7 @@
   "auth": {
     "providers": [
       "password",
-      "anonymous",
-      "google"
+      "anonymous"
     ]
   },
   "firestore": {
@@ -181,104 +235,116 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "Stores user profiles. User documents are created upon user registration.",
+          "description": "Stores user profile information.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier of the user."
+              "description": "The unique identifier for the user."
             }
           ]
         }
       },
       {
-        "path": "/users/{userId}/calendars/{calendarId}",
+        "path": "/users/{userId}/memos/{memoId}",
         "definition": {
-          "entityName": "GoogleCalendar",
+          "entityName": "Memo",
           "schema": {
-            "$ref": "#/backend/entities/GoogleCalendar"
+            "$ref": "#/backend/entities/Memo"
           },
-          "description": "Stores Google Calendar details for each user. Includes 'userId' to ensure authorization independence.",
+          "description": "Stores voice memos associated with a specific user.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier of the user."
+              "description": "The unique identifier for the user."
             },
             {
-              "name": "calendarId",
-              "description": "The unique identifier of the Google Calendar."
+              "name": "memoId",
+              "description": "The unique identifier for the memo."
             }
           ]
         }
       },
       {
-        "path": "/users/{userId}/contacts_lists/{contactsId}",
+        "path": "/users/{userId}/tasks/{taskId}",
         "definition": {
-          "entityName": "GoogleContacts",
+          "entityName": "Task",
           "schema": {
-            "$ref": "#/backend/entities/GoogleContacts"
+            "$ref": "#/backend/entities/Task"
           },
-          "description": "Stores Google Contacts details for each user. Includes 'userId' to ensure authorization independence.",
+          "description": "Stores tasks associated with a specific user.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier of the user."
+              "description": "The unique identifier for the user."
             },
             {
-              "name": "contactsId",
-              "description": "The unique identifier of the Google Contacts."
+              "name": "taskId",
+              "description": "The unique identifier for the task."
             }
           ]
         }
       },
       {
-        "path": "/users/{userId}/calendars/{calendarId}/appointments/{appointmentId}",
-        "definition": {
-          "entityName": "Appointment",
-          "schema": {
-            "$ref": "#/backend/entities/Appointment"
-          },
-          "description": "Stores appointments associated with a Google Calendar. Includes 'googleCalendarId' which contains the userId for authorization independence.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            },
-            {
-              "name": "calendarId",
-              "description": "The unique identifier of the Google Calendar."
-            },
-            {
-              "name": "appointmentId",
-              "description": "The unique identifier of the appointment."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/users/{userId}/contacts_lists/{contactsId}/contacts/{contactId}",
+        "path": "/users/{userId}/contacts/{contactId}",
         "definition": {
           "entityName": "Contact",
           "schema": {
             "$ref": "#/backend/entities/Contact"
           },
-          "description": "Stores contacts associated with Google Contacts. Includes 'googleContactsId' which contains the userId for authorization independence.",
+          "description": "Stores contacts associated with a specific user.",
           "params": [
             {
               "name": "userId",
-              "description": "The unique identifier of the user."
-            },
-            {
-              "name": "contactsId",
-              "description": "The unique identifier of the Google Contacts."
+              "description": "The unique identifier for the user."
             },
             {
               "name": "contactId",
-              "description": "The unique identifier of the contact."
+              "description": "The unique identifier for the contact."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/events/{eventId}",
+        "definition": {
+          "entityName": "Event",
+          "schema": {
+            "$ref": "#/backend/entities/Event"
+          },
+          "description": "Stores events associated with a specific user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "eventId",
+              "description": "The unique identifier for the event."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/tags/{tagId}",
+        "definition": {
+          "entityName": "Tag",
+          "schema": {
+            "$ref": "#/backend/entities/Tag"
+          },
+          "description": "Stores tags associated with a specific user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "tagId",
+              "description": "The unique identifier for the tag."
             }
           ]
         }
       }
     ],
-    "reasoning": "This Firestore structure is designed to support the MemoIQ application, with a focus on integrating Google Calendar and Contacts. The structure emphasizes authorization independence and supports secure list operations (QAPs). It utilizes path-based ownership for user-specific data and follows a consistent naming convention for clarity and debuggability.\n\nAuthorization Independence is achieved by avoiding `get()` calls in security rules. Specifically:\n\n*   For `GoogleCalendar`, `GoogleContacts`, `Appointment`, and `Contact` collections, the `userId` is explicitly present in each document. This allows security rules to validate ownership based solely on `request.auth.uid` without needing to fetch parent document data. This also allows atomic batch creation of a User and Calendar/Contacts without timing issues or security rule violations.\n\nThis design supports the required QAPs by:\n\n*   Structural Segregation: User data (Calendars, Contacts, Appointments, Contacts) is stored under the `/users/{userId}` path, ensuring that only the authenticated user has access to their data. The access is based on path-based ownership which is simple to reason about and highly performant.\n*   Consistent Naming: Using a consistent naming pattern (`/users/{userId}/calendars/{calendarId}`) ensures that all documents within a collection have the same security requirements, further simplifying rules.\n"
+    "reasoning": "The Firestore data structure is designed to ensure security, scalability, and ease of debugging, adhering to the core design principles of Authorization Independence, Clarity of Intent, DBAC (Database-Based Access Control), and QAPs (Rules are not Filters). It leverages denormalization and structural segregation to achieve these goals.\n\n**Authorization Independence:** Each document contains all the necessary information for authorization, eliminating the need for `get()` calls to parent documents. This is achieved primarily through path-based ownership for user-specific data.\n\n**Structural Segregation:** All documents within a collection share the same security posture. This avoids mixing data with different access requirements in the same collection.\n\n**Access Modeling:** Consistent patterns are used for authorization:\n    *   Path-Based ownership (`/users/{userId}/{entity}/{entityId}`): All entities (Memos, Tasks, Contacts, Events, and Tags) are stored as subcollections under the `/users/{userId}` collection. This ensures that only the user has access to their data.\n\n**QAPs (Rules are not Filters):**  The data structure supports secure `list` operations. Path-based ownership restricts listing to the user's own data.\n\n**Invariants:** The structure supports the integrity of ownership by ensuring that each entity has a `userId` field that matches the `userId` in the path. Timestamps like `createdAt` in Memos can be validated in rules to ensure data integrity."
   }
 }
