@@ -126,13 +126,35 @@ AI is embedded across the entire experience to help users work faster, stay orga
                             </div>
                             <CardDescription>MemoIQ includes intelligent AI managers that work behind the scenes to automate and optimize your workflow:</CardDescription>
                         </CardHeader>
-                        <CardContent>
-                            <ul className="space-y-2 text-sm text-muted-foreground">
-                                <li className="flex items-center gap-2"><Briefcase className="h-4 w-4" /> <strong>Tasks Manager</strong> – AI prioritizes, tracks, and organizes tasks</li>
-                                <li className="flex items-center gap-2"><Briefcase className="h-4 w-4" /> <strong>Calendar Manager</strong> – AI monitors availability, conflicts, and scheduling efficiency</li>
-                                <li className="flex items-center gap-2"><Briefcase className="h-4 w-4" /> <strong>Appointment Manager</strong> – AI handles booking logic, reminders, and updates</li>
-                                <li className="flex items-center gap-2"><Briefcase className="h-4 w-4" /> <strong>Contacts Manager</strong> – AI maintains clean, organized, and up-to-date contacts</li>
-                            </ul>
+                        <CardContent className="space-y-4">
+                            <div className="flex items-start gap-3">
+                                <Briefcase className="h-4 w-4 mt-1 text-muted-foreground shrink-0" />
+                                <div>
+                                    <h5 className="font-semibold">Tasks Manager</h5>
+                                    <p className="text-sm text-muted-foreground">AI prioritizes, tracks, and organizes tasks.</p>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                                <Briefcase className="h-4 w-4 mt-1 text-muted-foreground shrink-0" />
+                                <div>
+                                    <h5 className="font-semibold">Calendar Manager</h5>
+                                    <p className="text-sm text-muted-foreground">AI monitors availability, conflicts, and scheduling efficiency.</p>
+                                </div>
+                            </div>
+                            <div className="flex items-start gap-3">
+                                <Briefcase className="h-4 w-4 mt-1 text-muted-foreground shrink-0" />
+                                <div>
+                                    <h5 className="font-semibold">Appointment Manager</h5>
+                                    <p className="text-sm text-muted-foreground">AI handles booking logic, reminders, and updates.</p>
+                                </div>
+                            </div>
+                             <div className="flex items-start gap-3">
+                                <Briefcase className="h-4 w-4 mt-1 text-muted-foreground shrink-0" />
+                                <div>
+                                    <h5 className="font-semibold">Contacts Manager</h5>
+                                    <p className="text-sm text-muted-foreground">AI maintains clean, organized, and up-to-date contacts.</p>
+                                </div>
+                            </div>
                         </CardContent>
                      </Card>
                 </div>
