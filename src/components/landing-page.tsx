@@ -53,13 +53,10 @@ export function LandingPage() {
             </h1>
             <div className="mt-6 max-w-3xl mx-auto text-lg md:text-xl text-muted-foreground space-y-4">
                 <p>
-                    MemoIQ is a next-generation, AI-powered productivity platform designed to simplify how you manage your time, tasks, and information. Every feature is driven by advanced artificial intelligence—working seamlessly behind the scenes to turn voice into action, schedules into clarity, and daily workflows into effortless organization.
+                    MemoIQ is an AI-powered productivity platform that simplifies how you manage your time, tasks, and information. Every feature is driven by advanced AI—turning voice into action, schedules into clarity, and daily workflows into effortless organization.
                 </p>
                 <p>
-                    From AI voice memos and intelligent task management to smart calendars, appointments, contacts, and a personal AI companion, MemoIQ brings everything together in one unified experience. With built-in Google Calendar and Google Contacts integration—and Microsoft 365 compatibility coming soon—MemoIQ keeps your work and life perfectly in sync across platforms.
-                </p>
-                <p className="font-semibold text-foreground/90">
-                    Powerful yet intuitive. Intelligent by design. MemoIQ helps you focus on what matters most—while AI handles the rest.
+                    With AI voice memos, smart tasks, calendars, appointments, contacts, and a personal AI companion, MemoIQ delivers a unified experience. Integrated with Google Calendar and Google Contacts, with Microsoft 365 compatibility coming soon, MemoIQ keeps everything in sync—so you can focus on what matters most.
                 </p>
             </div>
             <div className="mt-8 flex justify-center gap-4">
