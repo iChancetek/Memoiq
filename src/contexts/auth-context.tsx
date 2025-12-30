@@ -59,6 +59,45 @@ googleProvider.addScope('https://www.googleapis.com/auth/calendar.readonly');
 googleProvider.addScope('https://www.googleapis.com/auth/contacts.readonly');
 
 
+const getOrCreateUserInFirestore = async (user: User, additionalData: object = {}) => {
+    const userRef = doc(firestore, 'users', user.uid);
+    const userDoc = await getDoc(userRef);
+
+    if (userDoc.exists()) {
+        const updateData = {
+            lastLogin: serverTimestamp(),
+            ...additionalData,
+        };
+        await updateDoc(userRef, updateData);
+        return { ...userDoc.data(), ...updateData };
+    } else {
+        const newUserPayload = {
+            uid: user.uid,
+            email: user.email,
+            displayName: user.displayName || 'User',
+            createdAt: serverTimestamp(),
+            lastLogin: serverTimestamp(),
+            settings: {
+                theme: 'dark',
+                language: 'en',
+                uiLanguage: 'en',
+                notifications: true,
+                enableVoiceGreeting: true,
+            },
+            integrations: {
+              google: {
+                calendar: 'disconnected',
+                contacts: 'disconnected',
+                accessToken: null,
+              }
+            },
+            ...additionalData,
+        };
+        await setDoc(userRef, newUserPayload);
+        return newUserPayload;
+    }
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = React.useState<AppUser | null>(null);
   const [loading, setLoading] = React.useState(true);
@@ -69,18 +108,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setLoading(true);
       if (user) {
-        const userDocRef = doc(firestore, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
+        const userDoc = await getDoc(doc(firestore, 'users', user.uid));
         if (userDoc.exists()) {
              setUser({ ...user, ...userDoc.data() } as AppUser);
         } else {
-             try {
-                const firestoreUser = await createUserInFirestore(user, user.displayName || '');
-                setUser({ ...user, ...firestoreUser } as AppUser);
-             } catch (e) {
-                console.error("Failed to create user document for existing auth user:", e);
-                setUser(user as AppUser);
-             }
+             // This case handles users who were authenticated but didn't have a firestore doc
+             const firestoreUser = await getOrCreateUserInFirestore(user);
+             setUser({ ...user, ...firestoreUser } as AppUser);
         }
       } else {
         setUser(null);
@@ -92,7 +126,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const handleAuthError = (err: any) => {
     setLoading(false);
+    console.error('Authentication Error:', err.code, err.message);
     if (err.code === 'auth/popup-closed-by-user') {
+        setError(null);
         return;
     }
     switch (err.code) {
@@ -109,88 +145,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setError('Password should be at least 6 characters.');
         break;
       case 'auth/requires-recent-login':
-        setError('Please log out and log back in to change your password.');
+        setError('Please log out and log back in to complete this action.');
         break;
       default:
         setError('An unexpected error occurred. Please try again.');
-        console.error(err);
     }
   }
-  
-  const createUserInFirestore = async (user: User, displayName?: string | null) => {
-      const userRef = doc(firestore, 'users', user.uid);
-      const userDoc = await getDoc(userRef);
-
-      if (userDoc.exists()) {
-          await updateDoc(userRef, { lastLogin: serverTimestamp() });
-          return userDoc.data();
-      }
-
-      const newUserPayload = {
-          id: user.uid,
-          uid: user.uid,
-          email: user.email,
-          displayName: displayName || user.displayName || 'User',
-          createdAt: serverTimestamp(),
-          lastLogin: serverTimestamp(),
-          settings: {
-              theme: 'dark',
-              language: 'en',
-              uiLanguage: 'en',
-              notifications: true,
-              enableVoiceGreeting: true,
-          },
-          integrations: {
-            google: {
-              calendar: 'disconnected',
-              contacts: 'disconnected',
-            }
-          }
-      };
-      await setDoc(userRef, newUserPayload);
-
-      if (displayName && user.displayName !== displayName) {
-          await updateProfile(user, { displayName });
-      }
-      
-      return newUserPayload;
-  }
-
-  const handleAuthSuccess = async (userCredential: any) => {
-    const firebaseUser = userCredential.user;
-    let firestoreData = await createUserInFirestore(firebaseUser, firebaseUser.displayName);
-
-    const additionalInfo = getAdditionalUserInfo(userCredential);
-    if (additionalInfo?.providerId === 'google.com' && additionalInfo.credential) {
-      const accessToken = (additionalInfo.credential as any).accessToken;
-      const updatedIntegrations = {
-        google: {
-          calendar: 'connected',
-          contacts: 'connected',
-          accessToken: accessToken || null,
-        }
-      };
-      await updateDoc(doc(firestore, 'users', firebaseUser.uid), {
-        'integrations.google': updatedIntegrations.google,
-        lastLogin: serverTimestamp(),
-      });
-      firestoreData = { ...firestoreData, integrations: updatedIntegrations };
-    }
-    
-    setUser({ ...firebaseUser, ...firestoreData } as AppUser);
-    router.push('/');
-    setLoading(false);
-  };
-
 
   const login = async (email: string, password: string) => {
     setLoading(true);
     setError(null);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      await handleAuthSuccess(userCredential);
+      const firestoreUser = await getOrCreateUserInFirestore(userCredential.user);
+      setUser({ ...userCredential.user, ...firestoreUser } as AppUser);
+      router.push('/');
     } catch (err) {
       handleAuthError(err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -200,9 +173,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName });
-      await handleAuthSuccess(userCredential);
+      const firestoreUser = await getOrCreateUserInFirestore(userCredential.user, { displayName });
+      setUser({ ...userCredential.user, displayName, ...firestoreUser } as AppUser);
+      router.push('/');
     } catch (err) {
       handleAuthError(err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -211,9 +188,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     try {
       const userCredential = await signInWithPopup(auth, googleProvider);
-      await handleAuthSuccess(userCredential);
+      const firebaseUser = userCredential.user;
+      
+      const additionalInfo = getAdditionalUserInfo(userCredential);
+      const accessToken = (additionalInfo?.credential as any)?.accessToken;
+
+      const additionalData = {
+          'integrations.google': {
+              calendar: 'connected',
+              contacts: 'connected',
+              accessToken: accessToken || null,
+          }
+      };
+
+      const firestoreUser = await getOrCreateUserInFirestore(firebaseUser, additionalData);
+      
+      setUser({ ...firebaseUser, ...firestoreUser } as AppUser);
+      router.push('/');
     } catch (err: any) {
       handleAuthError(err);
+    } finally {
+        setLoading(false);
     }
   };
 
@@ -247,13 +242,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
   
   const updateUserProfile = async (profile: { displayName?: string; photoURL?: string }) => {
-    if (user) {
+    if (auth.currentUser) {
         setLoading(true);
         setError(null);
         try {
-            await updateProfile(user, profile);
-            await setDoc(doc(firestore, 'users', user.uid), profile, { merge: true });
-            setUser({ ...user, ...profile });
+            await updateProfile(auth.currentUser, profile);
+            await setDoc(doc(firestore, 'users', auth.currentUser.uid), profile, { merge: true });
+            setUser({ ...user!, ...profile });
         } catch (err: any) {
             handleAuthError(err);
         } finally {
@@ -263,11 +258,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateUserPassword = async (newPassword: string) => {
-    if (user) {
+    if (auth.currentUser) {
         setLoading(true);
         setError(null);
         try {
-            await updatePassword(user, newPassword);
+            await updatePassword(auth.currentUser, newPassword);
         } catch (err: any) {
             handleAuthError(err);
             throw err;
@@ -331,3 +326,5 @@ export function useAuth() {
   }
   return context;
 }
+
+    
