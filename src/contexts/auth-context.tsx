@@ -1,9 +1,7 @@
-
 'use client';
 
 import * as React from 'react';
 import {
-  getAuth,
   onAuthStateChanged,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -16,10 +14,8 @@ import {
   type User,
 } from 'firebase/auth';
 import { getFirestore, doc, setDoc, serverTimestamp, getDoc, updateDoc } from 'firebase/firestore';
-import { initializeFirebase } from '@/firebase';
+import { useFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
-
-const { auth, firestore } = initializeFirebase();
 
 export interface AppUser extends User {
     settings?: {
@@ -62,7 +58,14 @@ googleProvider.setCustomParameters({
 });
 
 
-const getOrCreateUserInFirestore = async (user: User, accessToken?: string, additionalData: object = {}) => {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = React.useState<AppUser | null>(null);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+  const router = useRouter();
+  const { auth, firestore } = useFirebase();
+
+  const getOrCreateUserInFirestore = async (user: User, accessToken?: string, additionalData: object = {}) => {
     const userRef = doc(firestore, 'users', user.uid);
     const userDoc = await getDoc(userRef);
 
@@ -116,13 +119,7 @@ const getOrCreateUserInFirestore = async (user: User, accessToken?: string, addi
         await setDoc(userRef, newUserPayload);
         return newUserPayload;
     }
-};
-
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = React.useState<AppUser | null>(null);
-  const [loading, setLoading] = React.useState(true);
-  const [error, setError] = React.useState<string | null>(null);
-  const router = useRouter();
+  };
 
   React.useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -142,7 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  }, [auth, firestore]);
 
   const handleAuthError = (err: any) => {
     setLoading(false);
