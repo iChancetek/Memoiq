@@ -120,7 +120,7 @@ export function LandingPage() {
 
       <footer className="border-t">
         <div className="container py-8 text-center text-muted-foreground text-sm">
-            <p>&copy; {new Date().getFullYear()} MemoIQ. All Rights Reserved.</p>
+            <p>© 2026 MemoIQ. All Rights Reserved. Developed by Chancellor Minus I ChanceTEK | iChanceTEK</p>
         </div>
       </footer>
     </div>
