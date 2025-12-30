@@ -13,10 +13,11 @@ import {z} from 'genkit';
 import { TaskSchema, ContactSchema, CalendarEventSchema, MemoSchema, ScribeEntrySchema } from '@/lib/data';
 import type { Task, Contact, CalendarEvent, Memo, ScribeEntry } from '@/lib/data';
 import { format } from 'date-fns';
-import { firestore as db } from '@/lib/firebase-admin';
+import { getServerFirebase } from '@/firebase/server';
 import { gpt4o } from 'genkitx-openai';
 import { type Message } from '@genkit-ai/core';
 
+const { firestore: db } = getServerFirebase();
 
 // Define tools for the AI to use
 export const getTasks = ai.defineTool(

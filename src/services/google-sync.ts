@@ -1,8 +1,8 @@
 
 'use server';
 
-import { collection, writeBatch, serverTimestamp, doc, getDoc, addDoc } from 'firebase/firestore';
-import { initializeFirebase } from '@/firebase';
+import { collection, writeBatch, serverTimestamp, doc, getDoc } from 'firebase/firestore';
+import { getServerFirebase } from '@/firebase/server';
 
 /**
  * Fetches data from a Google API endpoint.
@@ -28,7 +28,7 @@ async function fetchGoogleApi(url: string, accessToken: string) {
 }
 
 async function getAccessToken(userId: string): Promise<string> {
-    const { firestore } = initializeFirebase();
+    const { firestore } = getServerFirebase();
     const userDocRef = doc(firestore, 'users', userId);
     const userDoc = await getDoc(userDocRef);
     if (!userDoc.exists()) {
@@ -46,7 +46,7 @@ async function getAccessToken(userId: string): Promise<string> {
  * @param userId The ID of the user to sync contacts for.
  */
 export async function syncGoogleContacts(userId: string) {
-    const { firestore } = initializeFirebase();
+    const { firestore } = getServerFirebase();
   
     try {
         const accessToken = await getAccessToken(userId);
@@ -94,7 +94,7 @@ export async function syncGoogleContacts(userId: string) {
  * @param userId The ID of the user to sync events for.
  */
 export async function syncGoogleCalendar(userId: string) {
-    const { firestore } = initializeFirebase();
+    const { firestore } = getServerFirebase();
 
     try {
         const accessToken = await getAccessToken(userId);
