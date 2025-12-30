@@ -130,7 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Only create a new document if the user is new.
       if (additionalInfo?.isNewUser) {
           const newUserPayload = {
-            uid: user.uid,
+            id: user.uid,
             email: user.email,
             displayName: user.displayName || 'User',
             createdAt: serverTimestamp(),
@@ -161,7 +161,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      router.push('/');
+      router.push('/dashboard');
       setLoading(false);
   }
 

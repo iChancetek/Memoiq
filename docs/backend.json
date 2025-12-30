@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -8,7 +9,7 @@
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the User entity."
+          "description": "Unique identifier for the User entity. Should match the Firebase Auth UID."
         },
         "email": {
           "type": "string",
@@ -223,7 +224,8 @@
   "auth": {
     "providers": [
       "password",
-      "anonymous"
+      "anonymous",
+      "google.com"
     ]
   },
   "firestore": {
