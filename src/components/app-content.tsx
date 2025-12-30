@@ -5,7 +5,6 @@ import { useAuth } from '@/contexts/auth-context';
 import { usePathname } from 'next/navigation';
 import { MainLayout } from './main-layout';
 import { Loader2 } from 'lucide-react';
-import { Toaster } from './ui/toaster';
 
 const AUTH_ROUTES = ['/login', '/signup', '/auth'];
 const PUBLIC_ROUTES = ['/']; // Landing page
@@ -17,6 +16,7 @@ export function AppContent({ children }: { children: React.ReactNode }) {
   const isAuthRoute = AUTH_ROUTES.includes(pathname);
   const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
 
+  // While loading, if not on a public route, show a spinner.
   if (loading && !isPublicRoute) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
@@ -24,32 +24,31 @@ export function AppContent({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-
-  // If it's a public route and the user is not logged in, show the content directly
+  
+  // If it's a public route and user is not logged in, show page.
   if (isPublicRoute && !user) {
     return <>{children}</>;
   }
 
+  // If on an auth route, show the page (login/signup forms).
   if (isAuthRoute) {
     return <>{children}</>;
   }
-  
-  if (isPublicRoute && user) {
-      return (
-        <MainLayout>
-          {children}
-        </MainLayout>
-      )
-  }
 
-  // For authenticated users on protected routes
+  // If a user is logged in, wrap the content in the main application layout.
   if (user) {
     return (
         <MainLayout>
-        {children}
+          {children}
         </MainLayout>
     );
   }
 
-  return <>{children}</>;
+  // Fallback for any other case (e.g. protected route with no user)
+  // The auth context will handle redirection.
+  return (
+    <div className="flex h-screen w-full items-center justify-center">
+      <Loader2 className="h-10 w-10 animate-spin text-primary" />
+    </div>
+  );
 }

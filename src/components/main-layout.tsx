@@ -55,7 +55,7 @@ export function MainLayout({children}: {children: React.ReactNode}) {
   
   const getPageTitle = () => {
     switch (pathname) {
-      case '/':
+      case '/dashboard':
         return t('dashboard');
       case '/memos':
         return t('voiceMemos');
@@ -100,7 +100,7 @@ export function MainLayout({children}: {children: React.ReactNode}) {
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/dashboard" className="flex items-center gap-2">
             <Logo className="size-7 text-primary" />
             <h1 className="text-lg font-semibold text-foreground">MemoIQ</h1>
           </Link>
@@ -110,10 +110,10 @@ export function MainLayout({children}: {children: React.ReactNode}) {
             <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
-                isActive={pathname === '/'}
+                isActive={pathname === '/dashboard'}
                 tooltip={t('dashboard')}
               >
-                <Link href="/">
+                <Link href="/dashboard">
                   <Home />
                   <span>{t('dashboard')}</span>
                 </Link>
