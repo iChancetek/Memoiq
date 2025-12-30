@@ -57,6 +57,9 @@ const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 const googleProvider = new GoogleAuthProvider();
 googleProvider.addScope('https://www.googleapis.com/auth/calendar.readonly');
 googleProvider.addScope('https://www.googleapis.com/auth/contacts.readonly');
+googleProvider.setCustomParameters({
+  prompt: 'select_account'
+});
 
 
 const getOrCreateUserInFirestore = async (user: User, additionalData: object = {}) => {
@@ -64,12 +67,23 @@ const getOrCreateUserInFirestore = async (user: User, additionalData: object = {
     const userDoc = await getDoc(userRef);
 
     if (userDoc.exists()) {
-        const updateData = {
+        const existingData = userDoc.data();
+        const updateData: any = {
             lastLogin: serverTimestamp(),
             ...additionalData,
         };
+
+        // Deep merge for integrations
+        if (additionalData.hasOwnProperty('integrations')) {
+            updateData.integrations = {
+                ...existingData.integrations,
+                // @ts-ignore
+                ...additionalData.integrations,
+            };
+        }
+        
         await updateDoc(userRef, updateData);
-        return { ...userDoc.data(), ...updateData };
+        return { ...existingData, ...updateData };
     } else {
         const newUserPayload = {
             uid: user.uid,
@@ -126,11 +140,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const handleAuthError = (err: any) => {
     setLoading(false);
-    console.error('Authentication Error:', err.code, err.message);
+    
     if (err.code === 'auth/popup-closed-by-user') {
         setError(null);
         return;
     }
+
+    console.error('Authentication Error:', err.code, err.message);
+    
     switch (err.code) {
       case 'auth/user-not-found':
         setError('No account found with this email.');
@@ -152,18 +169,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const handleAuthSuccess = async (userCredential: any, additionalData = {}) => {
+      const firestoreUser = await getOrCreateUserInFirestore(userCredential.user, additionalData);
+      setUser({ ...userCredential.user, ...firestoreUser } as AppUser);
+      router.push('/');
+      setLoading(false);
+  }
+
   const login = async (email: string, password: string) => {
     setLoading(true);
     setError(null);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const firestoreUser = await getOrCreateUserInFirestore(userCredential.user);
-      setUser({ ...userCredential.user, ...firestoreUser } as AppUser);
-      router.push('/');
+      await handleAuthSuccess(userCredential);
     } catch (err) {
       handleAuthError(err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -173,13 +193,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCredential.user, { displayName });
-      const firestoreUser = await getOrCreateUserInFirestore(userCredential.user, { displayName });
-      setUser({ ...userCredential.user, displayName, ...firestoreUser } as AppUser);
-      router.push('/');
+      await handleAuthSuccess(userCredential, { displayName });
     } catch (err) {
       handleAuthError(err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -188,27 +204,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     try {
       const userCredential = await signInWithPopup(auth, googleProvider);
-      const firebaseUser = userCredential.user;
       
       const additionalInfo = getAdditionalUserInfo(userCredential);
       const accessToken = (additionalInfo?.credential as any)?.accessToken;
 
       const additionalData = {
-          'integrations.google': {
-              calendar: 'connected',
-              contacts: 'connected',
-              accessToken: accessToken || null,
+          integrations: {
+              google: {
+                calendar: 'connected',
+                contacts: 'connected',
+                accessToken: accessToken || null,
+              }
           }
       };
 
-      const firestoreUser = await getOrCreateUserInFirestore(firebaseUser, additionalData);
-      
-      setUser({ ...firebaseUser, ...firestoreUser } as AppUser);
-      router.push('/');
+      await handleAuthSuccess(userCredential, additionalData);
+
     } catch (err: any) {
       handleAuthError(err);
-    } finally {
-        setLoading(false);
     }
   };
 
@@ -326,5 +339,3 @@ export function useAuth() {
   }
   return context;
 }
-
-    
