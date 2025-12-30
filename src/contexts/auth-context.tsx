@@ -153,8 +153,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setError(null);
         return;
     }
-
-    console.error('Authentication Error:', err.code, err.message);
     
     switch (err.code) {
       case 'auth/user-not-found':
@@ -210,28 +208,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginWithGoogle = async () => {
     setLoading(true);
     setError(null);
-    try {
-        const userCredential = await signInWithPopup(auth, googleProvider);
-        const additionalInfo = getAdditionalUserInfo(userCredential);
-        const accessToken = (additionalInfo?.credential as any)?.accessToken;
-
-        if (userCredential.user) {
-            const firestoreUser = await getOrCreateUserInFirestore(userCredential.user, accessToken);
-            setUser({ ...userCredential.user, ...firestoreUser } as AppUser);
-            router.push('/');
-        } else {
-            throw new Error("Google Sign-In did not return a user.");
-        }
-    } catch (err: any) {
-        if (err.code === 'auth/popup-closed-by-user') {
-            // This is a normal user action, not an error to display
-            setError(null);
-        } else {
-            handleAuthError(err);
-        }
-    } finally {
+    signInWithPopup(auth, googleProvider).catch((err: any) => {
+      if (err.code !== 'auth/popup-closed-by-user') {
+        handleAuthError(err);
+      }
+    }).finally(() => {
+        // The onAuthStateChanged listener will handle success cases.
+        // We only need to manage loading state for non-success outcomes here.
         setLoading(false);
-    }
+    });
   };
 
   const disconnectGoogle = async () => {
