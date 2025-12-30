@@ -2,6 +2,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LoginPage } from './login-page';
@@ -10,6 +11,7 @@ import { Logo } from './logo';
 import { Button } from './ui/button';
 import { useAuth } from '@/contexts/auth-context';
 import { Separator } from './ui/separator';
+import { ArrowLeft } from 'lucide-react';
 
 const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
     <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {...props}>
@@ -22,6 +24,17 @@ export function AuthPage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
+      <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-14 max-w-screen-2xl items-center justify-between">
+          <Link href="/" className="flex items-center gap-2">
+            <Logo className="h-7 w-7 text-primary" />
+            <span className="text-xl font-bold">MemoIQ</span>
+          </Link>
+          <Button variant="outline" asChild>
+              <Link href="/"><ArrowLeft className="mr-2 h-4 w-4" />Back to Home</Link>
+          </Button>
+        </div>
+      </header>
       <div className="flex-grow flex items-center justify-center p-4">
         <div className="grid w-full max-w-4xl grid-cols-1 md:grid-cols-2 gap-8">
             <div className="flex flex-col justify-center text-center md:text-left">
@@ -74,7 +87,7 @@ export function AuthPage() {
         </div>
       </div>
       <footer className="text-center p-4 text-xs text-muted-foreground">
-        @ MemoIQ 2026. Developed by ChanceTEK LLC I iChanceTEK I Chancellor Minus
+        © 2026 MemoIQ. All Rights Reserved. Developed by Chancellor Minus I ChanceTEK | iChanceTEK
       </footer>
     </div>
   );
