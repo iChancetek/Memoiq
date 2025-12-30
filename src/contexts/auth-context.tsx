@@ -58,7 +58,7 @@ const googleProvider = new GoogleAuthProvider();
 googleProvider.addScope('https://www.googleapis.com/auth/calendar.readonly');
 googleProvider.addScope('https://www.googleapis.com/auth/contacts.readonly');
 googleProvider.setCustomParameters({
-  prompt: 'select_account'
+  prompt: 'consent select_account'
 });
 
 
