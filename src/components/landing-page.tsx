@@ -40,13 +40,7 @@ export function LandingPage() {
       <main className="flex-1">
         {/* Hero Section */}
         <section className="relative py-20 md:py-32 bg-background">
-          <div
-            className="absolute top-0 left-0 -z-10 h-full w-full"
-            style={{
-              backgroundImage:
-                'radial-gradient(circle at 50% 0, hsl(var(--primary) / 0.1), transparent 40%)',
-            }}
-          />
+           <div className="absolute top-0 left-0 -z-10 h-full w-full animated-gradient" />
           <div className="container text-center">
             <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
               MemoIQ — Intelligent Productivity, Reimagined
