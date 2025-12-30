@@ -4,19 +4,15 @@
 import * as React from 'react';
 import { useAuth } from './auth-context';
 import {
-  getFirestore,
   collection,
   query,
   onSnapshot,
-  addDoc,
-  updateDoc,
   doc,
   serverTimestamp,
   orderBy,
-  deleteDoc,
   Timestamp,
 } from 'firebase/firestore';
-import { initializeFirebase } from '@/firebase';
+import { useFirebase } from '@/firebase';
 import { useStorage } from './storage-context';
 import { scribeTranscribe } from '@/ai/flows/scribe-transcribe-and-translate';
 import { translateText } from '@/ai/flows/translate-text';
@@ -45,16 +41,16 @@ interface MediScribeContextType {
 }
 
 const MediScribeContext = React.createContext<MediScribeContextType | undefined>(undefined);
-const { firestore: db } = initializeFirebase();
 
 export function MediScribeProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const { uploadFile, deleteFile } = useStorage();
   const [scribeEntries, setScribeEntries] = React.useState<ScribeEntry[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const { firestore: db } = useFirebase();
 
   React.useEffect(() => {
-    if (user) {
+    if (user && db) {
       setLoading(true);
       const q = query(
         collection(db, 'users', user.uid, 'scribeEntries'),
@@ -76,10 +72,11 @@ export function MediScribeProvider({ children }: { children: React.ReactNode }) 
       setScribeEntries([]);
       setLoading(false);
     }
-  }, [user]);
+  }, [user, db]);
 
   const addScribeEntry = async (audioBlob: Blob) => {
     if (!user) throw new Error("User not authenticated");
+    if (!db) throw new Error("Firestore not initialized");
 
     // 1. Upload audio to Firebase Storage
     const fileExtension = audioBlob.type.split('/')[1] || 'webm';
@@ -116,7 +113,7 @@ export function MediScribeProvider({ children }: { children: React.ReactNode }) 
   };
   
   const deleteScribeEntry = async (entryId: string) => {
-    if (!user) return;
+    if (!user || !db) return;
     const entry = scribeEntries.find(e => e.id === entryId);
     if (!entry) return;
 
@@ -128,7 +125,7 @@ export function MediScribeProvider({ children }: { children: React.ReactNode }) 
   }
 
   const translateScribeEntry = async (entryId: string, targetLanguage: 'en' | 'es', text: string) => {
-      if (!user) throw new Error("User not authenticated");
+      if (!user || !db) throw new Error("User not authenticated or DB not initialized");
       const entry = scribeEntries.find(e => e.id === entryId);
       if (!entry) throw new Error("Scribe entry not found");
 

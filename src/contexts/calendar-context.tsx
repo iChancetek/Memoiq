@@ -5,19 +5,15 @@ import * as React from 'react';
 import { type CalendarEvent } from '@/lib/data';
 import { useAuth } from './auth-context';
 import {
-  getFirestore,
   collection,
   query,
   onSnapshot,
-  addDoc,
-  updateDoc,
-  doc,
   serverTimestamp,
   orderBy,
-  deleteDoc,
+  doc,
   Timestamp,
 } from 'firebase/firestore';
-import { initializeFirebase } from '@/firebase';
+import { useFirebase } from '@/firebase';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface CalendarContextType {
@@ -29,15 +25,15 @@ interface CalendarContextType {
 }
 
 const CalendarContext = React.createContext<CalendarContextType | undefined>(undefined);
-const { firestore: db } = initializeFirebase();
 
 export function CalendarProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [events, setEvents] = React.useState<CalendarEvent[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const { firestore: db } = useFirebase();
 
   React.useEffect(() => {
-    if (user) {
+    if (user && db) {
       setLoading(true);
       const q = query(
         collection(db, 'users', user.uid, 'events'),
@@ -66,10 +62,11 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
       setEvents([]);
       setLoading(false);
     }
-  }, [user]);
+  }, [user, db]);
 
   const addEvent = async (event: Omit<CalendarEvent, 'id' | 'userId' | 'createdAt'>) => {
     if (!user) throw new Error("User not authenticated");
+    if (!db) throw new Error("Firestore not initialized");
     const collectionRef = collection(db, 'users', user.uid, 'events');
     addDocumentNonBlocking(collectionRef, {
       ...event,
@@ -79,13 +76,13 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateEvent = async (eventId: string, updates: Partial<CalendarEvent>) => {
-    if (!user) return;
+    if (!user || !db) return;
     const eventRef = doc(db, 'users', user.uid, 'events', eventId);
     updateDocumentNonBlocking(eventRef, updates);
   };
   
   const deleteEvent = async (eventId: string) => {
-    if (!user) return;
+    if (!user || !db) return;
     const eventRef = doc(db, 'users', user.uid, 'events', eventId);
     deleteDocumentNonBlocking(eventRef);
   }

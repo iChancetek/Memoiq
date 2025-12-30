@@ -5,18 +5,14 @@ import * as React from 'react';
 import { type Contact } from '@/lib/data';
 import { useAuth } from './auth-context';
 import {
-  getFirestore,
   collection,
   query,
   onSnapshot,
-  addDoc,
-  updateDoc,
   doc,
   serverTimestamp,
   orderBy,
-  deleteDoc,
 } from 'firebase/firestore';
-import { initializeFirebase } from '@/firebase';
+import { useFirebase } from '@/firebase';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface ContactContextType {
@@ -28,15 +24,15 @@ interface ContactContextType {
 }
 
 const ContactContext = React.createContext<ContactContextType | undefined>(undefined);
-const { firestore: db } = initializeFirebase();
 
 export function ContactProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [contacts, setContacts] = React.useState<Contact[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const { firestore: db } = useFirebase();
 
   React.useEffect(() => {
-    if (user) {
+    if (user && db) {
       setLoading(true);
       const q = query(
         collection(db, 'users', user.uid, 'contacts'),
@@ -58,10 +54,11 @@ export function ContactProvider({ children }: { children: React.ReactNode }) {
       setContacts([]);
       setLoading(false);
     }
-  }, [user]);
+  }, [user, db]);
 
   const addContact = async (contact: Omit<Contact, 'id' | 'userId' | 'createdAt'>) => {
     if (!user) throw new Error("User not authenticated");
+    if (!db) throw new Error("Firestore not initialized");
     const collectionRef = collection(db, 'users', user.uid, 'contacts');
     addDocumentNonBlocking(collectionRef, {
       ...contact,
@@ -71,13 +68,13 @@ export function ContactProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateContact = async (contactId: string, updates: Partial<Contact>) => {
-    if (!user) return;
+    if (!user || !db) return;
     const contactRef = doc(db, 'users', user.uid, 'contacts', contactId);
     updateDocumentNonBlocking(contactRef, updates);
   };
   
   const deleteContact = async (contactId: string) => {
-    if (!user) return;
+    if (!user || !db) return;
     const contactRef = doc(db, 'users', user.uid, 'contacts', contactId);
     deleteDocumentNonBlocking(contactRef);
   }

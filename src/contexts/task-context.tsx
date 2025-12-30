@@ -2,22 +2,18 @@
 'use client';
 
 import * as React from 'react';
-import { type Task, type Subtask } from '@/lib/data';
+import { type Task } from '@/lib/data';
 import { useAuth } from './auth-context';
 import {
-  getFirestore,
   collection,
   query,
   onSnapshot,
-  addDoc,
-  updateDoc,
   doc,
   serverTimestamp,
   orderBy,
-  deleteDoc,
 } from 'firebase/firestore';
-import { initializeFirebase } from '@/firebase';
-import { setDocumentNonBlocking, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useFirebase } from '@/firebase';
+import { addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 interface TaskContextType {
   tasks: Task[];
@@ -30,15 +26,15 @@ interface TaskContextType {
 }
 
 const TaskContext = React.createContext<TaskContextType | undefined>(undefined);
-const { firestore: db } = initializeFirebase();
 
 export function TaskProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [tasks, setTasks] = React.useState<Task[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const { firestore: db } = useFirebase();
 
   React.useEffect(() => {
-    if (user) {
+    if (user && db) {
       setLoading(true);
       const q = query(
         collection(db, 'users', user.uid, 'tasks'),
@@ -60,10 +56,11 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
       setTasks([]);
       setLoading(false);
     }
-  }, [user]);
+  }, [user, db]);
 
   const addTask = async (task: Omit<Task, 'id' | 'userId' | 'completed' | 'createdAt'>) => {
     if (!user) throw new Error("User not authenticated");
+    if (!db) throw new Error("Firestore not initialized");
     const { title, dueDate, subtasks, contactIds } = task;
     const collectionRef = collection(db, 'users', user.uid, 'tasks');
     addDocumentNonBlocking(collectionRef, {
@@ -78,13 +75,13 @@ export function TaskProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateTask = async (taskId: string, updates: Partial<Task>) => {
-    if (!user) return;
+    if (!user || !db) return;
     const taskRef = doc(db, 'users', user.uid, 'tasks', taskId);
     updateDocumentNonBlocking(taskRef, updates);
   };
   
   const deleteTask = async (taskId: string) => {
-    if (!user) return;
+    if (!user || !db) return;
     const taskRef = doc(db, 'users', user.uid, 'tasks', taskId);
     deleteDocumentNonBlocking(taskRef);
   }

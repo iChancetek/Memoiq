@@ -17,13 +17,11 @@ import {MemoRecorder} from '@/components/memo-recorder';
 import type {Memo} from '@/lib/data';
 import {useToast} from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/auth-context';
-import { getFirestore, collection, query, onSnapshot, serverTimestamp, orderBy, Timestamp } from 'firebase/firestore';
-import { initializeFirebase } from '@/firebase';
+import { collection, query, onSnapshot, serverTimestamp, orderBy, Timestamp } from 'firebase/firestore';
+import { useFirebase } from '@/firebase';
 import { Skeleton } from './ui/skeleton';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
-
-const { firestore: db } = initializeFirebase();
 
 const MemoContext = React.createContext<{ memos: Memo[]; loading: boolean }>({ memos: [], loading: true });
 
@@ -31,9 +29,10 @@ export function MemoProvider({ children }: { children: React.ReactNode }) {
     const { user } = useAuth();
     const [memos, setMemos] = React.useState<Memo[]>([]);
     const [loading, setLoading] = React.useState(true);
+    const { firestore: db } = useFirebase();
 
     React.useEffect(() => {
-        if (user) {
+        if (user && db) {
         setLoading(true);
         const q = query(
             collection(db, 'users', user.uid, 'memos'),
@@ -56,7 +55,7 @@ export function MemoProvider({ children }: { children: React.ReactNode }) {
             setMemos([]);
             setLoading(false);
         }
-    }, [user]);
+    }, [user, db]);
 
     return (
         <MemoContext.Provider value={{ memos, loading }}>
@@ -72,6 +71,7 @@ export function MemosPage() {
   const [isRecording, setIsRecording] = React.useState(false);
   const { toast } = useToast();
   const { user } = useAuth();
+  const { firestore: db } = useFirebase();
 
   const addMemo = async (newMemo: Omit<Memo, 'id' | 'userId' | 'createdAt'>) => {
     if (!user) {
@@ -79,6 +79,14 @@ export function MemosPage() {
             variant: 'destructive',
             title: 'Authentication Error',
             description: 'You must be logged in to save a memo.',
+        });
+        return;
+    }
+    if (!db) {
+        toast({
+            variant: 'destructive',
+            title: 'Database Error',
+            description: 'Firestore is not available.',
         });
         return;
     }
@@ -169,5 +177,3 @@ export function MemosPage() {
     </div>
   );
 }
-
-    
