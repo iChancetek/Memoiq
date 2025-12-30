@@ -4,16 +4,12 @@
 import * as React from 'react';
 import { useAuth } from './auth-context';
 import {
-  getFirestore,
   collection,
   query,
   onSnapshot,
-  addDoc,
-  updateDoc,
   doc,
   serverTimestamp,
   orderBy,
-  deleteDoc,
   Timestamp,
 } from 'firebase/firestore';
 import { useFirebase } from '@/firebase';
