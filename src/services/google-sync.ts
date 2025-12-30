@@ -1,8 +1,6 @@
-
 'use server';
 
-import { collection, writeBatch, serverTimestamp, doc, getDoc } from 'firebase/firestore';
-import { getServerFirebase } from '@/firebase/server'; // ✅ Use server version
+import { getServerFirebase } from '@/firebase/server';
 
 /**
  * Fetches data from a Google API endpoint.
@@ -25,12 +23,15 @@ async function fetchGoogleApi(url: string, accessToken: string) {
 }
 
 async function getAccessToken(userId: string): Promise<string> {
-    const { firestore } = getServerFirebase(); // ✅ Use server version
-    const userDocRef = doc(firestore, 'users', userId);
-    const userDoc = await getDoc(userDocRef);
-    if (!userDoc.exists()) {
+    const { firestore } = getServerFirebase();
+    
+    // ✅ Admin SDK uses different syntax - no doc() function needed
+    const userDoc = await firestore.collection('users').doc(userId).get();
+    
+    if (!userDoc.exists) {
         throw new Error('User document not found.');
     }
+    
     const accessToken = userDoc.data()?.integrations?.google?.accessToken;
     if (!accessToken) {
         throw new Error('Google access token is missing. Please try reconnecting your account');
@@ -42,7 +43,7 @@ async function getAccessToken(userId: string): Promise<string> {
  * Syncs Google Contacts to Firestore.
  */
 export async function syncGoogleContacts(userId: string) {
-    const { firestore } = getServerFirebase(); // ✅ Use server version
+    const { firestore } = getServerFirebase();
   
     try {
         const accessToken = await getAccessToken(userId);
@@ -55,8 +56,9 @@ export async function syncGoogleContacts(userId: string) {
             return;
         }
         
-        const contactsRef = collection(firestore, 'users', userId, 'contacts');
-        const batch = writeBatch(firestore);
+        // ✅ Admin SDK uses collection().doc() syntax
+        const contactsRef = firestore.collection('users').doc(userId).collection('contacts');
+        const batch = firestore.batch();
 
         data.connections.forEach((person: any) => {
             const name = person.names?.[0]?.displayName;
@@ -70,10 +72,11 @@ export async function syncGoogleContacts(userId: string) {
                 title: person.organizations?.[0]?.title || '',
                 notes: person.biographies?.[0]?.value || '',
                 lastContact: new Date().toISOString().split('T')[0],
-                createdAt: serverTimestamp(),
+                createdAt: new Date(), // ✅ Admin SDK uses new Date() instead of serverTimestamp()
             };
             
-            const docRef = doc(contactsRef);
+            // ✅ Create a new document reference
+            const docRef = contactsRef.doc();
             batch.set(docRef, contactData);
         });
 
@@ -89,7 +92,7 @@ export async function syncGoogleContacts(userId: string) {
  * Syncs Google Calendar events to Firestore.
  */
 export async function syncGoogleCalendar(userId: string) {
-    const { firestore } = getServerFirebase(); // ✅ Use server version
+    const { firestore } = getServerFirebase();
 
     try {
         const accessToken = await getAccessToken(userId);
@@ -102,22 +105,23 @@ export async function syncGoogleCalendar(userId: string) {
             return;
         }
 
-        const eventsRef = collection(firestore, 'users', userId, 'events');
-        const batch = writeBatch(firestore);
+        // ✅ Admin SDK syntax
+        const eventsRef = firestore.collection('users').doc(userId).collection('events');
+        const batch = firestore.batch();
 
         data.items.forEach((event: any) => {
             if (!event.start?.dateTime || !event.end?.dateTime) {
                 return;
             }
             
-            const docRef = doc(eventsRef);
+            const docRef = eventsRef.doc();
             batch.set(docRef, {
                 userId: userId,
                 title: event.summary || 'Untitled Event',
                 startTime: new Date(event.start.dateTime),
                 endTime: new Date(event.end.dateTime),
                 location: event.location || '',
-                createdAt: serverTimestamp(),
+                createdAt: new Date(), // ✅ Admin SDK uses new Date()
                 googleEventId: event.id
             });
         });
