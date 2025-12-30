@@ -1,14 +1,13 @@
 
 'use server';
 
-import { getFirestore, collection, writeBatch, serverTimestamp, doc } from 'firebase/firestore';
+import { getFirestore, collection, writeBatch, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
-import { getAuth } from 'firebase/auth';
 import type { Contact, CalendarEvent } from '@/lib/data';
 import fetch from 'node-fetch';
 
 const { firestore } = initializeFirebase();
-const auth = getAuth();
+
 
 /**
  * Fetches data from a Google API endpoint.
@@ -32,15 +31,26 @@ async function fetchGoogleApi(url: string, accessToken: string) {
     return response.json();
 }
 
+async function getAccessToken(userId: string): Promise<string> {
+    const userDocRef = doc(firestore, 'users', userId);
+    const userDoc = await getDoc(userDocRef);
+    if (!userDoc.exists()) {
+        throw new Error('User document not found.');
+    }
+    const accessToken = userDoc.data()?.integrations?.google?.accessToken;
+    if (!accessToken) {
+        throw new Error('Google access token is missing from user profile.');
+    }
+    return accessToken;
+}
 
 /**
  * Syncs Google Contacts to Firestore.
- * @param accessToken The user's Google OAuth2 access token.
+ * @param userId The ID of the user to sync contacts for.
  */
-export async function syncGoogleContacts(accessToken: string) {
-    const user = auth.currentUser;
-    if (!user) throw new Error('User not authenticated.');
-
+export async function syncGoogleContacts(userId: string) {
+    const accessToken = await getAccessToken(userId);
+    
     const contactsUrl = 'https://people.googleapis.com/v1/people/me/connections?personFields=names,emailAddresses,organizations,phoneNumbers,biographies';
     const data: any = await fetchGoogleApi(contactsUrl, accessToken);
     
@@ -49,7 +59,7 @@ export async function syncGoogleContacts(accessToken: string) {
         return;
     }
 
-    const contactsCollectionRef = collection(firestore, 'users', user.uid, 'contacts');
+    const contactsCollectionRef = collection(firestore, 'users', userId, 'contacts');
     const batch = writeBatch(firestore);
 
     data.connections.forEach((person: any) => {
@@ -57,7 +67,7 @@ export async function syncGoogleContacts(accessToken: string) {
         if (!name) return; // Skip contacts without a name
 
         const contactData: Omit<Contact, 'id'> = {
-            userId: user.uid,
+            userId: userId,
             name,
             email: person.emailAddresses?.[0]?.value || '',
             company: person.organizations?.[0]?.name || '',
@@ -79,11 +89,10 @@ export async function syncGoogleContacts(accessToken: string) {
 
 /**
  * Syncs Google Calendar events to Firestore.
- * @param accessToken The user's Google OAuth2 access token.
+ * @param userId The ID of the user to sync events for.
  */
-export async function syncGoogleCalendar(accessToken: string) {
-    const user = auth.currentUser;
-    if (!user) throw new Error('User not authenticated.');
+export async function syncGoogleCalendar(userId: string) {
+    const accessToken = await getAccessToken(userId);
 
     const calendarUrl = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${new Date().toISOString()}&maxResults=250`;
     const data: any = await fetchGoogleApi(calendarUrl, accessToken);
@@ -93,7 +102,7 @@ export async function syncGoogleCalendar(accessToken: string) {
         return;
     }
 
-    const eventsCollectionRef = collection(firestore, 'users', user.uid, 'events');
+    const eventsCollectionRef = collection(firestore, 'users', userId, 'events');
     const batch = writeBatch(firestore);
 
     data.items.forEach((event: any) => {
@@ -102,7 +111,7 @@ export async function syncGoogleCalendar(accessToken: string) {
         }
 
         const eventData: Omit<CalendarEvent, 'id'> = {
-            userId: user.uid,
+            userId: userId,
             title: event.summary || 'No Title',
             startTime: new Date(event.start.dateTime),
             endTime: new Date(event.end.dateTime),
@@ -116,3 +125,5 @@ export async function syncGoogleCalendar(accessToken: string) {
 
     await batch.commit();
 }
+
+    

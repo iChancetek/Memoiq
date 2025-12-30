@@ -71,7 +71,6 @@ function IntegrationsCard() {
     const { toast } = useToast();
     const { user, loginWithGoogle, disconnectGoogle, loading: authLoading } = useAuth();
     
-    const googleToken = user?.integrations?.google?.accessToken;
     const isGoogleCalendarConnected = user?.integrations?.google?.calendar === 'connected';
     const isGoogleContactsConnected = user?.integrations?.google?.contacts === 'connected';
 
@@ -83,20 +82,20 @@ function IntegrationsCard() {
     };
     
     const handleSync = async (service: 'Google Calendar' | 'Google Contacts') => {
-        if (!googleToken) {
+        if (!user) {
             toast({
                 variant: 'destructive',
                 title: 'Authentication Error',
-                description: 'Google access token is missing. Please try reconnecting your account.'
+                description: 'You must be logged in to sync your account.'
             });
             return;
         }
 
         try {
             if (service === 'Google Calendar') {
-                await syncGoogleCalendar(googleToken);
+                await syncGoogleCalendar(user.uid);
             } else {
-                await syncGoogleContacts(googleToken);
+                await syncGoogleContacts(user.uid);
             }
             toast({
                 title: 'Sync Successful',
@@ -107,7 +106,7 @@ function IntegrationsCard() {
             toast({
                 variant: 'destructive',
                 title: 'Sync Failed',
-                description: `Could not sync your ${service}. Please try again.`
+                description: `Could not sync your ${service}. Please try reconnecting your Google account.`
             });
         }
     }
@@ -390,3 +389,5 @@ export function SettingsPage() {
     </div>
   );
 }
+
+    
