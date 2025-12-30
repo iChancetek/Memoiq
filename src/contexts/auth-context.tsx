@@ -71,30 +71,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const userRef = doc(firestore, 'users', user.uid);
     const userDoc = await getDoc(userRef);
 
-    let integrationsUpdate = {};
-    if (accessToken) {
-        integrationsUpdate = {
-            integrations: {
-                google: {
-                    calendar: 'connected',
-                    contacts: 'connected',
-                    accessToken: accessToken,
-                }
-            }
-        };
-    }
+    const integrationsUpdate = accessToken ? {
+        'integrations.google': {
+            calendar: 'connected',
+            contacts: 'connected',
+            accessToken: accessToken,
+        }
+    } : {};
 
     if (userDoc.exists()) {
-        const existingData = userDoc.data();
+        // For existing users, update last login and integrations.
         const updateData = {
             lastLogin: serverTimestamp(),
-            ...additionalData,
             ...integrationsUpdate,
         };
-        
         await updateDoc(userRef, updateData);
-        return { ...existingData, ...updateData };
+        return { ...userDoc.data(), ...updateData };
     } else {
+        // For new users, create the full document.
         const newUserPayload = {
             uid: user.uid,
             email: user.email,
@@ -116,8 +110,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               }
             },
             ...additionalData,
-            ...integrationsUpdate,
         };
+
+        // Manually merge integration data for new user creation
+        if (accessToken) {
+            newUserPayload.integrations.google = {
+                calendar: 'connected',
+                contacts: 'connected',
+                accessToken: accessToken,
+            };
+        }
+
         await setDoc(userRef, newUserPayload);
         return newUserPayload;
     }
