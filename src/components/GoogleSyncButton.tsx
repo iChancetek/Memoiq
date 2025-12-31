@@ -6,16 +6,21 @@ import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { syncGoogleContacts, syncGoogleCalendar } from '@/services/google-sync';
 import { Button } from './ui/button';
 import { Loader2 } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { AlertTriangle, ExternalLink } from 'lucide-react';
+import Link from 'next/link';
 
 export default function GoogleSyncButton() {
   const [syncing, setSyncing] = useState(false);
   const [message, setMessage] = useState('');
+  const [apiError, setApiError] = useState(false);
   
   const { auth } = initializeFirebase();
 
   async function handleSync() {
     setSyncing(true);
     setMessage('');
+    setApiError(false);
     
     try {
       const user = auth.currentUser;
@@ -42,21 +47,30 @@ export default function GoogleSyncButton() {
       // Sync contacts
       setMessage('📇 Syncing contacts...');
       const contactsResult = await syncGoogleContacts(user.uid, accessToken);
+      if (!contactsResult.success && contactsResult.message?.includes('Forbidden')) {
+          setApiError(true);
+          throw new Error('API access forbidden. Please enable the required APIs.');
+      }
       
       // Sync calendar
       setMessage('📅 Syncing calendar...');
       const calendarResult = await syncGoogleCalendar(user.uid, accessToken);
+       if (!calendarResult.success && calendarResult.message?.includes('Forbidden')) {
+          setApiError(true);
+          throw new Error('API access forbidden. Please enable the required APIs.');
+      }
       
       if (contactsResult.success && calendarResult.success) {
         setMessage(`✅ Success! Synced ${contactsResult.count} contacts and ${calendarResult.count} events`);
       } else {
-        setMessage(`⚠️ Partial sync: ${contactsResult.message}, ${calendarResult.message}`);
+        const errorMessages = [contactsResult.message, calendarResult.message].filter(Boolean).join(', ');
+        setMessage(`⚠️ Partial sync: ${errorMessages}`);
       }
     } catch (error: any) {
       console.error('Sync error:', error);
       if (error.code === 'auth/popup-closed-by-user') {
         setMessage('❌ Sync cancelled');
-      } else {
+      } else if (!apiError) { // Don't show generic error if it's a specific API error
         setMessage(`❌ Error: ${error.message}`);
       }
     } finally {
@@ -66,10 +80,30 @@ export default function GoogleSyncButton() {
 
   return (
     <div className="flex flex-col gap-3">
-      <h3 className="font-medium">Google Sync</h3>
         <p className="text-sm text-muted-foreground">
             Manually sync your Google Contacts and Calendar events with MemoIQ. You will be asked to re-authorize with Google.
         </p>
+        {apiError && (
+             <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>API Access Forbidden</AlertTitle>
+                <AlertDescription>
+                    <p>The Google People and/or Calendar APIs are not enabled for your project. Please enable them in your Google Cloud Console to proceed.</p>
+                    <div className="mt-2 space-y-1">
+                        <Button variant="link" size="sm" asChild className="p-0 h-auto">
+                            <Link href="https://console.cloud.google.com/apis/library/people.googleapis.com" target="_blank">
+                                Enable People API <ExternalLink className="ml-1 h-3 w-3"/>
+                            </Link>
+                        </Button>
+                         <Button variant="link" size="sm" asChild className="p-0 h-auto block">
+                            <Link href="https://console.cloud.google.com/apis/library/calendar-json.googleapis.com" target="_blank">
+                                Enable Google Calendar API <ExternalLink className="ml-1 h-3 w-3"/>
+                            </Link>
+                        </Button>
+                    </div>
+                </AlertDescription>
+            </Alert>
+        )}
       <Button
         onClick={handleSync}
         disabled={syncing}

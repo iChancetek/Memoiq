@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -120,7 +119,7 @@ export function SettingsPage() {
       
       <Card>
         <CardHeader>
-            <CardTitle>Integrations</CardTitle>
+            <CardTitle>Google Integration</CardTitle>
             <CardDescription>
                 Manage your external account connections.
             </CardDescription>
