@@ -30,6 +30,7 @@ import {
   LogOut,
   User,
   PenSquare,
+  Mail,
 } from 'lucide-react';
 import {QuickAdd} from '@/components/quick-add';
 import {Button} from './ui/button';
@@ -79,6 +80,8 @@ export function MainLayout({children}: {children: React.ReactNode}) {
         return t('aiCompanion');
        case '/mediscribe':
         return t('aiScribe');
+      case '/emails':
+        return 'Emails';
       case '/settings':
         return t('settings');
       default:
@@ -188,6 +191,18 @@ export function MainLayout({children}: {children: React.ReactNode}) {
                 <Link href="/contacts">
                   <Contact />
                   <span>{t('contacts')}</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname.startsWith('/emails')}
+                tooltip={'Emails'}
+              >
+                <Link href="/emails">
+                  <Mail />
+                  <span>Emails</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
