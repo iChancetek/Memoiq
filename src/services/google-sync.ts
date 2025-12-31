@@ -1,4 +1,3 @@
-
 'use server';
 
 import { getServerFirebase } from '@/firebase/server';
@@ -173,14 +172,26 @@ export async function syncGoogleEmails(userId: string, accessToken: string) {
             const messageUrl = `https://gmail.googleapis.com/gmail/v1/users/me/messages/${message.id}?format=metadata&metadataHeaders=From,Subject,Date`;
             const emailData: any = await fetchGoogleApi(messageUrl, accessToken);
             
-            const findHeader = (name: string) => emailData.payload.headers.find((h: any) => h.name === name)?.value || '';
+            const findHeader = (name: string) => {
+                if (!emailData?.payload?.headers) return '';
+                return emailData.payload.headers.find((h: any) => h.name === name)?.value || '';
+            }
 
+            const from = findHeader('From');
+            const subject = findHeader('Subject');
+            const date = findHeader('Date');
+            
+            if (!from || !subject || !date) {
+                console.warn(`Skipping email ${emailData.id} due to missing headers.`);
+                continue; // Skip this email if essential info is missing
+            }
+            
             const emailDoc = {
                 userId: userId,
-                from: findHeader('From'),
-                subject: findHeader('Subject'),
-                snippet: emailData.snippet,
-                receivedAt: new Date(findHeader('Date')),
+                from,
+                subject,
+                snippet: emailData.snippet || '',
+                receivedAt: new Date(date),
                 createdAt: new Date(),
                 gmailId: emailData.id,
             };
