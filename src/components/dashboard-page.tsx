@@ -31,7 +31,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { useCalendar } from '@/contexts/calendar-context';
 import { useMemos } from '@/components/memos-page';
-import { format } from 'date-fns';
+import { format, isToday, isFuture } from 'date-fns';
 import { useLanguage } from '@/contexts/language-context';
 import { useEmails } from '@/contexts/email-context';
 
@@ -69,13 +69,15 @@ function IskylarBriefingCard() {
         from: email.from,
         subject: email.subject
       }));
+      
+      const upcomingEvents = events.filter(e => isToday(e.startTime) || isFuture(e.startTime));
 
       const dailyBriefing = await getDailyBriefing({
         greeting: greetingText,
         displayName: user.displayName || 'User',
         memos: JSON.stringify(memos.map(m => `${m.title}: ${m.summary}`)),
         tasks: JSON.stringify(tasks.map(t => `${t.title} (Due: ${t.dueDate})`)),
-        calendarEvents: JSON.stringify(events.map(e => `${e.title} at ${format(e.startTime, 'p')}`)),
+        calendarEvents: JSON.stringify(upcomingEvents.map(e => `${e.title} at ${format(e.startTime, 'p')}`)),
         emails: JSON.stringify(emailSummaries),
         language: lang,
       });
