@@ -7,12 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Moon, Sun } from 'lucide-react';
+import { Loader2, Moon, Sun, ExternalLink } from 'lucide-react';
 import { Switch } from './ui/switch';
 import { useTheme } from 'next-themes';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { useLanguage } from '@/contexts/language-context';
 import GoogleSyncButton from './GoogleSyncButton';
+import Link from 'next/link';
 
 
 export function SettingsPage() {
@@ -126,6 +127,27 @@ export function SettingsPage() {
         </CardHeader>
         <CardContent>
             <GoogleSyncButton />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+            <CardTitle>Microsoft 365 Integration</CardTitle>
+            <CardDescription>
+                Sync your Outlook Calendar, Contacts, and Emails. Full integration coming soon.
+            </CardDescription>
+        </CardHeader>
+        <CardContent>
+             <div className="flex flex-col gap-3">
+                <p className="text-sm text-muted-foreground">
+                    Access your Outlook account directly. Full, seamless integration with MemoIQ is in development.
+                </p>
+                <Button asChild>
+                    <Link href="http://outlook.office.com/" target="_blank">
+                        Sign in to Outlook <ExternalLink className="ml-2 h-4 w-4"/>
+                    </Link>
+                </Button>
+            </div>
         </CardContent>
       </Card>
 
