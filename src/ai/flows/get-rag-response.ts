@@ -146,6 +146,39 @@ export const getScribeEntries = ai.defineTool(
   }
 );
 
+export const getEmails = ai.defineTool(
+    {
+      name: 'getEmails',
+      description: "Retrieve a list of the user's recent emails from their Gmail account.",
+      inputSchema: z.object({
+        userId: z.string().describe("The user's unique ID."),
+        count: z.number().optional().default(25).describe('The number of emails to retrieve.'),
+      }),
+      outputSchema: z.array(z.object({
+          from: z.string(),
+          subject: z.string(),
+          snippet: z.string(),
+          receivedAt: z.any(),
+      })),
+    },
+    async ({ userId, count }) => {
+      console.log('Tool: getEmails called');
+      const snapshot = await db.collection(`users/${userId}/emails`)
+        .orderBy('receivedAt', 'desc')
+        .limit(count || 25)
+        .get();
+      return snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+            from: data.from,
+            subject: data.subject,
+            snippet: data.snippet,
+            receivedAt: data.receivedAt?.toDate(),
+        };
+      }) as any;
+    }
+  );
+
 // Note: The client-side Message type and Genkit's Message type may differ.
 // The client sends its `history` which is an array of objects.
 // We need to convert it to Genkit's `Message[]` type.
@@ -186,7 +219,7 @@ const getRagResponseFlow = ai.defineFlow(
   },
   async ({ history, userId }) => {
 
-    const tools = [getTasks, getContacts, getCalendarEvents, getMemos, getScribeEntries];
+    const tools = [getTasks, getContacts, getCalendarEvents, getMemos, getScribeEntries, getEmails];
 
     // Inject userId into tool inputs if a tool call is being made
     const genkitHistory = history.map(msg => ({
@@ -217,6 +250,7 @@ Your capabilities:
     - 'getCalendarEvents': To answer about the user's schedule, calendar, or appointments.
     - 'getMemos': To retrieve and answer questions about the user's voice memos.
     - 'getScribeEntries': To get information from the user's transcribed recordings from MediScribe.
+    - 'getEmails': To answer questions about the user's recent emails.
 2.  **Intelligent Responses**: You must decide when to use a tool based on the user's query. You must pass the userId to any tool you call.
 3.  **Feature Support**: You are also an expert on how to use the MemoIQ application itself. Answer questions about app functionality clearly and concisely. You can explain what the Dashboard, Voice Memos, MediScribe, Tasks, Calendar, Appointments, Contacts, and AI Companion pages do.
 4.  **Conversational Tone**: Your tone should be warm, helpful, and professional.

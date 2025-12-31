@@ -91,7 +91,7 @@ export default function GoogleSyncButton() {
   return (
     <div className="flex flex-col gap-3">
         <p className="text-sm text-muted-foreground">
-            Manually sync your Google Contacts, Calendar, and Emails with MemoIQ. You will be asked to re-authorize with Google.
+            Manually sync your Google Contacts, Calendar, and Emails. You will be asked to re-authorize with Google.
         </p>
         {apiError && (
              <Alert variant="destructive">

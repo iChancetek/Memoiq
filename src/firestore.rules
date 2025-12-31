@@ -184,5 +184,15 @@ service cloud.firestore {
     match /users/{userId}/emails/{emailId} {
         allow get, list, create, update, delete: if isOwner(userId);
     }
+    
+    /**
+     * @description Manages a user's Scribe entries.
+     * @path /users/{userId}/scribeEntries/{entryId}
+     * @allow A user can manage their own scribe entries.
+     * @deny A user cannot access another user's scribe entries.
+     */
+    match /users/{userId}/scribeEntries/{entryId} {
+        allow get, list, create, update, delete: if isOwner(userId);
+    }
   }
 }

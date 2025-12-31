@@ -276,15 +276,9 @@
         "definition": {
           "entityName": "User",
           "schema": {
-            "$ref": "#/backend/entities/User"
+            "$ref": "#/entities/User"
           },
-          "description": "Stores user profile information.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            }
-          ]
+          "description": "Stores user profile information."
         }
       },
       {
@@ -292,19 +286,9 @@
         "definition": {
           "entityName": "Memo",
           "schema": {
-            "$ref": "#/backend/entities/Memo"
+            "$ref": "#/entities/Memo"
           },
-          "description": "Stores voice memos associated with a specific user.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "memoId",
-              "description": "The unique identifier for the memo."
-            }
-          ]
+          "description": "Stores voice memos associated with a specific user."
         }
       },
       {
@@ -312,19 +296,9 @@
         "definition": {
           "entityName": "Task",
           "schema": {
-            "$ref": "#/backend/entities/Task"
+            "$ref": "#/entities/Task"
           },
-          "description": "Stores tasks associated with a specific user.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "taskId",
-              "description": "The unique identifier for the task."
-            }
-          ]
+          "description": "Stores tasks associated with a specific user."
         }
       },
       {
@@ -332,19 +306,9 @@
         "definition": {
           "entityName": "Contact",
           "schema": {
-            "$ref": "#/backend/entities/Contact"
+            "$ref": "#/entities/Contact"
           },
-          "description": "Stores contacts associated with a specific user.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "contactId",
-              "description": "The unique identifier for the contact."
-            }
-          ]
+          "description": "Stores contacts associated with a specific user."
         }
       },
       {
@@ -352,19 +316,9 @@
         "definition": {
           "entityName": "Event",
           "schema": {
-            "$ref": "#/backend/entities/Event"
+            "$ref": "#/entities/Event"
           },
-          "description": "Stores events associated with a specific user.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "eventId",
-              "description": "The unique identifier for the event."
-            }
-          ]
+          "description": "Stores events associated with a specific user."
         }
       },
       {
@@ -372,19 +326,9 @@
         "definition": {
           "entityName": "Tag",
           "schema": {
-            "$ref": "#/backend/entities/Tag"
+            "$ref": "#/entities/Tag"
           },
-          "description": "Stores tags associated with a specific user.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "tagId",
-              "description": "The unique identifier for the tag."
-            }
-          ]
+          "description": "Stores tags associated with a specific user."
         }
       },
       {
@@ -392,22 +336,11 @@
         "definition": {
           "entityName": "Email",
           "schema": {
-            "$ref": "#/backend/entities/Email"
+            "$ref": "#/entities/Email"
           },
-          "description": "Stores synced emails for a specific user.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            },
-            {
-              "name": "emailId",
-              "description": "The unique identifier for the email."
-            }
-          ]
+          "description": "Stores synced emails for a specific user."
         }
       }
-    ],
-    "reasoning": "The Firestore data structure is designed to ensure security, scalability, and ease of debugging, adhering to the core design principles of Authorization Independence, Clarity of Intent, DBAC (Database-Based Access Control), and QAPs (Rules are not Filters). It leverages denormalization and structural segregation to achieve these goals.\n\n**Authorization Independence:** Each document contains all the necessary information for authorization, eliminating the need for `get()` calls to parent documents. This is achieved primarily through path-based ownership for user-specific data.\n\n**Structural Segregation:** All documents within a collection share the same security posture. This avoids mixing data with different access requirements in the same collection.\n\n**Access Modeling:** Consistent patterns are used for authorization:\n    *   Path-Based ownership (`/users/{userId}/{entity}/{entityId}`): All entities (Memos, Tasks, Contacts, Events, and Tags) are stored as subcollections under the `/users/{userId}` collection. This ensures that only the user has access to their data.\n\n**QAPs (Rules are not Filters):**  The data structure supports secure `list` operations. Path-based ownership restricts listing to the user's own data.\n\n**Invariants:** The structure supports the integrity of ownership by ensuring that each entity has a `userId` field that matches the `userId` in the path. Timestamps like `createdAt` in Memos can be validated in rules to ensure data integrity."
+    ]
   }
 }
