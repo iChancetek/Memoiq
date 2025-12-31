@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -20,6 +21,7 @@ import { useEmails } from '@/contexts/email-context';
 import { Skeleton } from './ui/skeleton';
 import { Mail } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import type { Timestamp } from 'firebase/firestore';
 
 export function EmailsPage() {
   const { emails, loading } = useEmails();
@@ -63,7 +65,7 @@ export function EmailsPage() {
                       <p className="text-sm text-muted-foreground truncate">{email.snippet}</p>
                     </TableCell>
                     <TableCell className="text-right text-sm text-muted-foreground">
-                        {formatDistanceToNow(email.receivedAt.toDate(), { addSuffix: true })}
+                        {(email.receivedAt as Timestamp)?.toDate && formatDistanceToNow((email.receivedAt as Timestamp).toDate(), { addSuffix: true })}
                     </TableCell>
                   </TableRow>
                 ))
