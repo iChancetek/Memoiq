@@ -121,7 +121,7 @@ export function SettingsPage() {
         <CardHeader>
             <CardTitle>Google Integration</CardTitle>
             <CardDescription>
-                Manage your external account connections.
+                Connect to your Google account to sync your Contacts, Calendar events, and Emails.
             </CardDescription>
         </CardHeader>
         <CardContent>
