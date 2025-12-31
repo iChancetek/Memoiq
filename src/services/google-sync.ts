@@ -6,20 +6,8 @@ import { getServerFirebase } from '@/firebase/server';
 /**
  * Exchanges a refresh token for a new access token from Google.
  */
-async function refreshAccessToken(userId: string): Promise<string> {
-    const { firestore } = getServerFirebase();
+async function refreshAccessToken(refreshToken: string): Promise<string> {
     const fetch = (await import('node-fetch')).default;
-    
-    const userDoc = await firestore.collection('users').doc(userId).get();
-    
-    if (!userDoc.exists) {
-        throw new Error('User document not found.');
-    }
-    
-    const refreshToken = userDoc.data()?.integrations?.google?.refreshToken;
-    if (!refreshToken) {
-        throw new Error('Google refresh token is missing. Please try reconnecting your account.');
-    }
 
     const response = await fetch('https://oauth2.googleapis.com/token', {
         method: 'POST',
@@ -34,11 +22,16 @@ async function refreshAccessToken(userId: string): Promise<string> {
         }),
     });
 
-    const tokenData = await response.json();
+    const tokenData = await response.json() as { access_token?: string; error?: any };
 
     if (!response.ok) {
         console.error('Failed to refresh access token:', tokenData);
         throw new Error('Could not refresh Google access token.');
+    }
+
+    if (!tokenData.access_token) {
+        console.error('No access token in refresh response:', tokenData);
+        throw new Error('Failed to obtain new access token from Google.');
     }
 
     return tokenData.access_token;
@@ -49,10 +42,20 @@ async function refreshAccessToken(userId: string): Promise<string> {
  * Fetches data from a Google API endpoint, handling token refresh implicitly.
  */
 async function fetchGoogleApi(userId: string, url: string) {
+    const { firestore } = getServerFirebase();
     const fetch = (await import('node-fetch')).default;
     
+    const userDoc = await firestore.collection('users').doc(userId).get();
+    if (!userDoc.exists) {
+        throw new Error('User document not found.');
+    }
+    const refreshToken = userDoc.data()?.integrations?.google?.refreshToken;
+    if (!refreshToken) {
+        throw new Error('Google refresh token is missing. Please try reconnecting your account.');
+    }
+
     // Get a fresh access token for every API call
-    const accessToken = await refreshAccessToken(userId);
+    const accessToken = await refreshAccessToken(refreshToken);
 
     const response = await fetch(url, {
         headers: {
