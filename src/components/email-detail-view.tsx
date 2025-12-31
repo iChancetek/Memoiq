@@ -8,30 +8,41 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from './ui/skeleton';
-import { Mail, Sparkles, Send, Loader2, Bot } from 'lucide-react';
+import { Mail, Sparkles, Send, Loader2, Bot, Volume2, StopCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import type { Timestamp } from 'firebase/firestore';
 import type { Email } from '@/contexts/email-context';
 import { summarizeEmail } from '@/ai/flows/summarize-email';
 import { draftEmailReply } from '@/ai/flows/draft-email-reply';
+import { textToSpeech } from '@/ai/flows/text-to-speech';
 import { useToast } from '@/hooks/use-toast';
 
-type AIAction = 'summarize' | 'reply';
+type AIAction = 'summarize' | 'reply' | 'read';
 
 export function EmailDetailView({ email, isLoading }: { email: Email | null; isLoading: boolean }) {
   const [aiResult, setAiResult] = React.useState<any>(null);
   const [isAiLoading, setIsAiLoading] = React.useState(false);
   const [activeAiAction, setActiveAiAction] = React.useState<AIAction | null>(null);
   const [replyContext, setReplyContext] = React.useState('');
+  const [audio, setAudio] = React.useState<HTMLAudioElement | null>(null);
   const { toast } = useToast();
 
+  const stopSpeaking = React.useCallback(() => {
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+      setAudio(null);
+    }
+  }, [audio]);
+
   React.useEffect(() => {
-    // Reset AI state when email changes
+    // Reset AI state and stop audio when email changes
     setAiResult(null);
     setIsAiLoading(false);
     setActiveAiAction(null);
     setReplyContext('');
-  }, [email]);
+    stopSpeaking();
+  }, [email, stopSpeaking]);
 
   const handleAiAction = async (action: AIAction) => {
     if (!email) return;
@@ -39,6 +50,7 @@ export function EmailDetailView({ email, isLoading }: { email: Email | null; isL
     setIsAiLoading(true);
     setAiResult(null);
     setActiveAiAction(action);
+    stopSpeaking();
 
     try {
       if (action === 'summarize') {
@@ -56,6 +68,17 @@ export function EmailDetailView({ email, isLoading }: { email: Email | null; isL
             userContext: replyContext || 'Draft a professional and helpful response.',
         });
         setAiResult(result);
+      } else if (action === 'read') {
+        const readableText = email.textBody || email.subject;
+        if (!readableText) {
+          toast({ variant: 'destructive', title: 'Nothing to read', description: 'This email has no text content.'});
+          return;
+        }
+        const { audioDataUri } = await textToSpeech({ text: readableText });
+        const newAudio = new Audio(audioDataUri);
+        setAudio(newAudio);
+        newAudio.play().catch(console.error);
+        newAudio.onended = () => setAudio(null);
       }
     } catch (error) {
       console.error(`Error with AI action (${action}):`, error);
@@ -98,6 +121,8 @@ export function EmailDetailView({ email, isLoading }: { email: Email | null; isL
     );
   }
 
+  const isReading = !!audio;
+
   return (
     <Card className="h-full flex flex-col">
       <CardHeader>
@@ -118,7 +143,16 @@ export function EmailDetailView({ email, isLoading }: { email: Email | null; isL
         )}
       </CardContent>
       <CardFooter className="flex flex-col items-start gap-4 border-t pt-4">
-         <div className="flex gap-2">
+         <div className="flex flex-wrap gap-2">
+            {isReading ? (
+                <Button variant="destructive" onClick={stopSpeaking}>
+                    <StopCircle className="mr-2" /> Stop Speaking
+                </Button>
+            ) : (
+                <Button variant="outline" onClick={() => handleAiAction('read')} disabled={isAiLoading}>
+                    <Volume2 className="mr-2" /> {isAiLoading && activeAiAction === 'read' ? 'Preparing...' : 'Read Aloud'}
+                </Button>
+            )}
             <Button variant="outline" onClick={() => handleAiAction('summarize')} disabled={isAiLoading}>
                 <Sparkles className="mr-2" /> {isAiLoading && activeAiAction === 'summarize' ? 'Summarizing...' : 'Summarize'}
             </Button>
@@ -154,7 +188,7 @@ export function EmailDetailView({ email, isLoading }: { email: Email | null; isL
             </Dialog>
          </div>
          
-         {isAiLoading && (
+         {isAiLoading && activeAiAction !== 'read' && (
             <div className="w-full p-4 border rounded-lg flex items-center gap-3 text-muted-foreground">
                 <Loader2 className="animate-spin" />
                 <p>iSkylar is thinking...</p>
