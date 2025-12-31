@@ -81,7 +81,7 @@ export function MainLayout({children}: {children: React.ReactNode}) {
        case '/mediscribe':
         return t('aiScribe');
       case '/emails':
-        return 'Synced Emails';
+        return 'Google Emails';
       case '/settings':
         return t('settings');
       default:
@@ -198,11 +198,11 @@ export function MainLayout({children}: {children: React.ReactNode}) {
               <SidebarMenuButton
                 asChild
                 isActive={pathname.startsWith('/emails')}
-                tooltip={'Synced Emails'}
+                tooltip={'Google Emails'}
               >
                 <Link href="/emails">
                   <Mail />
-                  <span>Synced Emails</span>
+                  <span>Google Emails</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
