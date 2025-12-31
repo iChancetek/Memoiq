@@ -33,6 +33,7 @@ import { useCalendar } from '@/contexts/calendar-context';
 import { useMemos } from '@/components/memos-page';
 import { format } from 'date-fns';
 import { useLanguage } from '@/contexts/language-context';
+import { useEmails } from '@/contexts/email-context';
 
 function IskylarBriefingCard() {
   const [briefing, setBriefing] = React.useState({ text: '', audioUri: '' });
@@ -44,6 +45,7 @@ function IskylarBriefingCard() {
   const { tasks } = useTasks();
   const { events } = useCalendar();
   const { memos } = useMemos();
+  const { emails } = useEmails();
   const { t } = useLanguage();
 
   const enableVoiceGreeting = user?.settings?.enableVoiceGreeting !== false; // Default to true if not set
@@ -68,6 +70,7 @@ function IskylarBriefingCard() {
         memos: JSON.stringify(memos.map(m => `${m.title}: ${m.summary}`)),
         tasks: JSON.stringify(tasks.map(t => `${t.title} (Due: ${t.dueDate})`)),
         calendarEvents: JSON.stringify(events.map(e => `${e.title} at ${format(e.startTime, 'p')}`)),
+        emails: JSON.stringify(emails),
         language: lang,
       });
       
@@ -83,7 +86,7 @@ function IskylarBriefingCard() {
     } finally {
       setLoading(false);
     }
-  }, [user, tasks, events, memos, toast, t]);
+  }, [user, tasks, events, memos, emails, toast, t]);
 
   React.useEffect(() => {
     if (user) {
@@ -93,8 +96,8 @@ function IskylarBriefingCard() {
 
   React.useEffect(() => {
     if (briefing.audioUri) {
-        const audio = new Audio(briefing.audioUri);
-        audioRef.current = audio;
+        audioRef.current = new Audio(briefing.audioUri);
+        const audio = audioRef.current;
         
         const handlePlay = () => setIsPlaying(true);
         const handlePause = () => setIsPlaying(false);
@@ -150,7 +153,7 @@ function IskylarBriefingCard() {
                     </AlertDescription>
                 </Alert>
                 <div className="mt-4 flex gap-2">
-                    <Button onClick={togglePlayback} disabled={!briefing.audioUri} className="flex-1">
+                    <Button onClick={togglePlayback} disabled={!briefing.audioUri || loading} className="flex-1">
                         {isPlaying ? <Pause className="mr-2" /> : (enableVoiceGreeting ? <Volume2 className="mr-2" /> : <VolumeX className="mr-2" />)}
                         {isPlaying ? t('pause') : t('playBriefing')}
                     </Button>

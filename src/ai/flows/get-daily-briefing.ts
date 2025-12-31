@@ -19,6 +19,7 @@ const GetDailyBriefingInputSchema = z.object({
   memos: z.string().describe('A JSON string of recent user memos.'),
   tasks: z.string().describe('A JSON string of user tasks for today.'),
   calendarEvents: z.string().describe('A JSON string of user calendar events for today.'),
+  emails: z.string().describe('A JSON string of recent user emails.'),
   language: z.enum(['en', 'es']).optional().default('en').describe('The language for the briefing.'),
 });
 export type GetDailyBriefingInput = z.infer<typeof GetDailyBriefingInputSchema>;
@@ -47,9 +48,10 @@ User Name: {{{displayName}}}
 Memos: {{{memos}}}
 Tasks: {{{tasks}}}
 Calendar Events: {{{calendarEvents}}}
+Emails: {{{emails}}}
 
 Instructions:
-1. Summarize the number of events, tasks, and any other important items in the specified language.
+1. Summarize the number of events, tasks, new emails, and any other important items in the specified language.
 2. Mention the first important event of the day in the specified language.
 3. Keep the entire briefing to 2-3 short sentences. Be conversational and encouraging.
 4. If there is nothing scheduled, provide a positive, encouraging message for the day in the specified language.
