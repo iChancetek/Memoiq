@@ -246,6 +246,14 @@
           "type": "string",
           "description": "A short snippet of the email's content."
         },
+        "htmlBody": {
+          "type": "string",
+          "description": "The full HTML content of the email body."
+        },
+        "textBody": {
+            "type": "string",
+            "description": "The full plain text content of the email body."
+        },
         "receivedAt": {
           "type": "string",
           "description": "The date and time the email was received.",

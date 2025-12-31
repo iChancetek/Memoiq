@@ -10,17 +10,9 @@ import {
   Timestamp,
 } from 'firebase/firestore';
 import { useFirebase } from '@/firebase';
+import type { Email as EmailType } from '@/lib/data';
 
-export interface Email {
-    id: string;
-    userId: string;
-    from: string;
-    subject: string;
-    snippet: string;
-    receivedAt: Timestamp;
-    createdAt: Timestamp;
-}
-
+export type Email = EmailType;
 
 interface EmailContextType {
   emails: Email[];

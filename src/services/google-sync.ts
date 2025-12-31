@@ -169,28 +169,56 @@ export async function syncGoogleEmails(userId: string, accessToken: string) {
         let addedCount = 0;
         
         for (const message of listData.messages) {
-            const messageUrl = `https://gmail.googleapis.com/gmail/v1/users/me/messages/${message.id}?format=metadata&metadataHeaders=From,Subject,Date`;
+            const messageUrl = `https://gmail.googleapis.com/gmail/v1/users/me/messages/${message.id}?format=full`;
             const emailData: any = await fetchGoogleApi(messageUrl, accessToken);
             
-            const findHeader = (name: string) => {
-                if (!emailData?.payload?.headers) return '';
-                return emailData.payload.headers.find((h: any) => h.name === name)?.value || '';
+            if (!emailData?.payload?.headers) {
+                console.warn(`Skipping email ${emailData.id} due to missing payload headers.`);
+                continue;
             }
+            
+            const findHeader = (name: string) => emailData.payload.headers.find((h: any) => h.name.toLowerCase() === name.toLowerCase())?.value || '';
 
             const from = findHeader('From');
             const subject = findHeader('Subject');
             const date = findHeader('Date');
-            
+
             if (!from || !subject || !date) {
-                console.warn(`Skipping email ${emailData.id} due to missing headers.`);
-                continue; // Skip this email if essential info is missing
+                console.warn(`Skipping email ${emailData.id} due to missing From, Subject, or Date header.`);
+                continue; 
             }
             
+            let htmlBody = '';
+            let textBody = '';
+
+            const getPartBody = (part: any) => {
+                if (part.body && part.body.data) {
+                    return Buffer.from(part.body.data, 'base64').toString('utf-8');
+                }
+                return '';
+            }
+
+            if (emailData.payload.parts) {
+                const htmlPart = emailData.payload.parts.find((p: any) => p.mimeType === 'text/html');
+                const textPart = emailData.payload.parts.find((p: any) => p.mimeType === 'text/plain');
+                if (htmlPart) htmlBody = getPartBody(htmlPart);
+                if (textPart) textBody = getPartBody(textPart);
+            } else if (emailData.payload.body && emailData.payload.body.data) {
+                if (emailData.payload.mimeType === 'text/html') {
+                    htmlBody = getPartBody(emailData.payload);
+                } else {
+                    textBody = getPartBody(emailData.payload);
+                }
+            }
+
+
             const emailDoc = {
                 userId: userId,
                 from,
                 subject,
                 snippet: emailData.snippet || '',
+                htmlBody,
+                textBody,
                 receivedAt: new Date(date),
                 createdAt: new Date(),
                 gmailId: emailData.id,

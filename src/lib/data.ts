@@ -71,3 +71,17 @@ export const ContactSchema = z.object({
     createdAt: z.any(),
 });
 export type Contact = z.infer<typeof ContactSchema>;
+
+
+export const EmailSchema = z.object({
+    id: z.string(),
+    userId: z.string(),
+    from: z.string().optional(),
+    subject: z.string().optional(),
+    snippet: z.string(),
+    htmlBody: z.string().optional(),
+    textBody: z.string().optional(),
+    receivedAt: z.any(),
+    createdAt: z.any(),
+});
+export type Email = z.infer<typeof EmailSchema>;
