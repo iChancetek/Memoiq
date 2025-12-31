@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -24,16 +23,19 @@ export function EmailDetailView({ email, isLoading }: { email: Email | null; isL
   const [isAiLoading, setIsAiLoading] = React.useState(false);
   const [activeAiAction, setActiveAiAction] = React.useState<AIAction | null>(null);
   const [replyContext, setReplyContext] = React.useState('');
-  const [audio, setAudio] = React.useState<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = React.useState(false);
+  const [currentAudioUri, setCurrentAudioUri] = React.useState<string | null>(null);
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const { toast } = useToast();
 
   const stopSpeaking = React.useCallback(() => {
-    if (audio) {
-      audio.pause();
-      audio.currentTime = 0;
-      setAudio(null);
+    if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        setIsPlaying(false);
+        setCurrentAudioUri(null);
     }
-  }, [audio]);
+  }, []);
 
   React.useEffect(() => {
     // Reset AI state and stop audio when email changes
@@ -43,6 +45,33 @@ export function EmailDetailView({ email, isLoading }: { email: Email | null; isL
     setReplyContext('');
     stopSpeaking();
   }, [email, stopSpeaking]);
+
+  React.useEffect(() => {
+    if (currentAudioUri) {
+        audioRef.current = new Audio(currentAudioUri);
+        const audio = audioRef.current;
+        
+        const handlePlay = () => setIsPlaying(true);
+        const handlePause = () => setIsPlaying(false);
+
+        audio.addEventListener('play', handlePlay);
+        audio.addEventListener('pause', handlePause);
+        audio.addEventListener('ended', handlePause);
+
+        audio.play().catch(err => {
+            console.error("Audio playback failed:", err);
+            setIsPlaying(false);
+        });
+
+        return () => {
+            audio.removeEventListener('play', handlePlay);
+            audio.removeEventListener('pause', handlePause);
+            audio.removeEventListener('ended', handlePause);
+            audio.pause();
+            audioRef.current = null;
+        }
+    }
+  }, [currentAudioUri]);
 
   const handleAiAction = async (action: AIAction) => {
     if (!email) return;
@@ -75,10 +104,7 @@ export function EmailDetailView({ email, isLoading }: { email: Email | null; isL
           return;
         }
         const { audioDataUri } = await textToSpeech({ text: readableText });
-        const newAudio = new Audio(audioDataUri);
-        setAudio(newAudio);
-        newAudio.play().catch(console.error);
-        newAudio.onended = () => setAudio(null);
+        setCurrentAudioUri(audioDataUri);
       }
     } catch (error) {
       console.error(`Error with AI action (${action}):`, error);
@@ -121,8 +147,6 @@ export function EmailDetailView({ email, isLoading }: { email: Email | null; isL
     );
   }
 
-  const isReading = !!audio;
-
   return (
     <Card className="h-full flex flex-col">
       <CardHeader>
@@ -144,13 +168,14 @@ export function EmailDetailView({ email, isLoading }: { email: Email | null; isL
       </CardContent>
       <CardFooter className="flex flex-col items-start gap-4 border-t pt-4">
          <div className="flex flex-wrap gap-2">
-            {isReading ? (
+            {isPlaying ? (
                 <Button variant="destructive" onClick={stopSpeaking}>
                     <StopCircle className="mr-2" /> Stop Speaking
                 </Button>
             ) : (
                 <Button variant="outline" onClick={() => handleAiAction('read')} disabled={isAiLoading}>
-                    <Volume2 className="mr-2" /> {isAiLoading && activeAiAction === 'read' ? 'Preparing...' : 'Read Aloud'}
+                    {isAiLoading && activeAiAction === 'read' ? <Loader2 className="animate-spin mr-2"/> : <Volume2 className="mr-2" />}
+                    {isAiLoading && activeAiAction === 'read' ? 'Preparing...' : 'Read Aloud'}
                 </Button>
             )}
             <Button variant="outline" onClick={() => handleAiAction('summarize')} disabled={isAiLoading}>

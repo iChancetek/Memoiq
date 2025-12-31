@@ -14,8 +14,8 @@ import { useCalendar } from '@/contexts/calendar-context';
 export function AppointmentManagerPage() {
   const [loading, setLoading] = React.useState(false);
   const [analysis, setAnalysis] = React.useState<any>(null);
-  const [audio, setAudio] = React.useState<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = React.useState(false);
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const { toast } = useToast();
   const { contacts, loading: contactsLoading } = useContacts();
   const { events, loading: eventsLoading } = useCalendar();
@@ -26,11 +26,11 @@ export function AppointmentManagerPage() {
   const handleAnalyzeAppointments = async () => {
     setLoading(true);
     setAnalysis(null);
-    if (audio) {
-      audio.pause();
-      setAudio(null);
-      setIsPlaying(false);
+    if (audioRef.current) {
+        audioRef.current.pause();
+        setIsPlaying(false);
     }
+
     try {
       const response = await getAppointmentAnalysis({
         contacts: JSON.stringify(contacts),
@@ -39,11 +39,10 @@ export function AppointmentManagerPage() {
       });
       setAnalysis(response);
       if (response.audioDataUri) {
-          const newAudio = new Audio(response.audioDataUri);
-          setAudio(newAudio);
-          newAudio.play().catch(console.error);
+          audioRef.current = new Audio(response.audioDataUri);
+          audioRef.current.play().catch(console.error);
           setIsPlaying(true);
-          newAudio.onended = () => setIsPlaying(false);
+          audioRef.current.onended = () => setIsPlaying(false);
       }
     } catch (error) {
       console.error('Error analyzing appointments:', error);
@@ -58,11 +57,11 @@ export function AppointmentManagerPage() {
   };
 
   const togglePlayback = () => {
-    if (audio) {
+    if (audioRef.current) {
       if (isPlaying) {
-        audio.pause();
+        audioRef.current.pause();
       } else {
-        audio.play().catch(console.error);
+        audioRef.current.play().catch(console.error);
       }
       setIsPlaying(!isPlaying);
     }

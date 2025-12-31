@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -15,8 +14,8 @@ import Link from 'next/link';
 export function CalendarManagerPage() {
   const [loading, setLoading] = React.useState(false);
   const [analysis, setAnalysis] = React.useState<any>(null);
-  const [audio, setAudio] = React.useState<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = React.useState(false);
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const { toast } = useToast();
   const { tasks, loading: tasksLoading } = useTasks();
   const { events, loading: eventsLoading } = useCalendar();
@@ -24,11 +23,11 @@ export function CalendarManagerPage() {
   const handleAnalyzeCalendar = async () => {
     setLoading(true);
     setAnalysis(null);
-    if (audio) {
-      audio.pause();
-      setAudio(null);
-      setIsPlaying(false);
+    if (audioRef.current) {
+        audioRef.current.pause();
+        setIsPlaying(false);
     }
+    
     try {
       const response = await getCalendarAnalysis({
         tasks: JSON.stringify(tasks),
@@ -37,11 +36,10 @@ export function CalendarManagerPage() {
       });
       setAnalysis(response);
       if (response.audioDataUri) {
-          const newAudio = new Audio(response.audioDataUri);
-          setAudio(newAudio);
-          newAudio.play().catch(console.error);
+          audioRef.current = new Audio(response.audioDataUri);
+          audioRef.current.play().catch(console.error);
           setIsPlaying(true);
-          newAudio.onended = () => setIsPlaying(false);
+          audioRef.current.onended = () => setIsPlaying(false);
       }
     } catch (error) {
       console.error('Error analyzing calendar:', error);
@@ -59,11 +57,11 @@ export function CalendarManagerPage() {
   const isDataLoading = tasksLoading || eventsLoading;
 
   const togglePlayback = () => {
-    if (audio) {
+    if (audioRef.current) {
       if (isPlaying) {
-        audio.pause();
+        audioRef.current.pause();
       } else {
-        audio.play().catch(console.error);
+        audioRef.current.play().catch(console.error);
       }
       setIsPlaying(!isPlaying);
     }

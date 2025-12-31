@@ -20,7 +20,9 @@ export function AICompanionPage() {
   const [messages, setMessages] = React.useState<Message[]>([]);
   const [input, setInput] = React.useState('');
   const [loading, setLoading] = React.useState(false);
-  const [audio, setAudio] = React.useState<HTMLAudioElement | null>(null);
+  const [currentAudioUri, setCurrentAudioUri] = React.useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = React.useState(false);
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const { toast } = useToast();
   const scrollAreaRef = React.useRef<HTMLDivElement>(null);
 
@@ -32,19 +34,48 @@ export function AICompanionPage() {
     }
   }, [messages]);
 
-  const stopSpeaking = () => {
-    if (audio) {
-      audio.pause();
-      audio.currentTime = 0;
-      setAudio(null);
+  const stopSpeaking = React.useCallback(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      setIsPlaying(false);
+      setCurrentAudioUri(null);
     }
-  };
+  }, []);
+
+  React.useEffect(() => {
+    if (currentAudioUri) {
+        audioRef.current = new Audio(currentAudioUri);
+        const audio = audioRef.current;
+
+        const handlePlay = () => setIsPlaying(true);
+        const handlePause = () => setIsPlaying(false);
+
+        audio.addEventListener('play', handlePlay);
+        audio.addEventListener('pause', handlePause);
+        audio.addEventListener('ended', handlePause);
+
+        audio.play().catch(err => {
+            console.error("Audio playback failed:", err);
+            // Don't show a toast for this, as it can be annoying if it happens often.
+            setIsPlaying(false);
+        });
+
+        return () => {
+            audio.removeEventListener('play', handlePlay);
+            audio.removeEventListener('pause', handlePause);
+            audio.removeEventListener('ended', handlePause);
+            audio.pause();
+            audioRef.current = null;
+        }
+    }
+  }, [currentAudioUri]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || loading) return;
 
-    stopSpeaking(); // Stop any currently playing audio
+    stopSpeaking();
 
     const userMessage: Message = { role: 'user', content: input };
     const newMessages = [...messages, userMessage];
@@ -62,13 +93,7 @@ export function AICompanionPage() {
       setMessages(prev => [...prev, assistantMessage]);
 
       if (response.audioDataUri) {
-        const newAudio = new Audio(response.audioDataUri);
-        setAudio(newAudio);
-        newAudio.play().catch(err => {
-          console.error("Audio playback failed:", err);
-          // Don't show a toast for this, as it can be annoying if it happens often.
-        });
-        newAudio.onended = () => setAudio(null);
+        setCurrentAudioUri(response.audioDataUri);
       }
 
     } catch (error) {
@@ -146,7 +171,7 @@ export function AICompanionPage() {
             <div ref={scrollAreaRef} />
         </ScrollArea>
         <div className="p-4 border-t max-w-3xl mx-auto w-full">
-            {audio && (
+            {isPlaying && (
                 <Button variant="destructive" onClick={stopSpeaking} className="w-full mb-2">
                     <StopCircle className="mr-2 h-4 w-4"/> Stop Speaking
                 </Button>

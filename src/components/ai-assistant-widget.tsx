@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -40,7 +39,9 @@ export function AIAssistantWidget() {
   const [messages, setMessages] = React.useState<Message[]>([]);
   const [input, setInput] = React.useState('');
   const [loading, setLoading] = React.useState(false);
-  const [audio, setAudio] = React.useState<HTMLAudioElement | null>(null);
+  const [isPlaying, setIsPlaying] = React.useState(false);
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
+  const [currentAudioUri, setCurrentAudioUri] = React.useState<string | null>(null);
   const { toast } = useToast();
   const scrollAreaRef = React.useRef<HTMLDivElement>(null);
   const [recordingState, setRecordingState] = React.useState<RecordingState>('idle');
@@ -51,12 +52,13 @@ export function AIAssistantWidget() {
   const lang = user?.settings?.language || 'en';
   
   const stopSpeaking = React.useCallback(() => {
-    if (audio) {
-      audio.pause();
-      audio.currentTime = 0;
-      setAudio(null);
+    if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+        setIsPlaying(false);
+        setCurrentAudioUri(null);
     }
-  }, [audio]);
+  }, []);
 
   React.useEffect(() => {
     if (!isOpen) {
@@ -73,6 +75,33 @@ export function AIAssistantWidget() {
         }
     }
   }, [messages, loading]);
+
+  React.useEffect(() => {
+    if (currentAudioUri) {
+        audioRef.current = new Audio(currentAudioUri);
+        const audio = audioRef.current;
+
+        const handlePlay = () => setIsPlaying(true);
+        const handlePause = () => setIsPlaying(false);
+        
+        audio.addEventListener('play', handlePlay);
+        audio.addEventListener('pause', handlePause);
+        audio.addEventListener('ended', handlePause);
+
+        audio.play().catch(err => {
+          console.error("Audio playback failed:", err);
+          setIsPlaying(false);
+        });
+
+        return () => {
+            audio.removeEventListener('play', handlePlay);
+            audio.removeEventListener('pause', handlePause);
+            audio.removeEventListener('ended', handlePause);
+            audio.pause();
+            audioRef.current = null;
+        };
+    }
+  }, [currentAudioUri]);
   
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -103,10 +132,7 @@ export function AIAssistantWidget() {
         if (textResponse) {
             const { audioDataUri } = await textToSpeech({ text: textResponse });
             if (audioDataUri) {
-                const newAudio = new Audio(audioDataUri);
-                setAudio(newAudio);
-                newAudio.play().catch(console.error);
-                newAudio.onended = () => setAudio(null);
+                setCurrentAudioUri(audioDataUri);
             }
         }
     } catch (err) {
@@ -234,7 +260,7 @@ export function AIAssistantWidget() {
                         </div>
                     </ScrollArea>
                     <div className="p-4 border-t">
-                        {audio && (
+                        {isPlaying && (
                             <Button variant="outline" onClick={stopSpeaking} className="w-full mb-2">
                                 <StopCircle className="mr-2 h-4 w-4"/> Stop Speaking
                             </Button>
@@ -282,5 +308,3 @@ export function AIAssistantWidget() {
     </div>
   );
 }
-
-    

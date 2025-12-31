@@ -1,4 +1,3 @@
-
 'use client';
 
 import * as React from 'react';
@@ -87,11 +86,17 @@ function RecordingItem({ recording, onDelete }: { recording: ScribeEntry, onDele
     const audioUrl = currentLanguage === 'en' ? recording.audioUrl_en : recording.audioUrl_es;
 
     React.useEffect(() => {
-        if(audioUrl) {
+        // Stop playing audio when the URL changes (e.g., language switch)
+        audioRef.current?.pause();
+        
+        if (audioUrl) {
             const audio = new Audio(audioUrl);
             audioRef.current = audio;
             audio.onended = () => setIsPlaying(false);
+        } else {
+            audioRef.current = null;
         }
+
         return () => {
             audioRef.current?.pause();
         };
