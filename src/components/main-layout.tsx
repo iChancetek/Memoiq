@@ -81,7 +81,7 @@ export function MainLayout({children}: {children: React.ReactNode}) {
        case '/mediscribe':
         return t('aiScribe');
       case '/emails':
-        return 'Emails';
+        return 'Synced Emails';
       case '/settings':
         return t('settings');
       default:
@@ -198,12 +198,23 @@ export function MainLayout({children}: {children: React.ReactNode}) {
               <SidebarMenuButton
                 asChild
                 isActive={pathname.startsWith('/emails')}
-                tooltip={'Emails'}
+                tooltip={'Synced Emails'}
               >
                 <Link href="/emails">
                   <Mail />
-                  <span>Emails</span>
+                  <span>Synced Emails</span>
                 </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+             <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                tooltip={'M365 Email'}
+              >
+                <a href="https://outlook.office.com/" target="_blank" rel="noopener noreferrer">
+                  <Mail />
+                  <span>M365 Email</span>
+                </a>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
