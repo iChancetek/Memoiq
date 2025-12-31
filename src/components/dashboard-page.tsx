@@ -64,13 +64,19 @@ function IskylarBriefingCard() {
         hour: currentHour,
       });
 
+      // Prepare a lightweight version of emails to avoid exceeding server action body limit
+      const emailSummaries = emails.map(email => ({
+        from: email.from,
+        subject: email.subject
+      }));
+
       const dailyBriefing = await getDailyBriefing({
         greeting: greetingText,
         displayName: user.displayName || 'User',
         memos: JSON.stringify(memos.map(m => `${m.title}: ${m.summary}`)),
         tasks: JSON.stringify(tasks.map(t => `${t.title} (Due: ${t.dueDate})`)),
         calendarEvents: JSON.stringify(events.map(e => `${e.title} at ${format(e.startTime, 'p')}`)),
-        emails: JSON.stringify(emails),
+        emails: JSON.stringify(emailSummaries),
         language: lang,
       });
       
