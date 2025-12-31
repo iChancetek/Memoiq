@@ -1,3 +1,4 @@
+
 'use server';
 
 import { getServerFirebase } from '@/firebase/server';
@@ -143,5 +144,61 @@ export async function syncGoogleCalendar(userId: string, accessToken: string) {
     } catch (error: any) {
         console.error('❌ Error syncing calendar:', error);
         return { success: false, count: 0, message: error.message || 'Failed to sync calendar events' };
+    }
+}
+
+
+/**
+ * Syncs recent Google Emails to Firestore.
+ */
+export async function syncGoogleEmails(userId: string, accessToken: string) {
+    const { firestore } = getServerFirebase();
+  
+    try {
+        // 1. Get list of recent message IDs
+        const listUrl = 'https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=50&q=is:inbox';
+        const listData: any = await fetchGoogleApi(listUrl, accessToken);
+
+        if (!listData.messages || listData.messages.length === 0) {
+            console.log('No Google Emails to sync.');
+            return { success: true, count: 0, message: 'No emails found' };
+        }
+
+        // 2. Fetch details for each message
+        const emailsRef = firestore.collection('users').doc(userId).collection('emails');
+        const batch = firestore.batch();
+        let addedCount = 0;
+        
+        for (const message of listData.messages) {
+            const messageUrl = `https://gmail.googleapis.com/gmail/v1/users/me/messages/${message.id}?format=metadata&metadataHeaders=From,Subject,Date`;
+            const emailData: any = await fetchGoogleApi(messageUrl, accessToken);
+            
+            const findHeader = (name: string) => emailData.payload.headers.find((h: any) => h.name === name)?.value || '';
+
+            const emailDoc = {
+                userId: userId,
+                from: findHeader('From'),
+                subject: findHeader('Subject'),
+                snippet: emailData.snippet,
+                receivedAt: new Date(findHeader('Date')),
+                createdAt: new Date(),
+                gmailId: emailData.id,
+            };
+            
+            // Use the Gmail ID as the document ID to prevent duplicates
+            const docRef = emailsRef.doc(emailData.id);
+            batch.set(docRef, emailDoc, { merge: true }); // Use merge to update existing
+            addedCount++;
+        }
+
+        if (addedCount > 0) {
+            await batch.commit();
+        }
+        
+        console.log(`✅ Synced ${addedCount} emails`);
+        return { success: true, count: addedCount, message: `Synced ${addedCount} emails` };
+    } catch (error: any) {
+        console.error('❌ Error syncing emails:', error);
+        return { success: false, count: 0, message: error.message || 'Failed to sync emails' };
     }
 }

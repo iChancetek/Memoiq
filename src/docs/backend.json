@@ -1,0 +1,413 @@
+
+{
+  "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the MemoIQ application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity. Should match the Firebase Auth UID."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the user.",
+          "format": "email"
+        },
+        "firstName": {
+          "type": "string",
+          "description": "First name of the user."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "Last name of the user."
+        }
+      },
+      "required": [
+        "id",
+        "email"
+      ]
+    },
+    "Memo": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Memo",
+      "type": "object",
+      "description": "Represents a voice memo and its associated data.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Memo entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Memo)"
+        },
+        "audioUrl": {
+          "type": "string",
+          "description": "URL of the audio recording.",
+          "format": "uri"
+        },
+        "transcription": {
+          "type": "string",
+          "description": "Text transcription of the voice memo."
+        },
+        "summary": {
+          "type": "string",
+          "description": "AI-generated summary of the memo."
+        },
+        "tagIds": {
+          "type": "array",
+          "description": "References to Tags. (Relationship: Tag N:N Memo)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp of when the memo was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "audioUrl",
+        "transcription"
+      ]
+    },
+    "Task": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Task",
+      "type": "object",
+      "description": "Represents a to-do item in the task management system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Task entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Task)"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the task."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the task."
+        },
+        "dueDate": {
+          "type": "string",
+          "description": "Date and time when the task is due.",
+          "format": "date-time"
+        },
+        "completed": {
+          "type": "boolean",
+          "description": "Indicates whether the task is completed."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "title"
+      ]
+    },
+    "Contact": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Contact",
+      "type": "object",
+      "description": "Represents a contact in the quick add panel.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Contact entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Contact)"
+        },
+        "firstName": {
+          "type": "string",
+          "description": "First name of the contact."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "Last name of the contact."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the contact.",
+          "format": "email"
+        },
+        "phoneNumber": {
+          "type": "string",
+          "description": "Phone number of the contact."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "firstName",
+        "lastName"
+      ]
+    },
+    "Event": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Event",
+      "type": "object",
+      "description": "Represents an event in the quick add panel and dashboard.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Event entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Event)"
+        },
+        "title": {
+          "type": "string",
+          "description": "Title of the event."
+        },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of the event."
+        },
+        "startTime": {
+          "type": "string",
+          "description": "Date and time when the event starts.",
+          "format": "date-time"
+        },
+        "endTime": {
+          "type": "string",
+          "description": "Date and time when the event ends.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "title",
+        "startTime",
+        "endTime"
+      ]
+    },
+    "Tag": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Tag",
+      "type": "object",
+      "description": "Represents a tag for categorizing memos.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Tag entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Tag)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the tag."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "name"
+      ]
+    },
+    "Email": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Email",
+      "type": "object",
+      "description": "Represents a synced email from a user's Google account.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Email entity (matches Gmail message ID)."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to User. (Relationship: User 1:N Email)"
+        },
+        "from": {
+          "type": "string",
+          "description": "The sender of the email."
+        },
+        "subject": {
+          "type": "string",
+          "description": "The subject line of the email."
+        },
+        "snippet": {
+          "type": "string",
+          "description": "A short snippet of the email's content."
+        },
+        "receivedAt": {
+          "type": "string",
+          "description": "The date and time the email was received.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "from",
+        "subject",
+        "snippet",
+        "receivedAt"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous",
+      "google.com"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user profile information.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/memos/{memoId}",
+        "definition": {
+          "entityName": "Memo",
+          "schema": {
+            "$ref": "#/backend/entities/Memo"
+          },
+          "description": "Stores voice memos associated with a specific user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "memoId",
+              "description": "The unique identifier for the memo."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/tasks/{taskId}",
+        "definition": {
+          "entityName": "Task",
+          "schema": {
+            "$ref": "#/backend/entities/Task"
+          },
+          "description": "Stores tasks associated with a specific user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "taskId",
+              "description": "The unique identifier for the task."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/contacts/{contactId}",
+        "definition": {
+          "entityName": "Contact",
+          "schema": {
+            "$ref": "#/backend/entities/Contact"
+          },
+          "description": "Stores contacts associated with a specific user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "contactId",
+              "description": "The unique identifier for the contact."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/events/{eventId}",
+        "definition": {
+          "entityName": "Event",
+          "schema": {
+            "$ref": "#/backend/entities/Event"
+          },
+          "description": "Stores events associated with a specific user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "eventId",
+              "description": "The unique identifier for the event."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/tags/{tagId}",
+        "definition": {
+          "entityName": "Tag",
+          "schema": {
+            "$ref": "#/backend/entities/Tag"
+          },
+          "description": "Stores tags associated with a specific user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "tagId",
+              "description": "The unique identifier for the tag."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/emails/{emailId}",
+        "definition": {
+          "entityName": "Email",
+          "schema": {
+            "$ref": "#/backend/entities/Email"
+          },
+          "description": "Stores synced emails for a specific user.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "emailId",
+              "description": "The unique identifier for the email."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure is designed to ensure security, scalability, and ease of debugging, adhering to the core design principles of Authorization Independence, Clarity of Intent, DBAC (Database-Based Access Control), and QAPs (Rules are not Filters). It leverages denormalization and structural segregation to achieve these goals.\n\n**Authorization Independence:** Each document contains all the necessary information for authorization, eliminating the need for `get()` calls to parent documents. This is achieved primarily through path-based ownership for user-specific data.\n\n**Structural Segregation:** All documents within a collection share the same security posture. This avoids mixing data with different access requirements in the same collection.\n\n**Access Modeling:** Consistent patterns are used for authorization:\n    *   Path-Based ownership (`/users/{userId}/{entity}/{entityId}`): All entities (Memos, Tasks, Contacts, Events, and Tags) are stored as subcollections under the `/users/{userId}` collection. This ensures that only the user has access to their data.\n\n**QAPs (Rules are not Filters):**  The data structure supports secure `list` operations. Path-based ownership restricts listing to the user's own data.\n\n**Invariants:** The structure supports the integrity of ownership by ensuring that each entity has a `userId` field that matches the `userId` in the path. Timestamps like `createdAt` in Memos can be validated in rules to ensure data integrity."
+  }
+}

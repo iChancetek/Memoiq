@@ -32,6 +32,7 @@ export interface AppUser extends User {
         google?: {
             calendar: 'connected' | 'disconnected',
             contacts: 'connected' | 'disconnected',
+            gmail: 'connected' | 'disconnected',
             refreshToken?: string | null,
         }
     }
@@ -56,6 +57,7 @@ const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
 const googleProvider = new GoogleAuthProvider();
 googleProvider.addScope('https://www.googleapis.com/auth/calendar.readonly');
 googleProvider.addScope('https://www.googleapis.com/auth/contacts.readonly');
+googleProvider.addScope('https://www.googleapis.com/auth/gmail.readonly');
 googleProvider.setCustomParameters({
   access_type: 'offline', // Request a refresh token
   prompt: 'consent',
@@ -147,6 +149,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               google: {
                 calendar: 'disconnected',
                 contacts: 'disconnected',
+                gmail: 'disconnected',
                 refreshToken: null,
               }
             },
@@ -207,11 +210,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             integrationsUpdate['integrations.google'] = {
                 calendar: 'connected',
                 contacts: 'connected',
+                gmail: 'connected',
                 refreshToken: refreshToken,
             };
         } else {
              integrationsUpdate['integrations.google.calendar'] = 'connected';
              integrationsUpdate['integrations.google.contacts'] = 'connected';
+             integrationsUpdate['integrations.google.gmail'] = 'connected';
         }
 
         await updateDoc(userRef, { lastLogin: serverTimestamp(), ...integrationsUpdate });
@@ -232,6 +237,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const updatedIntegrations = {
               calendar: 'disconnected',
               contacts: 'disconnected',
+              gmail: 'disconnected',
               refreshToken: null,
           };
           await updateDoc(userRef, { 'integrations.google': updatedIntegrations });

@@ -1,9 +1,10 @@
+
 'use client';
 
 import { useState } from 'react';
 import { initializeFirebase } from '@/firebase';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { syncGoogleContacts, syncGoogleCalendar } from '@/services/google-sync';
+import { syncGoogleContacts, syncGoogleCalendar, syncGoogleEmails } from '@/services/google-sync';
 import { Button } from './ui/button';
 import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
@@ -34,6 +35,7 @@ export default function GoogleSyncButton() {
       const provider = new GoogleAuthProvider();
       provider.addScope('https://www.googleapis.com/auth/contacts.readonly');
       provider.addScope('https://www.googleapis.com/auth/calendar.readonly');
+      provider.addScope('https://www.googleapis.com/auth/gmail.readonly');
       
       setMessage('🔐 Authorizing with Google...');
       const result = await signInWithPopup(auth, provider);
@@ -59,11 +61,19 @@ export default function GoogleSyncButton() {
           setApiError(true);
           throw new Error('API access forbidden. Please enable the required APIs.');
       }
+
+      // Sync emails
+      setMessage('✉️ Syncing emails...');
+      const emailsResult = await syncGoogleEmails(user.uid, accessToken);
+      if (!emailsResult.success && emailsResult.message?.includes('Forbidden')) {
+        setApiError(true);
+        throw new Error('API access forbidden. Please enable the required APIs.');
+      }
       
-      if (contactsResult.success && calendarResult.success) {
-        setMessage(`✅ Success! Synced ${contactsResult.count} contacts and ${calendarResult.count} events`);
+      if (contactsResult.success && calendarResult.success && emailsResult.success) {
+        setMessage(`✅ Success! Synced ${contactsResult.count} contacts, ${calendarResult.count} events, and ${emailsResult.count} emails.`);
       } else {
-        const errorMessages = [contactsResult.message, calendarResult.message].filter(Boolean).join(', ');
+        const errorMessages = [contactsResult.message, calendarResult.message, emailsResult.message].filter(Boolean).join(', ');
         setMessage(`⚠️ Partial sync: ${errorMessages}`);
       }
     } catch (error: any) {
@@ -81,14 +91,14 @@ export default function GoogleSyncButton() {
   return (
     <div className="flex flex-col gap-3">
         <p className="text-sm text-muted-foreground">
-            Manually sync your Google Contacts and Calendar events with MemoIQ. You will be asked to re-authorize with Google.
+            Manually sync your Google Contacts, Calendar, and Emails with MemoIQ. You will be asked to re-authorize with Google.
         </p>
         {apiError && (
              <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>API Access Forbidden</AlertTitle>
                 <AlertDescription>
-                    <p>The Google People and/or Calendar APIs are not enabled for your project. Please enable them in your Google Cloud Console to proceed.</p>
+                    <p>One or more required Google APIs are not enabled for your project. Please enable them in your Google Cloud Console to proceed.</p>
                     <div className="mt-2 space-y-1">
                         <Button variant="link" size="sm" asChild className="p-0 h-auto">
                             <Link href="https://console.cloud.google.com/apis/library/people.googleapis.com" target="_blank">
@@ -100,6 +110,11 @@ export default function GoogleSyncButton() {
                                 Enable Google Calendar API <ExternalLink className="ml-1 h-3 w-3"/>
                             </Link>
                         </Button>
+                        <Button variant="link" size="sm" asChild className="p-0 h-auto block">
+                            <Link href="https://console.cloud.google.com/apis/library/gmail.googleapis.com" target="_blank">
+                                Enable Gmail API <ExternalLink className="ml-1 h-3 w-3"/>
+                            </Link>
+                        </Button>
                     </div>
                 </AlertDescription>
             </Alert>
@@ -109,7 +124,7 @@ export default function GoogleSyncButton() {
         disabled={syncing}
       >
         {syncing ? <Loader2 className="animate-spin mr-2" /> : '🔄'}
-        {syncing ? message || 'Syncing...' : 'Sync Google Contacts & Calendar'}
+        {syncing ? message || 'Syncing...' : 'Sync Google Data'}
       </Button>
       {message && !syncing && (
         <p className={`text-sm ${message.startsWith('❌') || message.startsWith('⚠️') ? 'text-destructive' : 'text-muted-foreground'}`}>
