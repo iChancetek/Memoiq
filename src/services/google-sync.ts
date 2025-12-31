@@ -1,62 +1,12 @@
-
 'use server';
 
 import { getServerFirebase } from '@/firebase/server';
 
 /**
- * Exchanges a refresh token for a new access token from Google.
+ * Fetches data from a Google API endpoint.
  */
-async function refreshAccessToken(refreshToken: string): Promise<string> {
+async function fetchGoogleApi(url: string, accessToken: string) {
     const fetch = (await import('node-fetch')).default;
-
-    const response = await fetch('https://oauth2.googleapis.com/token', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-            client_id: process.env.GOOGLE_CLIENT_ID!,
-            client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-            refresh_token: refreshToken,
-            grant_type: 'refresh_token',
-        }),
-    });
-
-    const tokenData = await response.json() as { access_token?: string; error?: any };
-
-    if (!response.ok) {
-        console.error('Failed to refresh access token:', tokenData);
-        throw new Error('Could not refresh Google access token.');
-    }
-
-    if (!tokenData.access_token) {
-        console.error('No access token in refresh response:', tokenData);
-        throw new Error('Failed to obtain new access token from Google.');
-    }
-
-    return tokenData.access_token;
-}
-
-
-/**
- * Fetches data from a Google API endpoint, handling token refresh implicitly.
- */
-async function fetchGoogleApi(userId: string, url: string) {
-    const { firestore } = getServerFirebase();
-    const fetch = (await import('node-fetch')).default;
-    
-    const userDoc = await firestore.collection('users').doc(userId).get();
-    if (!userDoc.exists) {
-        throw new Error('User document not found.');
-    }
-    const refreshToken = userDoc.data()?.integrations?.google?.refreshToken;
-    if (!refreshToken) {
-        throw new Error('Google refresh token is missing. Please try reconnecting your account.');
-    }
-
-    // Get a fresh access token for every API call
-    const accessToken = await refreshAccessToken(refreshToken);
-
     const response = await fetch(url, {
         headers: {
             'Authorization': `Bearer ${accessToken}`,
@@ -73,28 +23,41 @@ async function fetchGoogleApi(userId: string, url: string) {
 }
 
 /**
- * Syncs Google Contacts to Firestore.
+ * Syncs Google Contacts to Firestore using a provided access token.
  */
-export async function syncGoogleContacts(userId: string) {
+export async function syncGoogleContacts(userId: string, accessToken: string) {
     const { firestore } = getServerFirebase();
   
     try {
         const contactsUrl = 'https://people.googleapis.com/v1/people/me/connections?personFields=names,emailAddresses,organizations,phoneNumbers,biographies';
-        const data: any = await fetchGoogleApi(userId, contactsUrl);
+        const data: any = await fetchGoogleApi(contactsUrl, accessToken);
         
         if (!data.connections || data.connections.length === 0) {
             console.log('No Google Contacts to sync.');
-            return;
+            return { success: true, count: 0, message: 'No contacts found' };
         }
         
         const contactsRef = firestore.collection('users').doc(userId).collection('contacts');
+        
+        // Delete old contacts first
+        const existingContacts = await contactsRef.get();
+        const deleteBatch = firestore.batch();
+        existingContacts.docs.forEach(doc => {
+            deleteBatch.delete(doc.ref);
+        });
+        if (existingContacts.size > 0) {
+            await deleteBatch.commit();
+        }
+        
+        // Add new contacts
         const batch = firestore.batch();
+        let addedCount = 0;
 
         data.connections.forEach((person: any) => {
             const name = person.names?.[0]?.displayName;
             if (!name) return;
 
-            const contactData: Omit<Contact, 'id'> = {
+            const contactData = {
                 userId: userId,
                 name,
                 email: person.emailAddresses?.[0]?.value || '',
@@ -107,33 +70,51 @@ export async function syncGoogleContacts(userId: string) {
             
             const docRef = contactsRef.doc();
             batch.set(docRef, contactData);
+            addedCount++;
         });
 
-        await batch.commit();
-        console.log(`✅ Synced ${data.connections.length} contacts`);
-    } catch (error) {
+        if (addedCount > 0) {
+            await batch.commit();
+        }
+        
+        console.log(`✅ Synced ${addedCount} contacts`);
+        return { success: true, count: addedCount, message: `Synced ${addedCount} contacts` };
+    } catch (error: any) {
         console.error('❌ Error syncing contacts:', error);
-        throw error;
+        return { success: false, count: 0, message: error.message || 'Failed to sync contacts' };
     }
 }
 
 /**
- * Syncs Google Calendar events to Firestore.
+ * Syncs Google Calendar events to Firestore using a provided access token.
  */
-export async function syncGoogleCalendar(userId: string) {
+export async function syncGoogleCalendar(userId: string, accessToken: string) {
     const { firestore } = getServerFirebase();
 
     try {
         const calendarUrl = `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${new Date().toISOString()}&maxResults=100&singleEvents=true&orderBy=startTime`;
-        const data: any = await fetchGoogleApi(userId, calendarUrl);
+        const data: any = await fetchGoogleApi(calendarUrl, accessToken);
 
         if (!data.items || data.items.length === 0) {
             console.log('No Google Calendar events to sync.');
-            return;
+            return { success: true, count: 0, message: 'No events found' };
         }
 
         const eventsRef = firestore.collection('users').doc(userId).collection('events');
+        
+        // Delete old events first
+        const existingEvents = await eventsRef.get();
+        const deleteBatch = firestore.batch();
+        existingEvents.docs.forEach(doc => {
+            deleteBatch.delete(doc.ref);
+        });
+        if (existingEvents.size > 0) {
+            await deleteBatch.commit();
+        }
+        
+        // Add new events
         const batch = firestore.batch();
+        let addedCount = 0;
 
         data.items.forEach((event: any) => {
             if (!event.start?.dateTime || !event.end?.dateTime) {
@@ -150,23 +131,17 @@ export async function syncGoogleCalendar(userId: string) {
                 createdAt: new Date(),
                 googleEventId: event.id
             });
+            addedCount++;
         });
 
-        await batch.commit();
-        console.log(`✅ Synced ${data.items.length} calendar events`);
-    } catch (error) {
+        if (addedCount > 0) {
+            await batch.commit();
+        }
+        
+        console.log(`✅ Synced ${addedCount} calendar events`);
+        return { success: true, count: addedCount, message: `Synced ${addedCount} events` };
+    } catch (error: any) {
         console.error('❌ Error syncing calendar:', error);
-        throw error;
+        return { success: false, count: 0, message: error.message || 'Failed to sync calendar events' };
     }
-}
-
-interface Contact {
-    userId: string;
-    name: string;
-    email: string;
-    company: string;
-    title: string;
-    notes: string;
-    lastContact: string;
-    createdAt: any;
 }

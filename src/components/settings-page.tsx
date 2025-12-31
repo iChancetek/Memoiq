@@ -8,164 +8,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/contexts/auth-context';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Moon, Sun, CheckCircle, RefreshCw } from 'lucide-react';
+import { Loader2, Moon, Sun } from 'lucide-react';
 import { Switch } from './ui/switch';
 import { useTheme } from 'next-themes';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { useLanguage } from '@/contexts/language-context';
-import { syncGoogleContacts, syncGoogleCalendar } from '@/services/google-sync';
+import GoogleSyncButton from './GoogleSyncButton';
 
-const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {...props}>
-        <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.85 3.18-1.73 4.1-1.02 1.02-2.62 2.04-4.54 2.04-3.64 0-6.58-3-6.58-6.6s2.94-6.6 6.58-6.6c2.02 0 3.42.82 4.22 1.58l2.6-2.58C18.04 1.32 15.48 0 12.48 0 5.88 0 .04 5.84.04 12s5.84 12 12.44 12c3.28 0 5.74-1.14 7.6-3.04 1.94-1.9 2.6-4.56 2.6-7.38 0-.82-.1-1.46-.24-2.1H12.48z" />
-    </svg>
-);
-
-const OutlookIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" {...props}>
-        <path d="M14.06,8.23l-4.23,4.21,4.23,4.21,1.86-1.86-2.38-2.35,2.38-2.35-1.86-1.86Zm-5,4.21,2.62-2.62,1.86,1.86-2.62,2.62-1.86-1.86Zm7.47-5.59a1.05,1.05,0,0,0-1.05,1.05v6.2a1.05,1.05,0,0,0,1.05,1.05h4.19a1.05,1.05,0,0,0,1.05-1.05V7.89a1.05,1.05,0,0,0-1.05-1.05H16.53Zm4.19,7.19H16.53a.53.53,0,0,1-.53-.52V8.42a.53.53,0,0,1,.53-.53h4.19a.53.53,0,0,1,.53.53v5.67a.53.53,0,0,1-.53.52ZM3,8.22a1,1,0,0,0-1,1v5.67a1,1,0,0,0,1,1H7.8v1.06H3a2,2,0,0,1-2-2V9.22a2,2,0,0,1,2-2H7.8V8.28H3Z"/>
-    </svg>
-);
-
-function IntegrationRow({ name, service, isConnected, onConnect, onDisconnect, onSync, loading: authLoading }: { name: string; service: 'Google' | 'Outlook'; isConnected: boolean; onConnect: () => void; onDisconnect: () => void; onSync: () => Promise<void>; loading: boolean; }) {
-  const [isSyncing, setIsSyncing] = React.useState(false);
-
-  const handleSync = async () => {
-      setIsSyncing(true);
-      await onSync();
-      setIsSyncing(false);
-  }
-
-  return (
-    <div className="flex items-center justify-between p-4 border rounded-lg">
-      <div className="flex items-center gap-3">
-        {service === 'Google' ? <GoogleIcon className="h-5 w-5 fill-current" /> : <OutlookIcon className="h-5 w-5" />}
-        <div>
-          <p className="font-medium">{name}</p>
-          <p className="text-sm text-muted-foreground capitalize">{isConnected ? "Connected" : "Not Connected"}</p>
-        </div>
-      </div>
-      <div className="flex items-center gap-2">
-        {isConnected ? (
-            <>
-                <Button onClick={handleSync} variant="outline" size="sm" disabled={authLoading || isSyncing}>
-                    {isSyncing ? <Loader2 className="animate-spin mr-2" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                    {isSyncing ? 'Syncing...' : 'Sync Now'}
-                </Button>
-                <Button onClick={onDisconnect} variant="destructive" size="sm" disabled={authLoading}>
-                    {authLoading ? <Loader2 className="animate-spin" /> : 'Disconnect'}
-                </Button>
-            </>
-        ) : (
-            <Button onClick={onConnect} variant="secondary" disabled={authLoading}>
-            {authLoading ? <Loader2 className="animate-spin mr-2" /> : null}
-            Connect
-            </Button>
-        )}
-       </div>
-    </div>
-  );
-}
-
-function IntegrationsCard() {
-    const { toast } = useToast();
-    const { user, loginWithGoogle, disconnectGoogle, loading: authLoading } = useAuth();
-    
-    const isGoogleCalendarConnected = user?.integrations?.google?.calendar === 'connected';
-    const isGoogleContactsConnected = user?.integrations?.google?.contacts === 'connected';
-
-    const handleOutlookConnect = (service: string) => {
-        toast({
-            title: 'Feature Coming Soon',
-            description: `${service} integration is not yet available.`,
-        });
-    };
-    
-    const handleSync = async (service: 'Google Calendar' | 'Google Contacts') => {
-        if (!user) {
-            toast({
-                variant: 'destructive',
-                title: 'Authentication Error',
-                description: 'You must be logged in to sync your account.'
-            });
-            return;
-        }
-
-        try {
-            if (service === 'Google Calendar') {
-                await syncGoogleCalendar(user.uid);
-            } else {
-                await syncGoogleContacts(user.uid);
-            }
-            toast({
-                title: 'Sync Successful',
-                description: `${service} have been synced to your MemoIQ account.`
-            });
-        } catch (error) {
-            console.error(`Error syncing ${service}:`, error);
-            toast({
-                variant: 'destructive',
-                title: 'Sync Failed',
-                description: `Could not sync your ${service}. Please try reconnecting your Google account.`
-            });
-        }
-    }
-
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Integrations</CardTitle>
-                <CardDescription>
-                    Connect your external accounts to sync calendars and contacts.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="space-y-2">
-                    <h3 className="font-medium">Google</h3>
-                    <IntegrationRow
-                        name="Google Calendar"
-                        service="Google"
-                        isConnected={isGoogleCalendarConnected}
-                        onConnect={loginWithGoogle}
-                        onDisconnect={disconnectGoogle}
-                        onSync={() => handleSync('Google Calendar')}
-                        loading={authLoading}
-                    />
-                    <IntegrationRow
-                        name="Google Contacts"
-                        service="Google"
-                        isConnected={isGoogleContactsConnected}
-                        onConnect={loginWithGoogle}
-                        onDisconnect={disconnectGoogle}
-                        onSync={() => handleSync('Google Contacts')}
-                        loading={authLoading}
-                    />
-                </div>
-                <div className="space-y-2">
-                    <h3 className="font-medium">Outlook</h3>
-                    <IntegrationRow
-                        name="Outlook Calendar"
-                        service="Outlook"
-                        isConnected={false}
-                        onConnect={() => handleOutlookConnect('Outlook Calendar')}
-                        onDisconnect={() => {}}
-                        onSync={async () => handleOutlookConnect('Outlook Calendar')}
-                        loading={authLoading}
-                    />
-                    <IntegrationRow
-                        name="Outlook Contacts"
-                        service="Outlook"
-                        isConnected={false}
-                        onConnect={() => handleOutlookConnect('Outlook Contacts')}
-                        onDisconnect={() => {}}
-                        onSync={async () => handleOutlookConnect('Outlook Contacts')}
-                        loading={authLoading}
-                    />
-                </div>
-            </CardContent>
-        </Card>
-    );
-}
 
 export function SettingsPage() {
   const { user, updateUserProfile, updateUserPassword, loading, updateUserSettings } = useAuth();
@@ -269,7 +118,17 @@ export function SettingsPage() {
         </CardContent>
       </Card>
       
-      <IntegrationsCard />
+      <Card>
+        <CardHeader>
+            <CardTitle>Integrations</CardTitle>
+            <CardDescription>
+                Manage your external account connections.
+            </CardDescription>
+        </CardHeader>
+        <CardContent>
+            <GoogleSyncButton />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -389,7 +248,3 @@ export function SettingsPage() {
     </div>
   );
 }
-
-    
-
-    
