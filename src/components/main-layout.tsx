@@ -48,7 +48,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useLanguage } from '@/contexts/language-context';
-import { AIAssistantWidget } from './ai-assistant-widget';
 import { useTheme } from 'next-themes';
 
 export function MainLayout({children}: {children: React.ReactNode}) {
@@ -348,7 +347,6 @@ export function MainLayout({children}: {children: React.ReactNode}) {
             {children}
           </div>
         </main>
-        <AIAssistantWidget />
       </SidebarInset>
     </SidebarProvider>
   );

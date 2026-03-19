@@ -1,3 +1,5 @@
+'use server';
+
 import { getServerFirebase } from '@/firebase/server';
 import { getNewAccessToken } from './microsoft-oauth';
 
