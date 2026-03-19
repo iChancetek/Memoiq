@@ -1,4 +1,3 @@
-
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { ThemeProvider } from '@/contexts/theme-context';
@@ -17,6 +16,10 @@ export const metadata: Metadata = {
   formatDetection: {
     telephone: false,
   },
+  icons: {
+    icon: '/icon.svg',
+    apple: '/apple-icon',
+  }
 };
 
 export const viewport: Viewport = {

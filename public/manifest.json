@@ -1,4 +1,3 @@
-
 {
   "name": "MemoIQ",
   "short_name": "MemoIQ",
@@ -9,22 +8,28 @@
   "theme_color": "#000080",
   "icons": [
     {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
       "src": "/icon",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "maskable"
     }
   ],
   "shortcuts": [
     {
       "name": "Dashboard",
       "url": "/dashboard",
-      "icons": [{ "src": "/icon", "sizes": "192x192" }]
+      "description": "View your daily briefing"
     },
     {
       "name": "New Memo",
       "url": "/memos",
-      "icons": [{ "src": "/icon", "sizes": "192x192" }]
+      "description": "Record a new voice note"
     }
   ]
 }
