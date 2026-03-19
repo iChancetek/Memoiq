@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { ThemeProvider } from '@/contexts/theme-context';
 import { Providers } from '@/components/providers';
@@ -6,6 +6,23 @@ import { Providers } from '@/components/providers';
 export const metadata: Metadata = {
   title: 'MemoIQ',
   description: 'Your intelligent assistant for memos, tasks, and more.',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'MemoIQ',
+  },
+  formatDetection: {
+    telephone: false,
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: '#000080',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
