@@ -102,9 +102,22 @@ export function LandingPage() {
       <main className="flex-1 pt-20">
         {/* Hero Section — Cinematic Experience */}
         <section className="relative min-h-[100vh] flex items-center justify-center overflow-hidden py-24">
-          <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.1),transparent_70%)]" />
-          <div className="absolute top-1/4 left-1/4 -z-10 h-96 w-96 bg-violet-600/5 blur-[120px] rounded-full animate-slow-fade" />
-          <div className="absolute bottom-1/4 right-1/4 -z-10 h-96 w-96 bg-blue-600/5 blur-[120px] rounded-full animate-slow-fade [animation-delay:2s]" />
+          {/* Cinematic Background Video */}
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 -z-20 object-cover w-full h-full"
+          >
+            <source src="/memoiq.mp4" type="video/mp4" />
+          </video>
+
+          {/* Overlays for readability and atmosphere */}
+          <div className="absolute inset-0 -z-10 bg-background/40 backdrop-blur-[2px]" />
+          <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.15),transparent_70%)]" />
+          <div className="absolute top-1/4 left-1/4 -z-10 h-96 w-96 bg-violet-600/10 blur-[120px] rounded-full animate-slow-fade" />
+          <div className="absolute bottom-1/4 right-1/4 -z-10 h-96 w-96 bg-blue-600/10 blur-[120px] rounded-full animate-slow-fade [animation-delay:2s]" />
           
           <div className="container mx-auto relative z-10 px-4 text-center">
             <motion.div
