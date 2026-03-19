@@ -1,7 +1,9 @@
+
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { ThemeProvider } from '@/contexts/theme-context';
 import { Providers } from '@/components/providers';
+import { ServiceWorkerRegister } from '@/components/service-worker-register';
 
 export const metadata: Metadata = {
   title: 'MemoIQ',
@@ -51,7 +53,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <Providers>{children}</Providers>
+          <Providers>
+            <ServiceWorkerRegister />
+            {children}
+          </Providers>
         </ThemeProvider>
       </body>
     </html>
