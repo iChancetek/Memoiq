@@ -13,6 +13,7 @@ import { useTheme } from 'next-themes';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { useLanguage } from '@/contexts/language-context';
 import GoogleSyncButton from './GoogleSyncButton';
+import MicrosoftSyncButton from './MicrosoftSyncButton';
 import Link from 'next/link';
 
 
@@ -134,20 +135,11 @@ export function SettingsPage() {
         <CardHeader>
             <CardTitle>Microsoft 365 Integration</CardTitle>
             <CardDescription>
-                Sync your Outlook Calendar, Contacts, and Emails. Full integration coming soon.
+                Sync your Outlook Calendar, Contacts, and Emails. Full bidirectional support including sending and receiving.
             </CardDescription>
         </CardHeader>
         <CardContent>
-             <div className="flex flex-col gap-3">
-                <p className="text-sm text-muted-foreground">
-                    Access your Outlook account directly. Full, seamless integration with MemoIQ is in development.
-                </p>
-                <Button asChild>
-                    <Link href="http://outlook.office.com/" target="_blank">
-                        Sign in to Outlook <ExternalLink className="ml-2 h-4 w-4"/>
-                    </Link>
-                </Button>
-            </div>
+            <MicrosoftSyncButton />
         </CardContent>
       </Card>
 

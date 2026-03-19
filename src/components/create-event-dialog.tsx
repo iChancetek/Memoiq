@@ -17,6 +17,7 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { ManualEventForm } from './manual-event-form';
 import { useAuth } from '@/contexts/auth-context';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 type RecordingState = 'idle' | 'recording' | 'processing';
 
@@ -25,6 +26,7 @@ function AIScheduler() {
   const [loading, setLoading] = React.useState(false);
   const [result, setResult] = React.useState<any>(null);
   const [recordingState, setRecordingState] = React.useState<RecordingState>('idle');
+  const [provider, setProvider] = React.useState<'google' | 'microsoft'>('google');
   
   const mediaRecorderRef = React.useRef<MediaRecorder | null>(null);
   const audioChunksRef = React.useRef<Blob[]>([]);
@@ -35,8 +37,15 @@ function AIScheduler() {
   const { contacts } = useContacts();
   const { toast } = useToast();
   // @ts-ignore
-  const lang = user?.settings?.language || 'en';
-  
+  const isGoogleConnected = user?.integrations?.google?.calendar === 'connected';
+  const isMicrosoftConnected = user?.integrations?.microsoft?.calendar === 'connected';
+
+  React.useEffect(() => {
+    if (!isGoogleConnected && isMicrosoftConnected) {
+      setProvider('microsoft');
+    }
+  }, [isGoogleConnected, isMicrosoftConnected]);
+
   const handleSchedule = async (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!request.trim()) return;
@@ -81,7 +90,7 @@ function AIScheduler() {
             startTime: parsedDate,
             endTime: new Date(parsedDate.getTime() + 60 * 60 * 1000), // Default 1 hour duration
             location: '', // Location parsing can be added later
-        });
+        }, provider);
 
         toast({
             title: "Event Scheduled!",
@@ -202,6 +211,17 @@ function AIScheduler() {
         <Button type="submit" size="icon" aria-label="Schedule with AI" disabled={loading || !request.trim() || isRecording || isProcessing}>
             {loading ? <Loader2 className="animate-spin" /> : <Sparkles />}
         </Button>
+        <div className="w-40 ml-2">
+            <Select value={provider} onValueChange={(value: any) => setProvider(value)}>
+                <SelectTrigger>
+                    <SelectValue placeholder="Calendar" />
+                </SelectTrigger>
+                <SelectContent>
+                    {isGoogleConnected && <SelectItem value="google">Google</SelectItem>}
+                    {isMicrosoftConnected && <SelectItem value="microsoft">Outlook</SelectItem>}
+                </SelectContent>
+            </Select>
+        </div>
     </form>
   )
 }

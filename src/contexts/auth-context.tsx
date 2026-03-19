@@ -8,6 +8,7 @@ import {
   signInWithEmailAndPassword,
   signOut,
   GoogleAuthProvider,
+  OAuthProvider,
   signInWithPopup,
   updateProfile,
   updatePassword,
@@ -34,6 +35,12 @@ export interface AppUser extends User {
             contacts: 'connected' | 'disconnected',
             gmail: 'connected' | 'disconnected',
             refreshToken?: string | null,
+        },
+        microsoft?: {
+            calendar: 'connected' | 'disconnected',
+            contacts: 'connected' | 'disconnected',
+            outlook: 'connected' | 'disconnected',
+            refreshToken?: string | null,
         }
     }
 }
@@ -47,6 +54,8 @@ interface AuthContextType {
   logout: () => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   disconnectGoogle: () => Promise<void>;
+  loginWithMicrosoft: () => Promise<void>;
+  disconnectMicrosoft: () => Promise<void>;
   updateUserProfile: (profile: { displayName?: string; photoURL?: string }) => Promise<void>;
   updateUserPassword: (newPassword: string) => Promise<void>;
   updateUserSettings: (settings: object) => Promise<void>;
@@ -60,6 +69,17 @@ googleProvider.addScope('https://www.googleapis.com/auth/contacts.readonly');
 googleProvider.addScope('https://www.googleapis.com/auth/gmail.readonly');
 googleProvider.setCustomParameters({
   access_type: 'offline', // Request a refresh token
+  prompt: 'consent',
+});
+
+const microsoftProvider = new OAuthProvider('microsoft.com');
+microsoftProvider.addScope('openid');
+microsoftProvider.addScope('profile');
+microsoftProvider.addScope('offline_access');
+microsoftProvider.addScope('Mail.ReadWrite');
+microsoftProvider.addScope('Calendars.ReadWrite');
+microsoftProvider.addScope('Contacts.ReadWrite');
+microsoftProvider.setCustomParameters({
   prompt: 'consent',
 });
 
@@ -151,6 +171,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 contacts: 'disconnected',
                 gmail: 'disconnected',
                 refreshToken: null,
+              },
+              microsoft: {
+                calendar: 'disconnected',
+                contacts: 'disconnected',
+                outlook: 'disconnected',
+                refreshToken: null,
               }
             },
             ...additionalData,
@@ -226,6 +252,71 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (err: any) {
         handleAuthError(err);
     }
+  };
+  
+  const loginWithMicrosoft = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+        const userCredential = await signInWithPopup(auth, microsoftProvider);
+        
+        // OAuthProvider gives access to the credential which contains the tokens
+        const credential = OAuthProvider.credentialFromResult(userCredential);
+        const accessToken = credential?.accessToken;
+        const refreshToken = (userCredential as any)?._tokenResponse?.refreshToken;
+
+        const userRef = doc(firestore, 'users', userCredential.user.uid);
+        
+        const integrationsUpdate: any = {};
+        if (refreshToken) {
+            integrationsUpdate['integrations.microsoft'] = {
+                calendar: 'connected',
+                contacts: 'connected',
+                outlook: 'connected',
+                refreshToken: refreshToken,
+            };
+        } else {
+             integrationsUpdate['integrations.microsoft.calendar'] = 'connected';
+             integrationsUpdate['integrations.microsoft.contacts'] = 'connected';
+             integrationsUpdate['integrations.microsoft.outlook'] = 'connected';
+        }
+
+        await updateDoc(userRef, { lastLogin: serverTimestamp(), ...integrationsUpdate });
+        await handleAuthSuccess(userCredential);
+
+    } catch (err: any) {
+        handleAuthError(err);
+    }
+  };
+
+  const disconnectMicrosoft = async () => {
+      if (!user) return;
+      setLoading(true);
+      setError(null);
+      try {
+          const userRef = doc(firestore, 'users', user.uid);
+          const updatedIntegrations = {
+              calendar: 'disconnected',
+              contacts: 'disconnected',
+              outlook: 'disconnected',
+              refreshToken: null,
+          };
+          await updateDoc(userRef, { 'integrations.microsoft': updatedIntegrations });
+          
+          setUser(prevUser => {
+              if (!prevUser) return null;
+              const newIntegrationsState = {
+                  ...prevUser.integrations,
+                  microsoft: updatedIntegrations,
+              };
+              return { ...prevUser, integrations: newIntegrationsState } as AppUser;
+          });
+
+      } catch (err: any) {
+          handleAuthError(err);
+      } finally {
+          setLoading(false);
+      }
   };
 
   const disconnectGoogle = async () => {
@@ -328,6 +419,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     loginWithGoogle,
     disconnectGoogle,
+    loginWithMicrosoft,
+    disconnectMicrosoft,
     updateUserProfile,
     updateUserPassword,
     updateUserSettings,

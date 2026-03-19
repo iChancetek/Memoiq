@@ -11,6 +11,7 @@ import { Mail, Sparkles, Send, Loader2, Bot, Volume2, StopCircle } from 'lucide-
 import { format } from 'date-fns';
 import type { Timestamp } from 'firebase/firestore';
 import type { Email } from '@/contexts/email-context';
+import { useEmails } from '@/contexts/email-context';
 import { summarizeEmail } from '@/ai/flows/summarize-email';
 import { draftEmailReply } from '@/ai/flows/draft-email-reply';
 import { textToSpeech } from '@/ai/flows/text-to-speech';
@@ -19,8 +20,10 @@ import { useToast } from '@/hooks/use-toast';
 type AIAction = 'summarize' | 'reply' | 'read';
 
 export function EmailDetailView({ email, isLoading }: { email: Email | null; isLoading: boolean }) {
+  const { sendEmail } = useEmails();
   const [aiResult, setAiResult] = React.useState<any>(null);
   const [isAiLoading, setIsAiLoading] = React.useState(false);
+  const [isSending, setIsSending] = React.useState(false);
   const [activeAiAction, setActiveAiAction] = React.useState<AIAction | null>(null);
   const [replyContext, setReplyContext] = React.useState('');
   const [isPlaying, setIsPlaying] = React.useState(false);
@@ -115,6 +118,40 @@ export function EmailDetailView({ email, isLoading }: { email: Email | null; isL
       });
     } finally {
       setIsAiLoading(false);
+    }
+  };
+
+  const handleSendEmail = async () => {
+    if (!email || !aiResult?.replyBody) return;
+
+    setIsSending(true);
+    try {
+      const provider = email.id.startsWith('ms-') ? 'microsoft' : 'google';
+      const result = await sendEmail(
+        email.from || '', // In a real reply, this should be the 'reply-to' or 'from'
+        `Re: ${email.subject}`,
+        aiResult.replyBody,
+        provider
+      );
+
+      if (result.success) {
+        toast({
+          title: "Email Sent!",
+          description: `Your reply has been sent via ${provider === 'microsoft' ? 'Outlook' : 'Gmail'}.`,
+        });
+        setAiResult(null); // Clear the draft after sending
+      } else {
+        throw new Error(result.message || 'Failed to send email');
+      }
+    } catch (error: any) {
+      console.error('Error sending email:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Send Error',
+        description: error.message,
+      });
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -251,9 +288,19 @@ export function EmailDetailView({ email, isLoading }: { email: Email | null; isL
                     <Textarea 
                         value={aiResult.replyBody}
                         className="h-48 bg-background"
-                        readOnly // For now, the user can copy-paste this
+                        onChange={(e) => setAiResult({ ...aiResult, replyBody: e.target.value })}
                     />
-                    <p className="text-xs text-muted-foreground mt-2">You can copy this draft into your email client.</p>
+                    <div className="flex justify-between items-center mt-4">
+                        <p className="text-xs text-muted-foreground">You can edit this draft before sending.</p>
+                        <Button 
+                            onClick={handleSendEmail} 
+                            disabled={isSending}
+                            className="bg-primary text-primary-foreground"
+                        >
+                            {isSending ? <Loader2 className="animate-spin mr-2" /> : <Send className="mr-2 h-4 w-4" />}
+                            {email.id.startsWith('ms-') ? 'Send via Outlook' : 'Send via Gmail'}
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
          )}

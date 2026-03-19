@@ -6,8 +6,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useCalendar } from '@/contexts/calendar-context';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Save } from 'lucide-react';
+import { Loader2, Save, Calendar as CalendarIcon } from 'lucide-react';
 import { parse } from 'date-fns';
+import { useAuth } from '@/contexts/auth-context';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 export function ManualEventForm() {
   const [title, setTitle] = React.useState('');
@@ -16,9 +18,20 @@ export function ManualEventForm() {
   const [endTime, setEndTime] = React.useState('');
   const [location, setLocation] = React.useState('');
   const [loading, setLoading] = React.useState(false);
+  const [provider, setProvider] = React.useState<'google' | 'microsoft'>('google');
 
   const { addEvent } = useCalendar();
+  const { user } = useAuth();
   const { toast } = useToast();
+  
+  const isGoogleConnected = user?.integrations?.google?.calendar === 'connected';
+  const isMicrosoftConnected = user?.integrations?.microsoft?.calendar === 'connected';
+
+  React.useEffect(() => {
+    if (!isGoogleConnected && isMicrosoftConnected) {
+      setProvider('microsoft');
+    }
+  }, [isGoogleConnected, isMicrosoftConnected]);
   
   const resetForm = () => {
     setTitle('');
@@ -53,7 +66,7 @@ export function ManualEventForm() {
         startTime: startDateTime,
         endTime: endDateTime,
         location,
-      });
+      }, provider);
 
       toast({
         title: 'Event Created',
@@ -96,6 +109,20 @@ export function ManualEventForm() {
        <div className="grid gap-2">
         <Label htmlFor="location">Location</Label>
         <Input id="location" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="e.g., Conference Room 1 or Virtual" />
+      </div>
+
+      <div className="grid gap-2 pt-2">
+        <Label>Save to Calendar</Label>
+        <Select value={provider} onValueChange={(value: any) => setProvider(value)}>
+            <SelectTrigger className="w-full">
+                <SelectValue placeholder="Select Calendar" />
+            </SelectTrigger>
+            <SelectContent>
+                {isGoogleConnected && <SelectItem value="google">Google Calendar</SelectItem>}
+                {isMicrosoftConnected && <SelectItem value="microsoft">Microsoft 365 / Outlook</SelectItem>}
+                {!isGoogleConnected && !isMicrosoftConnected && <SelectItem value="google" disabled>No calendars connected</SelectItem>}
+            </SelectContent>
+        </Select>
       </div>
 
       <div className="flex justify-end">

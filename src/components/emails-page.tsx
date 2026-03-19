@@ -36,7 +36,7 @@ export function EmailsPage() {
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 h-[calc(100vh-8rem)]">
       <Card className="md:col-span-1 h-full flex flex-col">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Mail /> Google Emails</CardTitle>
+          <CardTitle className="flex items-center gap-2"><Mail /> Synced Emails</CardTitle>
           <CardDescription>
             A list of your most recently synced emails.
           </CardDescription>

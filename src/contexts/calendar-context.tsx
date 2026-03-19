@@ -18,7 +18,7 @@ import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlo
 
 interface CalendarContextType {
   events: CalendarEvent[];
-  addEvent: (event: Omit<CalendarEvent, 'id' | 'userId' | 'createdAt'>) => Promise<void>;
+  addEvent: (event: Omit<CalendarEvent, 'id' | 'userId' | 'createdAt'>, provider?: 'google' | 'microsoft') => Promise<void>;
   updateEvent: (eventId: string, updates: Partial<CalendarEvent>) => Promise<void>;
   deleteEvent: (eventId: string) => Promise<void>;
   loading: boolean;
@@ -64,11 +64,15 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user, db]);
 
-  const addEvent = async (event: Omit<CalendarEvent, 'id' | 'userId' | 'createdAt'>) => {
+  const addEvent = async (event: Omit<CalendarEvent, 'id' | 'userId' | 'createdAt'>, provider: 'google' | 'microsoft' = 'google') => {
     if (!user || !db) throw new Error("User not authenticated or DB not initialized");
     const collectionRef = collection(db, 'users', user.uid, 'events');
+    
+    // In a real app, if provider is 'microsoft', we'd also call createMicrosoftEvent
+    // For this implementation, we'll store the event locally in Firestore first.
     addDocumentNonBlocking(collectionRef, {
       ...event,
+      provider: provider,
       userId: user.uid,
       createdAt: serverTimestamp(),
     });
