@@ -1,0 +1,15 @@
+
+{
+  "hero": {
+    "url": "https://picsum.photos/seed/memoiq-loft/1920/1080",
+    "width": 1920,
+    "height": 1080,
+    "hint": "futuristic loft diversity holographic"
+  },
+  "ai-collaboration": {
+    "url": "https://picsum.photos/seed/memoiq-team/1200/800",
+    "width": 1200,
+    "height": 800,
+    "hint": "diverse team working loft sun"
+  }
+}

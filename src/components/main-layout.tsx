@@ -31,6 +31,8 @@ import {
   User,
   PenSquare,
   Mail,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import {QuickAdd} from '@/components/quick-add';
 import {Button} from './ui/button';
@@ -47,12 +49,14 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useLanguage } from '@/contexts/language-context';
 import { AIAssistantWidget } from './ai-assistant-widget';
+import { useTheme } from 'next-themes';
 
 export function MainLayout({children}: {children: React.ReactNode}) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout, loading: authLoading } = useAuth();
   const { t } = useLanguage();
+  const { theme, setTheme } = useTheme();
   
   const getPageTitle = () => {
     switch (pathname) {
@@ -96,19 +100,19 @@ export function MainLayout({children}: {children: React.ReactNode}) {
   }, [user, authLoading, router]);
 
   if (!user) {
-    return null; // Or a loading spinner
+    return null;
   }
 
   return (
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader>
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <Logo className="size-7 text-primary" />
-            <h1 className="text-lg font-semibold text-foreground">MemoIQ</h1>
+          <Link href="/dashboard" className="flex items-center gap-2 px-2 pt-4">
+            <Logo className="size-8 text-primary" />
+            <h1 className="text-xl font-bold tracking-tight text-foreground">MemoIQ</h1>
           </Link>
         </SidebarHeader>
-        <SidebarContent>
+        <SidebarContent className="px-2">
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
@@ -230,8 +234,8 @@ export function MainLayout({children}: {children: React.ReactNode}) {
               </SidebarMenuButton>
             </SidebarMenuItem>
           
-            <SidebarMenuItem className="mt-4">
-               <span className="px-2 text-xs font-semibold text-muted-foreground">{t('managers')}</span>
+            <SidebarMenuItem className="mt-6 mb-2">
+               <span className="px-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">{t('managers')}</span>
             </SidebarMenuItem>
 
              <SidebarMenuItem>
@@ -286,20 +290,28 @@ export function MainLayout({children}: {children: React.ReactNode}) {
           </SidebarMenu>
         </SidebarContent>
         <SidebarFooter>
-            {/* Settings button removed from footer */}
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset>
-        <header className="flex h-14 items-center justify-between border-b bg-background/80 px-4 backdrop-blur-sm sm:px-6">
+      <SidebarInset className="flex flex-col">
+        <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center justify-between border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 sm:px-6">
           <div className="flex items-center gap-4">
-            <SidebarTrigger className="md:hidden" />
+            <SidebarTrigger className="-ml-1" />
             <div className="flex items-center gap-2">
               <LayoutDashboard className="h-5 w-5 text-muted-foreground" />
-              <h2 className="text-lg font-semibold">{getPageTitle()}</h2>
+              <h2 className="text-lg font-semibold tracking-tight">{getPageTitle()}</h2>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
              <QuickAdd />
+             <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                aria-label="Toggle theme"
+             >
+                <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+             </Button>
             <Button variant="ghost" size="icon" asChild>
                 <Link href="/settings">
                     <Settings className="h-5 w-5" />
@@ -308,27 +320,33 @@ export function MainLayout({children}: {children: React.ReactNode}) {
             </Button>
              <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="gap-2 px-2">
-                        <User className="h-5 w-5" />
-                        <span className="hidden sm:inline-block">{user?.displayName || 'User'}</span>
+                    <Button variant="ghost" className="gap-2 px-2 hover:bg-muted">
+                        <Avatar className="h-7 w-7 border">
+                            <AvatarFallback className="bg-primary/10 text-primary text-[10px]">
+                                {user?.displayName?.[0] || 'U'}
+                            </AvatarFallback>
+                        </Avatar>
+                        <span className="hidden text-sm font-medium sm:inline-block">{user?.displayName || 'User'}</span>
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                     <DropdownMenuLabel>
-                        <p>{user?.displayName || 'User'}</p>
+                        <p className="font-semibold">{user?.displayName || 'User'}</p>
                         <p className="text-xs font-normal text-muted-foreground">{user?.email}</p>
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={logout}>
-                        <LogOut className="mr-2"/>
+                    <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive">
+                        <LogOut className="mr-2 h-4 w-4"/>
                         {t('logout')}
                     </DropdownMenuItem>
                 </DropdownMenuContent>
              </DropdownMenu>
           </div>
         </header>
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6">
-          {children}
+        <main className="flex-1 overflow-y-auto">
+          <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+            {children}
+          </div>
         </main>
         <AIAssistantWidget />
       </SidebarInset>
