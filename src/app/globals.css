@@ -83,11 +83,11 @@ body {
 
 @layer utilities {
   .glass {
-    @apply bg-background/40 backdrop-blur-2xl border border-border shadow-[0_8px_32px_0_rgba(0,0,0,0.1)];
+    @apply bg-background/[0.05] border border-border shadow-[0_8px_32px_0_rgba(0,0,0,0.05)];
   }
   
   .dark .glass {
-    @apply bg-white/[0.03] border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)];
+    @apply bg-white/[0.02] border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.2)];
   }
   
   .ai-glow {

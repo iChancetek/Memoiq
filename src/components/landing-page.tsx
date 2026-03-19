@@ -3,7 +3,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { 
@@ -17,13 +17,12 @@ import {
   Layers, 
   Shield, 
   Globe,
-  Waves,
   Sparkles,
   Sun,
   Moon
 } from 'lucide-react';
 import { Logo } from './logo';
-import placeholderData from '@/app/lib/placeholder-images.json';
+
 import { useTheme } from 'next-themes';
 
 const fadeIn = {
@@ -53,8 +52,8 @@ const FeatureBlock = ({
     <div className="flex items-center justify-center h-14 w-14 rounded-2xl bg-primary/10 text-primary mb-6 group-hover:scale-110 transition-transform">
       <Icon className="h-7 w-7" />
     </div>
-    <h3 className="text-2xl font-bold mb-4 tracking-tight">{title}</h3>
-    <p className="text-muted-foreground leading-relaxed">{description}</p>
+    <h3 className="text-2xl font-bold mb-4 tracking-tight drop-shadow-md">{title}</h3>
+    <p className="text-foreground/90 leading-relaxed font-medium drop-shadow-sm">{description}</p>
     <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
       <Zap className="h-4 w-4 text-primary animate-pulse" />
     </div>
@@ -65,7 +64,7 @@ export function LandingPage() {
   const { theme, setTheme } = useTheme();
 
   return (
-    <div className="relative flex flex-col min-h-screen bg-background text-foreground selection:bg-primary/30 overflow-x-hidden transition-colors duration-500">
+    <div className="relative flex flex-col min-h-screen text-foreground selection:bg-primary/30 overflow-x-hidden transition-colors duration-500">
       {/* Global Cinematic Background Video */}
       <video
         autoPlay
@@ -114,11 +113,7 @@ export function LandingPage() {
       <main className="flex-1 pt-20">
         {/* Hero Section — Cinematic Experience */}
         <section className="relative min-h-[100vh] flex items-center justify-center overflow-hidden py-24">
-          {/* Overlays for readability and atmosphere */}
-          <div className="absolute inset-0 -z-10 bg-background/40 backdrop-blur-[2px]" />
-          <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.15),transparent_70%)]" />
-          <div className="absolute top-1/4 left-1/4 -z-10 h-96 w-96 bg-violet-600/10 blur-[120px] rounded-full animate-slow-fade" />
-          <div className="absolute bottom-1/4 right-1/4 -z-10 h-96 w-96 bg-blue-600/10 blur-[120px] rounded-full animate-slow-fade [animation-delay:2s]" />
+
           
           <div className="container mx-auto relative z-10 px-4 text-center">
             <motion.div
@@ -144,7 +139,7 @@ export function LandingPage() {
             <motion.p 
               {...fadeIn}
               transition={{ ...fadeIn.transition, delay: 0.2 }}
-              className="mt-8 max-w-2xl mx-auto text-xl md:text-2xl text-muted-foreground leading-relaxed font-medium"
+              className="mt-8 max-w-2xl mx-auto text-xl md:text-2xl text-foreground/90 leading-relaxed font-semibold drop-shadow-lg"
             >
               AI transforms your voice, tasks, and time into a seamless, 
               intelligent workflow. The future of precision productivity is here.
@@ -168,37 +163,7 @@ export function LandingPage() {
               </Button>
             </motion.div>
 
-            {/* Cinematic Focal Point */}
-            <motion.div
-              initial={{ opacity: 0, y: 100 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1.5, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
-              className="mt-24 relative max-w-7xl mx-auto aspect-[21/9] rounded-[48px] overflow-hidden border border-border glass float shadow-[0_0_120px_rgba(0,0,0,0.1)] dark:shadow-[0_0_120px_rgba(0,0,0,0.6)]"
-            >
-              <Image 
-                src={placeholderData.hero.url} 
-                alt="Cinematic Interface in a sun-drenched loft"
-                fill
-                className="object-cover opacity-40 dark:opacity-60 transition-all duration-1000 scale-105 hover:scale-100"
-                data-ai-hint={placeholderData.hero.hint}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-80" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="w-2/3 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent blur-md" />
-                <div className="absolute flex flex-col items-center">
-                  <Waves className="h-16 w-16 text-primary animate-pulse mb-6" />
-                  <span className="text-primary font-mono text-[10px] tracking-[0.4em] animate-pulse uppercase font-bold">Syncing Intelligence...</span>
-                </div>
-              </div>
-              
-              {/* Holographic Interface elements overlay */}
-              <div className="absolute top-12 left-12 p-6 glass rounded-2xl hidden lg:block border-border/20 ai-glow animate-pulse">
-                <CalendarCheck className="h-6 w-6 text-primary/60" />
-              </div>
-              <div className="absolute bottom-12 right-12 p-6 glass rounded-2xl hidden lg:block border-border/20 ai-glow animate-pulse [animation-delay:1s]">
-                <Bot className="h-6 w-6 text-primary/60" />
-              </div>
-            </motion.div>
+
           </div>
         </section>
 
@@ -309,7 +274,7 @@ export function LandingPage() {
         </section>
         
         {/* PWA Section */}
-        <section className="py-40 bg-background/20 relative overflow-hidden">
+        <section className="py-40 relative overflow-hidden">
           <div className="container mx-auto px-4 text-center">
             <motion.div 
               initial={{ opacity: 0, y: 50 }}
@@ -317,7 +282,7 @@ export function LandingPage() {
               className="max-w-5xl mx-auto"
             >
               <h2 className="text-5xl md:text-8xl font-black mb-10 tracking-tighter italic">One App. Everywhere.</h2>
-              <p className="text-3xl text-muted-foreground leading-relaxed mb-16 font-medium">
+              <p className="text-3xl text-foreground/90 leading-relaxed mb-16 font-semibold drop-shadow-md">
                 The PWA experience ensures zero friction. Install MemoIQ instantly on any device. 
                 Full offline intelligence means your day never pauses.
               </p>
@@ -350,7 +315,7 @@ export function LandingPage() {
               className="max-w-5xl mx-auto glass p-20 rounded-[80px] ai-glow border-border"
             >
               <h2 className="text-6xl md:text-8xl font-black mb-10 tracking-tighter leading-[0.9]">Ready to <br /> Own Your Time?</h2>
-              <p className="text-2xl text-muted-foreground mb-16 max-w-2xl mx-auto font-medium leading-relaxed">
+              <p className="text-2xl text-foreground/90 mb-16 max-w-2xl mx-auto font-semibold leading-relaxed drop-shadow-md">
                 Join the elite circle of professionals using AI-native productivity to redefine precision.
               </p>
               <div className="flex flex-col sm:flex-row justify-center gap-8">
@@ -375,7 +340,7 @@ export function LandingPage() {
                 <Logo className="h-10 w-10 text-primary" />
                 <span className="text-3xl font-black tracking-tighter">MemoIQ</span>
               </Link>
-              <p className="text-muted-foreground text-xl leading-relaxed max-w-md font-medium">
+              <p className="text-foreground/90 text-xl leading-relaxed max-w-md font-semibold drop-shadow-sm">
                 Building the interface for human-AI synergy. 
                 Intelligent productivity, designed for absolute precision.
               </p>
