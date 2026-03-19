@@ -19,7 +19,7 @@ export type Email = EmailType;
 interface EmailContextType {
   emails: Email[];
   loading: boolean;
-  sendEmail: (to: string, subject: string, body: string, provider: 'google' | 'microsoft') => Promise<{ success: boolean; message?: string }>;
+  sendEmail: (to: string, subject: string, body: string, provider: 'google' | 'microsoft', accountEmail?: string) => Promise<{ success: boolean; message?: string }>;
 }
 
 const EmailContext = React.createContext<EmailContextType | undefined>(undefined);
@@ -60,31 +60,35 @@ export function EmailProvider({ children }: { children: React.ReactNode }) {
 
   const { toast } = useToast();
 
-  const sendEmail = async (to: string, subject: string, body: string, provider: 'google' | 'microsoft') => {
+  const sendEmail = async (to: string, subject: string, body: string, provider: 'google' | 'microsoft', accountEmail?: string) => {
       try {
           if (provider === 'microsoft') {
-              // In a real app, we'd fetch the token from a secure session or server action.
-              // For now, we'll prompt the user if the token is missing or expired in a more advanced way later.
-              // Here we'll just try to use a placeholder or assume the user just logged in.
+              if (!user) throw new Error('User not authenticated');
+              const targetEmail = accountEmail || (user.integrations?.microsoftAccounts ? Object.keys(user.integrations.microsoftAccounts)[0] : null);
+              if (!targetEmail) throw new Error('No Microsoft account connected');
               
-              // @ts-ignore
-              const msToken = user?.integrations?.microsoft?.refreshToken; 
-              // Actually, we need an ACCESS token, not a refresh token.
-              // This part usually happens on the server.
+              const actualEmail = targetEmail.replace(/_/g, '.');
+              toast({ title: 'Sending...', description: `Sending via ${actualEmail}...` });
               
-              toast({ title: 'Sending...', description: 'Sending your email via Microsoft 365.' });
-              // This is a placeholder for the actual API call which requires a fresh token.
-              // In this demo, we'll simulate success if the integration is connected.
-              if (user?.integrations?.microsoft?.outlook === 'connected') {
-                  // Simulate API delay
-                  await new Promise(resolve => setTimeout(resolve, 1500));
-                  return { success: true };
-              } else {
-                  throw new Error('Microsoft 365 not connected');
-              }
+              const { sendMicrosoftEmail } = await import('@/services/microsoft-sync');
+              return await sendMicrosoftEmail(user.uid, actualEmail, to, subject, body);
           } else {
-              // Google implementation...
-              return { success: false, message: 'Google send not implemented yet' };
+              // Google implementation
+              if (!user) throw new Error('User not authenticated');
+              
+              // If accountEmail not specified, use the first one available
+              const targetEmail = accountEmail || (user.integrations?.googleAccounts ? Object.keys(user.integrations.googleAccounts)[0] : null);
+              
+              if (!targetEmail) {
+                  throw new Error('No Google account connected');
+              }
+
+              const actualEmail = targetEmail.replace(/_/g, '.'); // Handle key normalization
+              
+              toast({ title: 'Sending...', description: `Sending via ${actualEmail}...` });
+              
+              const { sendGoogleEmail } = await import('@/services/google-sync');
+              return await sendGoogleEmail(user.uid, actualEmail, to, subject, body);
           }
       } catch (error: any) {
           console.error('Send email error:', error);

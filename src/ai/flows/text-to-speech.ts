@@ -8,9 +8,8 @@
  * - TextToSpeechOutput - The return type for the flow.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
-import { tts1 } from 'genkitx-openai';
+import { openai } from '@/ai/openai-client';
+import { z } from 'zod';
 
 const TextToSpeechInputSchema = z.object({
   text: z.string().describe('The text to be converted to speech.'),
@@ -25,49 +24,21 @@ export type TextToSpeechOutput = z.infer<typeof TextToSpeechOutputSchema>;
 export async function textToSpeech(
   input: TextToSpeechInput
 ): Promise<TextToSpeechOutput> {
-  return textToSpeechFlow(input);
-}
+  const { text } = input;
+  
+  try {
+    const mp3 = await openai.audio.speech.create({
+      model: "tts-1",
+      voice: "nova",
+      input: text,
+    });
 
-const textToSpeechFlow = ai.defineFlow(
-  {
-    name: 'textToSpeechFlow',
-    inputSchema: TextToSpeechInputSchema,
-    outputSchema: TextToSpeechOutputSchema,
-  },
-  async ({ text }) => {
-    let media;
-    let attempts = 0;
-    const maxAttempts = 3;
+    const buffer = Buffer.from(await mp3.arrayBuffer());
+    const audioDataUri = `data:audio/mp3;base64,${buffer.toString('base64')}`;
 
-    while (attempts < maxAttempts) {
-        try {
-            const ttsResponse = await ai.generate({
-                model: tts1,
-                prompt: text,
-                config: {
-                    voice: 'nova'
-                }
-            });
-            media = ttsResponse.media;
-            break; // Success
-        } catch(error: any) {
-            attempts++;
-            if (error.message && (error.message.includes('503') || error.message.includes('429')) && attempts < maxAttempts) {
-                console.log(`TTS generation attempt ${attempts} failed, retrying...`);
-                await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
-            } else {
-                throw error;
-            }
-        }
-    }
-
-
-    if (!media) {
-      throw new Error('no media returned');
-    }
-
-    return {
-      audioDataUri: media.url,
-    };
+    return { audioDataUri };
+  } catch (error: any) {
+    console.error('TTS Error:', error);
+    return { audioDataUri: "" };
   }
-);
+}

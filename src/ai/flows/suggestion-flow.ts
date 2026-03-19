@@ -1,20 +1,16 @@
 'use server';
 
-import { ai } from '@/ai/genkit';
-import { gpt4o } from 'genkitx-openai';
-import { z } from 'zod';
+import { openai } from '@/ai/openai-client';
 
-export const suggestionFlow = ai.defineFlow(
-  {
-    name: 'suggestionFlow',
-    inputSchema: z.string(),
-    outputSchema: z.string(),
-  },
-  async (prompt: string) => {
-    const response = await ai.generate({
-      model: gpt4o,
-      prompt: prompt,
+export async function suggestionFlow(prompt: string): Promise<string> {
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-5.4",
+      messages: [{ role: "user", content: prompt }]
     });
-    return response.text;
+    return response.choices[0].message.content || "";
+  } catch (error) {
+    console.error('Error in suggestionFlow:', error);
+    return "Error generating suggestion.";
   }
-);
+}

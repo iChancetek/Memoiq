@@ -8,8 +8,7 @@
  * - GetWelcomeGreetingOutput - The return type for the getWelcomeGreetingText function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { z } from 'zod';
 
 const GetWelcomeGreetingInputSchema = z.object({
   displayName: z.string().describe("The user's first name or display name."),
@@ -17,33 +16,18 @@ const GetWelcomeGreetingInputSchema = z.object({
 });
 export type GetWelcomeGreetingInput = z.infer<typeof GetWelcomeGreetingInputSchema>;
 
-
 export async function getWelcomeGreetingText(
   input: GetWelcomeGreetingInput
 ): Promise<string> {
-  return getWelcomeGreetingFlow(input);
-}
-
-const getGreetingText = (name: string, hour: number) => {
+    const { displayName, hour } = input;
     if (hour >= 5 && hour < 12) {
-        return `Good morning, ${name}.`;
+        return `Good morning, ${displayName}.`;
     }
     if (hour >= 12 && hour < 18) {
-        return `Good afternoon, ${name}.`;
+        return `Good afternoon, ${displayName}.`;
     }
     if (hour >= 18 && hour < 22) {
-        return `Good evening, ${name}.`;
+        return `Good evening, ${displayName}.`;
     }
-    return `Hello, ${name}. I hope you’re winding down for the night.`;
+    return `Hello, ${displayName}. I hope you’re winding down for the night.`;
 }
-
-const getWelcomeGreetingFlow = ai.defineFlow(
-  {
-    name: 'getWelcomeGreetingFlow',
-    inputSchema: GetWelcomeGreetingInputSchema,
-    outputSchema: z.string(),
-  },
-  async ({ displayName, hour }) => {
-    return getGreetingText(displayName, hour);
-  }
-);

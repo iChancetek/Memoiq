@@ -55,6 +55,7 @@ export const CalendarEventSchema = z.object({
     startTime: z.date(),
     endTime: z.date(),
     location: z.string().optional(),
+    description: z.string().optional(),
     createdAt: z.any(),
 });
 export type CalendarEvent = z.infer<typeof CalendarEventSchema>;

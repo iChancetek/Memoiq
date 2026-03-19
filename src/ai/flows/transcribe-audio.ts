@@ -8,17 +8,12 @@
  * - TranscribeAudioOutput - The return type for the transcribeAudio function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
-import { whisper1 } from 'genkitx-openai';
+import { openai } from '@/ai/openai-client';
+import { z } from 'zod';
 
 const TranscribeAudioInputSchema = z.object({
-  audioDataUri: z
-    .string()
-    .describe(
-      "An audio file, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
-    ),
-    language: z.enum(['en', 'es']).describe("The language of the audio to transcribe into."),
+  audioDataUri: z.string().describe("Data URI: 'data:<mimetype>;base64,<encoded_data>'."),
+  language: z.enum(['en', 'es']).describe("The language of the audio."),
 });
 export type TranscribeAudioInput = z.infer<typeof TranscribeAudioInputSchema>;
 
@@ -28,53 +23,29 @@ const TranscribeAudioOutputSchema = z.object({
 export type TranscribeAudioOutput = z.infer<typeof TranscribeAudioOutputSchema>;
 
 export async function transcribeAudio(input: TranscribeAudioInput): Promise<TranscribeAudioOutput> {
-  return transcribeAudioFlow(input);
+  const { audioDataUri } = input;
+  
+  try {
+    // Extract base64 and mime type
+    const matches = audioDataUri.match(/^data:(.+);base64,(.+)$/);
+    if (!matches) throw new Error('Invalid audio data URI format');
+    
+    const mimeType = matches[1];
+    const base64Data = matches[2];
+    const buffer = Buffer.from(base64Data, 'base64');
+
+    // Create a temporary file-like object for Whisper
+    // In Next.js server actions, we can use a Buffer with a filename
+    const transcription = await openai.audio.transcriptions.create({
+      file: await OpenAI.toFile(buffer, `audio.${mimeType.split('/')[1] || 'webm'}`, { type: mimeType }),
+      model: "whisper-1",
+    });
+
+    return { transcription: transcription.text };
+  } catch (error: any) {
+    console.error('Whisper Transcription Error:', error);
+    throw new Error(`Failed to transcribe audio: ${error.message}`);
+  }
 }
 
-const transcribeAudioPrompt = ai.definePrompt({
-  name: 'transcribeAudioPrompt',
-  input: {schema: TranscribeAudioInputSchema},
-  output: {schema: TranscribeAudioOutputSchema},
-  model: whisper1,
-  prompt: [
-    { text: `You are a transcription expert. Please transcribe the following audio to text in {{language}}.` },
-    { media: { url: '{{audioDataUri}}' } }
-  ],
-});
-
-const transcribeAudioFlow = ai.defineFlow(
-  {
-    name: 'transcribeAudioFlow',
-    inputSchema: TranscribeAudioInputSchema,
-    outputSchema: TranscribeAudioOutputSchema,
-  },
-  async input => {
-    let output;
-    let attempts = 0;
-    const maxAttempts = 3;
-
-    while (attempts < maxAttempts) {
-        try {
-            const result = await transcribeAudioPrompt(input);
-            output = result.output;
-            if (output) {
-                break; 
-            }
-            attempts++;
-        } catch (error: any) {
-            attempts++;
-            if ((error.message.includes('503') || error.message.includes('429')) && attempts < maxAttempts) {
-                console.log(`Scribe transcription attempt ${attempts} failed, retrying...`);
-                await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
-            } else {
-                throw error;
-            }
-        }
-    }
-    
-    if (!output) {
-        throw new Error('Transcription failed after multiple attempts.');
-    }
-    return output;
-  }
-);
+import OpenAI from 'openai';

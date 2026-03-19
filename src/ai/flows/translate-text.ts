@@ -8,9 +8,8 @@
  * - TranslateTextOutput - The return type for the flow.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
-import { gpt4o } from 'genkitx-openai';
+import { openai } from '@/ai/openai-client';
+import { z } from 'zod';
 
 const TranslateTextInputSchema = z.object({
   text: z.string().describe('The text to be translated.'),
@@ -26,55 +25,28 @@ export type TranslateTextOutput = z.infer<typeof TranslateTextOutputSchema>;
 export async function translateText(
   input: TranslateTextInput
 ): Promise<TranslateTextOutput> {
-  return translateTextFlow(input);
-}
+  const { text, targetLanguage } = input;
 
-const translatePrompt = ai.definePrompt({
-    name: 'translateTextPrompt',
-    model: gpt4o,
-    input: { schema: TranslateTextInputSchema },
-    output: { schema: TranslateTextOutputSchema },
-    prompt: `You are a translation expert. Translate the following text to {{targetLanguage}}.
+  const prompt = `You are a translation expert. Translate the following text to ${targetLanguage}.
 
 Text:
-{{{text}}}
-`,
-});
+${text}`;
 
-const translateTextFlow = ai.defineFlow(
-  {
-    name: 'translateTextFlow',
-    inputSchema: TranslateTextInputSchema,
-    outputSchema: TranslateTextOutputSchema,
-  },
-  async (input) => {
-    let translationOutput;
-    let attempts = 0;
-    const maxAttempts = 3;
-    
-    while (attempts < maxAttempts) {
-        try {
-            const result = await translatePrompt(input);
-            translationOutput = result.output;
-            if (translationOutput) {
-              break; // Success
-            }
-            attempts++;
-        } catch (error: any) {
-            attempts++;
-            if ((error.message.includes('503') || error.message.includes('429')) && attempts < maxAttempts) {
-                console.log(`Translation attempt ${attempts} failed, retrying...`);
-                await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
-            } else {
-                throw error;
-            }
-        }
-    }
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-5.4",
+      messages: [
+        { role: "system", content: "You are a helpful assistant." },
+        { role: "user", content: prompt }
+      ]
+    });
 
-    if (!translationOutput) {
-        throw new Error('Translation failed after multiple attempts.');
-    }
+    const translation = response.choices[0].message.content || "";
     
-    return { translation: translationOutput.translation };
+    return { translation };
+
+  } catch (error: any) {
+    console.error('Error in translateText:', error);
+    return { translation: "Error during translation." };
   }
-);
+}

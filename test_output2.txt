@@ -1,0 +1,21 @@
+﻿≡ƒº¬ Testing Chancellor AI RAG Flow...
+
+User: "What is MemoIQ and who created it?"
+
+≡ƒñû Chancellor:
+MemoIQ is an AI-powered productivity platform designed to help you manage work and life in one place. It brings together things like:
+
+- Tasks
+- Email
+- Calendar
+- Contacts
+- Voice memos
+- AI insights and assistance
+
+ItΓÇÖs built to help you capture information quickly, stay organized, and turn scattered inputs into actionable next steps.
+
+MemoIQ was created by ChanceTEK LLC.
+
+If you want, I can also give you a quick overview of how MemoIQ works or walk you through the main features on your dashboard.
+
+≡ƒôÜ Sources: None

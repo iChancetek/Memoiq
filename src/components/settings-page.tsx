@@ -12,8 +12,8 @@ import { Switch } from './ui/switch';
 import { useTheme } from 'next-themes';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import { useLanguage } from '@/contexts/language-context';
-import GoogleSyncButton from './GoogleSyncButton';
-import MicrosoftSyncButton from './MicrosoftSyncButton';
+import GoogleAccountsManager from './GoogleAccountsManager';
+import MicrosoftAccountsManager from './MicrosoftAccountsManager';
 import Link from 'next/link';
 
 
@@ -123,11 +123,11 @@ export function SettingsPage() {
         <CardHeader>
             <CardTitle>Google Integration</CardTitle>
             <CardDescription>
-                Connect to your Google account to sync your Contacts, Calendar events, and Emails.
+                Connect and manage multiple Google accounts to sync your Mail and Calendar events.
             </CardDescription>
         </CardHeader>
         <CardContent>
-            <GoogleSyncButton />
+            <GoogleAccountsManager />
         </CardContent>
       </Card>
 
@@ -139,7 +139,7 @@ export function SettingsPage() {
             </CardDescription>
         </CardHeader>
         <CardContent>
-            <MicrosoftSyncButton />
+            <MicrosoftAccountsManager />
         </CardContent>
       </Card>
 

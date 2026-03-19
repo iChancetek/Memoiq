@@ -5,8 +5,7 @@
  * @fileOverview Generates a draft reply to an email.
  */
 
-import { ai } from '@/ai/genkit';
-import { gpt4o } from 'genkitx-openai';
+import { openai } from '@/ai/openai-client';
 import { z } from 'zod';
 
 const DraftEmailReplyInputSchema = z.object({
@@ -25,39 +24,35 @@ export type DraftEmailReplyOutput = z.infer<typeof DraftEmailReplyOutputSchema>;
 export async function draftEmailReply(
   input: DraftEmailReplyInput
 ): Promise<DraftEmailReplyOutput> {
-  return draftEmailReplyFlow(input);
-}
+  const { from, subject, body, userContext } = input;
 
-const prompt = ai.definePrompt({
-  name: 'draftEmailReplyPrompt',
-  input: { schema: DraftEmailReplyInputSchema },
-  output: { schema: DraftEmailReplyOutputSchema },
-  model: gpt4o,
-  prompt: `You are an expert at drafting professional and concise emails. Based on the original email below, draft a reply.
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-5.4",
+      messages: [
+        {
+          role: "system",
+          content: "You are an expert at drafting professional and concise emails. Based on the original email and user context, draft a clear, professional, and helpful response. Do not include a subject line or signature. Return the result in JSON format with a 'replyBody' field."
+        },
+        {
+          role: "user",
+          content: `Original Email From: ${from}\nOriginal Email Subject: ${subject}\nOriginal Email Body:\n${body}\n\nUser Context for Reply: ${userContext}`
+        }
+      ],
+      response_format: { type: "json_object" }
+    });
 
-Original Email From: {{{from}}}
-Original Email Subject: {{{subject}}}
-Original Email Body:
-{{{body}}}
+    const content = response.choices[0].message.content;
+    if (!content) throw new Error('Empty response from OpenAI');
 
-User Context for Reply: {{{userContext}}}
-
-Instructions:
-1. Analyze the original email to understand its purpose and key points.
-2. Consider the user's context to tailor the tone and content of the reply.
-3. Draft a clear, professional, and helpful response. Do not include a subject line or signature.
-
-Drafted Reply:`,
-});
-
-const draftEmailReplyFlow = ai.defineFlow(
-  {
-    name: 'draftEmailReplyFlow',
-    inputSchema: DraftEmailReplyInputSchema,
-    outputSchema: DraftEmailReplyOutputSchema,
-  },
-  async (input) => {
-    const result = await prompt(input);
-    return result.output!;
+    const parsed = JSON.parse(content);
+    return {
+      replyBody: parsed.replyBody || "Could not draft reply."
+    };
+  } catch (error: any) {
+    console.error('Error drafting email reply:', error);
+    return {
+      replyBody: "Error generating draft reply."
+    };
   }
-);
+}

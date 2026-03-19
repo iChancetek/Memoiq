@@ -8,8 +8,8 @@
  * - ParseTaskStringOutput - The return type for the parseTaskString function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { openai } from '@/ai/openai-client';
+import { z } from 'zod';
 
 const ParseTaskStringInputSchema = z.object({
   taskString: z.string().describe('The natural language description of the task.'),
@@ -29,37 +29,50 @@ export type ParseTaskStringOutput = z.infer<typeof ParseTaskStringOutputSchema>;
 export async function parseTaskString(
   input: ParseTaskStringInput
 ): Promise<ParseTaskStringOutput> {
-  return parseTaskStringFlow(input);
-}
+  const { taskString, contacts, context } = input;
 
-const prompt = ai.definePrompt({
-  name: 'parseTaskStringPrompt',
-  input: {schema: ParseTaskStringInputSchema},
-  output: {schema: ParseTaskStringOutputSchema},
-  prompt: `You are an expert at parsing tasks from natural language. Analyze the user's request and convert it into a structured task object.
+  const prompt = `You are an expert at parsing tasks from natural language. Analyze the user's request and convert it into a structured task object.
 
-User Request: "{{taskString}}"
-User's Contacts: {{{contacts}}}
+User Request: "${taskString}"
+User's Contacts: ${contacts}
 Current Date: ${new Date().toDateString()}
 
 Instructions:
 1.  Determine a clear, concise title for the task.
-2.  Identify the due date. If a specific date or day is mentioned (e.g., "by Thursday", "on the 25th"), calculate the date in YYYY-MM-DD format. If no date is given, suggest a reasonable future date (e.g., 3-7 days from now).
+2.  Identify the due date. If a specific date or day is mentioned, calculate the date in YYYY-MM-DD format. If no date is given, suggest a reasonable future date (e.g., 3-7 days from now).
 3.  Based on the task title, generate a list of 2-3 actionable subtasks that would help accomplish the main task. If the task is simple and doesn't need decomposition, return an empty array for subtasks.
-4.  Scan the task string for any names that match the user's contacts. If a match is found, include the corresponding contact's ID (which is a string) in the 'contactIds' array. For example, if the request is "Follow up with Olivia Chen", and Olivia Chen has ID "abc-123", the 'contactIds' should be ["abc-123"].
-5.  Consider the following context if provided: {{context}}
+4.  Scan the task string for any names that match the user's contacts. If a match is found, include the corresponding contact's ID (which is a string) in the 'contactIds' array.
 
-Output the structured task object.`,
-});
+Context: ${context}
 
-const parseTaskStringFlow = ai.defineFlow(
-  {
-    name: 'parseTaskStringFlow',
-    inputSchema: ParseTaskStringInputSchema,
-    outputSchema: ParseTaskStringOutputSchema,
-  },
-  async input => {
-    const result = await prompt(input);
-    return result.output!;
+Output MUST be a JSON object with the following fields:
+- title (string)
+- dueDate (string, YYYY-MM-DD)
+- subtasks (array of strings)
+- contactIds (array of strings)`;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-5.4",
+      messages: [
+        { role: "system", content: "You are a helpful assistant that outputs JSON." },
+        { role: "user", content: prompt }
+      ],
+      response_format: { type: "json_object" }
+    });
+
+    const content = response.choices[0].message.content || "{}";
+    const result = JSON.parse(content);
+    
+    return ParseTaskStringOutputSchema.parse(result);
+
+  } catch (error: any) {
+    console.error('Error in parseTaskString:', error);
+    return {
+        title: taskString,
+        dueDate: new Date().toISOString().split('T')[0],
+        subtasks: [],
+        contactIds: []
+    };
   }
-);
+}

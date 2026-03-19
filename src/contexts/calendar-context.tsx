@@ -18,7 +18,7 @@ import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlo
 
 interface CalendarContextType {
   events: CalendarEvent[];
-  addEvent: (event: Omit<CalendarEvent, 'id' | 'userId' | 'createdAt'>, provider?: 'google' | 'microsoft') => Promise<void>;
+  addEvent: (event: Omit<CalendarEvent, 'id' | 'userId' | 'createdAt'>, provider?: 'google' | 'microsoft', accountEmail?: string) => Promise<void>;
   updateEvent: (eventId: string, updates: Partial<CalendarEvent>) => Promise<void>;
   deleteEvent: (eventId: string) => Promise<void>;
   loading: boolean;
@@ -64,18 +64,45 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user, db]);
 
-  const addEvent = async (event: Omit<CalendarEvent, 'id' | 'userId' | 'createdAt'>, provider: 'google' | 'microsoft' = 'google') => {
+  const addEvent = async (event: Omit<CalendarEvent, 'id' | 'userId' | 'createdAt'>, provider: 'google' | 'microsoft' = 'google', accountEmail?: string) => {
     if (!user || !db) throw new Error("User not authenticated or DB not initialized");
     const collectionRef = collection(db, 'users', user.uid, 'events');
     
-    // In a real app, if provider is 'microsoft', we'd also call createMicrosoftEvent
-    // For this implementation, we'll store the event locally in Firestore first.
+    // 1. Always store locally in Firestore for immediate UI update
     addDocumentNonBlocking(collectionRef, {
       ...event,
       provider: provider,
+      accountEmail: accountEmail,
       userId: user.uid,
       createdAt: serverTimestamp(),
     });
+
+    // 2. Call external API if provider is connected
+    if (provider === 'google') {
+        const targetEmail = accountEmail || (user.integrations?.googleAccounts ? Object.keys(user.integrations.googleAccounts)[0] : null);
+        if (targetEmail) {
+            const actualEmail = targetEmail.replace(/_/g, '.');
+            const { createGoogleEvent } = await import('@/services/google-sync');
+            await createGoogleEvent(user.uid, actualEmail, {
+                title: event.title,
+                startTime: event.startTime,
+                endTime: event.endTime,
+                location: event.location,
+                description: event.description
+            });
+        }
+    } else if (provider === 'microsoft') {
+        const targetEmail = accountEmail || (user.integrations?.microsoftAccounts ? Object.keys(user.integrations.microsoftAccounts)[0] : null);
+        if (targetEmail) {
+            const actualEmail = targetEmail.replace(/_/g, '.');
+            const { createMicrosoftEvent } = await import('@/services/microsoft-sync');
+            await createMicrosoftEvent(user.uid, actualEmail, {
+                subject: event.title,
+                start: { dateTime: event.startTime.toISOString(), timeZone: 'UTC' },
+                end: { dateTime: event.endTime.toISOString(), timeZone: 'UTC' },
+            });
+        }
+    }
   };
 
   const updateEvent = async (eventId: string, updates: Partial<CalendarEvent>) => {

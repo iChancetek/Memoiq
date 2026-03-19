@@ -21,6 +21,24 @@ import { getFirestore, doc, setDoc, serverTimestamp, getDoc, updateDoc, type Fir
 import { useRouter } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 
+export interface GoogleAccount {
+    email: string;
+    displayName: string;
+    photoURL?: string;
+    refreshToken: string;
+    status: 'connected' | 'disconnected';
+    lastSync?: any; // Firestore Timestamp
+}
+
+export interface MicrosoftAccount {
+    email: string;
+    displayName: string;
+    photoURL?: string;
+    refreshToken: string;
+    status: 'connected' | 'disconnected';
+    lastSync?: any; // Firestore Timestamp
+}
+
 export interface AppUser extends User {
     settings?: {
         theme?: string;
@@ -36,11 +54,17 @@ export interface AppUser extends User {
             gmail: 'connected' | 'disconnected',
             refreshToken?: string | null,
         },
+        googleAccounts?: {
+            [email: string]: GoogleAccount;
+        },
         microsoft?: {
             calendar: 'connected' | 'disconnected',
             contacts: 'connected' | 'disconnected',
             outlook: 'connected' | 'disconnected',
             refreshToken?: string | null,
+        },
+        microsoftAccounts?: {
+            [email: string]: MicrosoftAccount;
         }
     }
 }
@@ -54,6 +78,10 @@ interface AuthContextType {
   logout: () => Promise<void>;
   loginWithGoogle: () => Promise<void>;
   disconnectGoogle: () => Promise<void>;
+  addGoogleAccount: (account: GoogleAccount) => Promise<void>;
+  removeGoogleAccount: (email: string) => Promise<void>;
+  addMicrosoftAccount: (account: MicrosoftAccount) => Promise<void>;
+  removeMicrosoftAccount: (email: string) => Promise<void>;
   loginWithMicrosoft: () => Promise<void>;
   disconnectMicrosoft: () => Promise<void>;
   updateUserProfile: (profile: { displayName?: string; photoURL?: string }) => Promise<void>;
@@ -319,6 +347,125 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
   };
 
+  const addGoogleAccount = async (account: GoogleAccount) => {
+    if (user) {
+        setLoading(true);
+        setError(null);
+        try {
+            const userRef = doc(firestore, 'users', user.uid);
+            const updatedGoogleAccounts = {
+                ...(user.integrations?.googleAccounts || {}),
+                [account.email]: account
+            };
+            await updateDoc(userRef, { 'integrations.googleAccounts': updatedGoogleAccounts });
+            
+            setUser(prevUser => {
+                if (!prevUser) return null;
+                return {
+                    ...prevUser,
+                    integrations: {
+                        ...prevUser.integrations,
+                        googleAccounts: updatedGoogleAccounts
+                    }
+                } as AppUser;
+            });
+        } catch (err: any) {
+            handleAuthError(err);
+        } finally {
+            setLoading(false);
+        }
+    }
+  };
+
+  const removeGoogleAccount = async (email: string) => {
+    if (user) {
+        setLoading(true);
+        setError(null);
+        try {
+            const userRef = doc(firestore, 'users', user.uid);
+            const updatedGoogleAccounts = { ...(user.integrations?.googleAccounts || {}) };
+            delete updatedGoogleAccounts[email];
+            
+            await updateDoc(userRef, { 'integrations.googleAccounts': updatedGoogleAccounts });
+            
+            setUser(prevUser => {
+                if (!prevUser) return null;
+                return {
+                    ...prevUser,
+                    integrations: {
+                        ...prevUser.integrations,
+                        googleAccounts: updatedGoogleAccounts
+                    }
+                } as AppUser;
+            });
+        } catch (err: any) {
+            handleAuthError(err);
+        } finally {
+            setLoading(false);
+        }
+    }
+  };
+  
+  const addMicrosoftAccount = async (account: MicrosoftAccount) => {
+    if (user) {
+        setLoading(true);
+        setError(null);
+        try {
+            const userRef = doc(firestore, 'users', user.uid);
+            const updatedMSAccounts = {
+                ...(user.integrations?.microsoftAccounts || {}),
+                [account.email.replace(/\./g, '_')]: account
+            };
+            await updateDoc(userRef, { 'integrations.microsoftAccounts': updatedMSAccounts });
+            
+            setUser(prevUser => {
+                if (!prevUser) return null;
+                return {
+                    ...prevUser,
+                    integrations: {
+                        ...prevUser.integrations,
+                        microsoftAccounts: updatedMSAccounts
+                    }
+                } as AppUser;
+            });
+        } catch (err: any) {
+            handleAuthError(err);
+        } finally {
+            setLoading(false);
+        }
+    }
+  };
+
+  const removeMicrosoftAccount = async (email: string) => {
+    if (user) {
+        setLoading(true);
+        setError(null);
+        try {
+            const userRef = doc(firestore, 'users', user.uid);
+            const emailKey = email.replace(/\./g, '_');
+            const updatedMSAccounts = { ...(user.integrations?.microsoftAccounts || {}) };
+            delete updatedMSAccounts[emailKey];
+            
+            await updateDoc(userRef, { 'integrations.microsoftAccounts': updatedMSAccounts });
+            
+            setUser(prevUser => {
+                if (!prevUser) return null;
+                return {
+                    ...prevUser,
+                    integrations: {
+                        ...prevUser.integrations,
+                        microsoftAccounts: updatedMSAccounts
+                    }
+                } as AppUser;
+            });
+        } catch (err: any) {
+            handleAuthError(err);
+        } finally {
+            setLoading(false);
+        }
+    }
+  };
+
   const disconnectGoogle = async () => {
       if (!user) return;
       setLoading(true);
@@ -419,6 +566,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     loginWithGoogle,
     disconnectGoogle,
+    addGoogleAccount,
+    removeGoogleAccount,
+    addMicrosoftAccount,
+    removeMicrosoftAccount,
     loginWithMicrosoft,
     disconnectMicrosoft,
     updateUserProfile,

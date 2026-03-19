@@ -5,8 +5,7 @@
  * @fileOverview Summarizes an email.
  */
 
-import { ai } from '@/ai/genkit';
-import { gpt4o } from 'genkitx-openai';
+import { openai } from '@/ai/openai-client';
 import { z } from 'zod';
 
 const SummarizeEmailInputSchema = z.object({
@@ -25,36 +24,37 @@ export type SummarizeEmailOutput = z.infer<typeof SummarizeEmailOutputSchema>;
 export async function summarizeEmail(
   input: SummarizeEmailInput
 ): Promise<SummarizeEmailOutput> {
-  return summarizeEmailFlow(input);
-}
+  const { from, subject, body } = input;
 
-const prompt = ai.definePrompt({
-  name: 'summarizeEmailPrompt',
-  input: { schema: SummarizeEmailInputSchema },
-  output: { schema: SummarizeEmailOutputSchema },
-  model: gpt4o,
-  prompt: `You are an expert at summarizing emails concisely. Analyze the following email and provide a one-paragraph summary and a list of key action items.
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-5.4",
+      messages: [
+        {
+          role: "system",
+          content: "You are an expert at summarizing emails concisely. Analyze the email and provide a one-paragraph summary and a list of key action items in JSON format."
+        },
+        {
+          role: "user",
+          content: `Email From: ${from}\nEmail Subject: ${subject}\nEmail Body:\n${body}`
+        }
+      ],
+      response_format: { type: "json_object" }
+    });
 
-Email From: {{{from}}}
-Email Subject: {{{subject}}}
-Email Body:
-{{{body}}}
+    const content = response.choices[0].message.content;
+    if (!content) throw new Error('Empty response from OpenAI');
 
-Instructions:
-1.  **Summary**: Write a single paragraph that captures the main points and purpose of the email.
-2.  **Action Items**: Identify any explicit or implicit tasks, questions, or deadlines for the recipient. List them out. If there are no action items, return an empty array.
-
-Generate the structured output.`,
-});
-
-const summarizeEmailFlow = ai.defineFlow(
-  {
-    name: 'summarizeEmailFlow',
-    inputSchema: SummarizeEmailInputSchema,
-    outputSchema: SummarizeEmailOutputSchema,
-  },
-  async (input) => {
-    const result = await prompt(input);
-    return result.output!;
+    const parsed = JSON.parse(content);
+    return {
+      summary: parsed.summary || "No summary available.",
+      actionItems: parsed.actionItems || []
+    };
+  } catch (error: any) {
+    console.error('Error summarizing email:', error);
+    return {
+        summary: "Error generating summary.",
+        actionItems: []
+    };
   }
-);
+}

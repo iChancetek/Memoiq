@@ -9,9 +9,8 @@
  * - PersonalizedInsightsOutput - The return type for the getPersonalizedInsights function.
  */
 
-import {ai} from '@/ai/genkit';
-import { gpt4o } from 'genkitx-openai';
-import {z} from 'genkit';
+import { openai } from '@/ai/openai-client';
+import { z } from 'zod';
 
 const PersonalizedInsightsInputSchema = z.object({
   memos: z.string().describe('User memos.'),
@@ -32,39 +31,43 @@ export type PersonalizedInsightsOutput = z.infer<
 export async function getPersonalizedInsights(
   input: PersonalizedInsightsInput
 ): Promise<PersonalizedInsightsOutput> {
-  const result = await getPersonalizedInsightsFlow(input);
-  return {insights: result.insights};
-}
+  const { memos, tasks, calendarEvents } = input;
 
-const getPersonalizedInsightsFlow = ai.defineFlow(
-  {
-    name: 'getPersonalizedInsightsFlow',
-    inputSchema: PersonalizedInsightsInputSchema,
-    outputSchema: PersonalizedInsightsOutputSchema,
-  },
-  async ({memos, tasks, calendarEvents}) => {
-    const prompt = `
-      You are an AI assistant that provides personalized insights and reminders based on the user's memos, tasks, and calendar events.
+  const prompt = `
+    You are an AI assistant that provides personalized insights and reminders based on the user's memos, tasks, and calendar events.
 
-      Memos:
-      ${memos}
+    Memos:
+    ${memos}
 
-      Tasks:
-      ${tasks}
+    Tasks:
+    ${tasks}
 
-      Calendar Events:
-      ${calendarEvents}
+    Calendar Events:
+    ${calendarEvents}
 
-      Generate a few key insights or reminders for the user.
-    `;
-    const llmResponse = await ai.generate({
-      model: gpt4o,
-      prompt: prompt,
-      output: {
-        schema: PersonalizedInsightsOutputSchema,
-      },
+    Generate a few key insights or reminders for the user.
+  `;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-5.4",
+      messages: [
+        { role: "system", content: "You are a helpful assistant providing personalized insights." },
+        { role: "user", content: prompt }
+      ],
+      response_format: { type: "json_object" }, // We'll try structuring it or just returning text
     });
 
-    return llmResponse.output!;
+    // Actually, usually we want to parse it. Let's make the prompt ask for JSON to match schema.
+    // Or we can just use the response text directly if the output expects a string.
+    // The schema says `insights: z.string()`.
+    
+    const responseContent = response.choices[0].message.content || "";
+    
+    return { insights: responseContent };
+
+  } catch (error: any) {
+    console.error('Error in getPersonalizedInsights:', error);
+    return { insights: "Unable to generate insights at this time." };
   }
-);
+}

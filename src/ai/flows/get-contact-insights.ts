@@ -7,9 +7,8 @@
  * - GetContactInsightsOutput - The return type for the getContactInsights function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
-import { gpt4o, tts1 } from 'genkitx-openai';
+import { openai } from '@/ai/openai-client';
+import { z } from 'zod';
 
 const GetContactInsightsInputSchema = z.object({
   contacts: z.string().describe('A JSON string of the user\'s contacts, including name, company, and last contact date.'),
@@ -26,20 +25,14 @@ export type GetContactInsightsOutput = z.infer<typeof GetContactInsightsOutputSc
 export async function getContactInsights(
   input: GetContactInsightsInput
 ): Promise<GetContactInsightsOutput> {
-  return getContactInsightsFlow(input);
-}
+  const { contacts, currentDate } = input;
 
-const prompt = ai.definePrompt({
-  name: 'getContactInsightsPrompt',
-  input: {schema: GetContactInsightsInputSchema},
-  output: {schema: GetContactInsightsOutputSchema.omit({ audioDataUri: true })},
-  model: gpt4o,
-  prompt: `You are a relationship management assistant. Your goal is to help users maintain professional connections by suggesting timely follow-ups.
+  const prompt = `You are a relationship management assistant. Your goal is to help users maintain professional connections by suggesting timely follow-ups.
 
-Current Date: {{{currentDate}}}
+Current Date: ${currentDate}
 
 User's Contacts (JSON):
-{{{contacts}}}
+${contacts}
 
 Instructions:
 1.  Analyze the user's contact list. Pay close attention to the 'lastContact' date for each person.
@@ -50,42 +43,40 @@ Instructions:
 
 Example output:
 - Samuel Rodriguez: It's been over two months since your last chat. A good time to reconnect about Q4 marketing ideas.
-- Olivia Chen: You haven't spoken since late July. Check in on Project Phoenix progress.`,
-});
+- Olivia Chen: You haven't spoken since late July. Check in on Project Phoenix progress.`;
 
-
-const getContactInsightsFlow = ai.defineFlow(
-  {
-    name: 'getContactInsightsFlow',
-    inputSchema: GetContactInsightsInputSchema,
-    outputSchema: GetContactInsightsOutputSchema,
-  },
-  async input => {
-    const result = await prompt(input);
-    const analysisOutput = result.output;
-
-    if (!analysisOutput) {
-      throw new Error('Failed to get contact insights after multiple attempts.');
-    }
-    
-    const readableAnalysis = `
-      Here are your contact suggestions.
-      ${analysisOutput.followUpSuggestions}.
-    `;
-
-    const { media: audio } = await ai.generate({
-      model: tts1,
-      prompt: readableAnalysis,
-      config: {
-        voice: 'nova'
-      }
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-5.4",
+      messages: [
+        { role: "system", content: "You are a helpful assistant." },
+        { role: "user", content: prompt }
+      ]
     });
 
-    const audioDataUri = audio!.url;
-    
+    const suggestions = response.choices[0].message.content || "";
+
+    const readableAnalysis = `Here are your contact suggestions. ${suggestions}`;
+
+    const mp3 = await openai.audio.speech.create({
+      model: "tts-1",
+      voice: "nova",
+      input: readableAnalysis,
+    });
+
+    const buffer = Buffer.from(await mp3.arrayBuffer());
+    const audioDataUri = `data:audio/mp3;base64,${buffer.toString('base64')}`;
+
     return {
-        ...analysisOutput,
-        audioDataUri,
+      followUpSuggestions: suggestions,
+      audioDataUri,
+    };
+
+  } catch (error: any) {
+    console.error('Error in getContactInsights:', error);
+    return {
+      followUpSuggestions: "Unable to generate contact suggestions at this time.",
+      audioDataUri: "",
     };
   }
-);
+}

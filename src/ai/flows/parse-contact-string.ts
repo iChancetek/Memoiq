@@ -8,9 +8,8 @@
  * - ParseContactStringOutput - The return type for the parseContactString function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
-import { gpt4o } from 'genkitx-openai';
+import { openai } from '@/ai/openai-client';
+import { z } from 'zod';
 
 const ParseContactStringInputSchema = z.object({
   contactString: z.string().describe('The natural language description of the contact.'),
@@ -29,17 +28,11 @@ export type ParseContactStringOutput = z.infer<typeof ParseContactStringOutputSc
 export async function parseContactString(
   input: ParseContactStringInput
 ): Promise<ParseContactStringOutput> {
-  return parseContactStringFlow(input);
-}
+  const { contactString } = input;
 
-const prompt = ai.definePrompt({
-  name: 'parseContactStringPrompt',
-  input: {schema: ParseContactStringInputSchema},
-  output: {schema: ParseContactStringOutputSchema},
-  model: gpt4o,
-  prompt: `You are an expert at parsing contact information from natural language. Analyze the user's request and convert it into a structured contact object.
+  const prompt = `You are an expert at parsing contact information from natural language. Analyze the user's request and convert it into a structured contact object.
 
-User Request: "{{contactString}}"
+User Request: "${contactString}"
 
 Instructions:
 1.  Extract the full name of the person.
@@ -48,17 +41,36 @@ Instructions:
 4.  Extract the company name. If not provided, leave the field empty.
 5.  Extract any other relevant information as notes.
 
-Output the structured contact object.`,
-});
+Output MUST be a JSON object with the following fields:
+- name (string)
+- email (string)
+- title (string)
+- company (string)
+- notes (string)`;
 
-const parseContactStringFlow = ai.defineFlow(
-  {
-    name: 'parseContactStringFlow',
-    inputSchema: ParseContactStringInputSchema,
-    outputSchema: ParseContactStringOutputSchema,
-  },
-  async input => {
-    const result = await prompt(input);
-    return result.output!;
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-5.4",
+      messages: [
+        { role: "system", content: "You are a helpful assistant that outputs JSON." },
+        { role: "user", content: prompt }
+      ],
+      response_format: { type: "json_object" }
+    });
+
+    const content = response.choices[0].message.content || "{}";
+    const result = JSON.parse(content);
+    
+    return ParseContactStringOutputSchema.parse(result);
+
+  } catch (error: any) {
+    console.error('Error in parseContactString:', error);
+    return {
+        name: contactString,
+        email: "",
+        title: "",
+        company: "",
+        notes: ""
+    };
   }
-);
+}

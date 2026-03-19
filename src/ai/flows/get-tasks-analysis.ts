@@ -7,9 +7,8 @@
  * - GetTasksAnalysisOutput - The return type for the getTasksAnalysis function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
-import { gpt4o, tts1 } from 'genkitx-openai';
+import { openai } from '@/ai/openai-client';
+import { z } from 'zod';
 
 const GetTasksAnalysisInputSchema = z.object({
   tasks: z.string().describe("A JSON string of the user's tasks, including title, due date, and completion status."),
@@ -35,44 +34,41 @@ export type GetTasksAnalysisOutput = z.infer<typeof GetTasksAnalysisOutputSchema
 export async function getTasksAnalysis(
   input: GetTasksAnalysisInput
 ): Promise<GetTasksAnalysisOutput> {
-  return getTasksAnalysisFlow(input);
-}
+  const { tasks, currentDate } = input;
 
-const prompt = ai.definePrompt({
-  name: 'getTasksAnalysisPrompt',
-  input: {schema: GetTasksAnalysisInputSchema},
-  output: {schema: GetTasksAnalysisOutputSchema.omit({ audioDataUri: true })},
-  model: gpt4o,
-  prompt: `You are a world-class productivity coach and project manager. Your goal is to analyze a user's task list and provide a strategic, intelligent briefing.
+  const prompt = `You are a world-class productivity coach and project manager. Your goal is to analyze a user's task list and provide a strategic, intelligent briefing.
 
-Current Date: {{{currentDate}}}
+Current Date: ${currentDate}
 
 User's Task List (JSON):
-{{{tasks}}}
+${tasks}
 
 Instructions:
-1.  **Summary**: Provide a concise, one-sentence summary of the overall workload. (e.g., "You have a busy week ahead focused on Project Apollo," or "Your workload seems manageable with a few key deadlines approaching.")
-2.  **Identify Priority Task**: Analyze all tasks, considering due dates, task titles, and dependencies (implied from titles). Identify the single most critical task that the user should focus on next. Provide a clear reason why it's the priority.
-3.  **Assess Risks**: Look for potential problems. This includes overdue tasks, tasks with close deadlines that seem large, or potential bottlenecks (e.g., multiple tasks due on the same day). If a risk is found, set 'hasRisk' to true and describe it clearly. If not, set 'hasRisk' to false.
-4.  **Provide Actionable Suggestions**: Based on your analysis, generate a list of 2-3 concrete, actionable suggestions. These should not be simple task reminders. Instead, they should be strategic tips. Examples: "Consider breaking down 'Draft proposal' into smaller research and writing subtasks," or "Since two major tasks are due on Friday, try to complete the review for one of them by Wednesday to spread out the workload."
+1.  **Summary**: Provide a concise, one-sentence summary of the overall workload.
+2.  **Identify Priority Task**: Identify the single most critical task that the user should focus on next. Provide reasoning.
+3.  **Assess Risks**: Look for overdue tasks, bottlenecks. Set 'hasRisk' accordingly.
+4.  **Provide Actionable Suggestions**: Generate 2-3 actionable suggestions.
 
-Analyze the provided data and generate the structured output.`,
-});
+Output MUST be a JSON object with the following structure:
+{
+  "summary": "string",
+  "priorityTask": { "title": "string", "reasoning": "string" },
+  "risk": { "hasRisk": boolean, "description": "string" },
+  "suggestions": ["string"]
+}`;
 
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-5.4",
+      messages: [
+        { role: "system", content: "You are a helpful assistant that outputs JSON." },
+        { role: "user", content: prompt }
+      ],
+      response_format: { type: "json_object" }
+    });
 
-const getTasksAnalysisFlow = ai.defineFlow(
-  {
-    name: 'getTasksAnalysisFlow',
-    inputSchema: GetTasksAnalysisInputSchema,
-    outputSchema: GetTasksAnalysisOutputSchema,
-  },
-  async input => {
-    const result = await prompt(input);
-    const analysisOutput = result.output;
-
-    if (!analysisOutput) {
-      throw new Error('Failed to get task analysis after multiple attempts.');
-    }
+    const content = response.choices[0].message.content || "{}";
+    const analysisOutput = JSON.parse(content);
 
     const readableAnalysis = `
       Here is your task analysis.
@@ -82,40 +78,28 @@ const getTasksAnalysisFlow = ai.defineFlow(
       Suggestions: ${analysisOutput.suggestions.join('. ')}.
     `;
 
-    let media;
-    let attempts = 0;
-    const maxAttempts = 3;
-     while (attempts < maxAttempts) {
-        try {
-            const ttsResponse = await ai.generate({
-                model: tts1,
-                prompt: readableAnalysis,
-                config: {
-                    voice: 'nova'
-                }
-            });
-            media = ttsResponse.media;
-            break; // Success
-        } catch(error: any) {
-            attempts++;
-            if (error.message && (error.message.includes('503') || error.message.includes('429')) && attempts < maxAttempts) {
-                console.log(`TTS generation attempt ${attempts} failed, retrying...`);
-                await new Promise(res => setTimeout(res, 1000 * Math.pow(2, attempts)));
-            } else {
-                throw error;
-            }
-        }
-    }
+    const mp3 = await openai.audio.speech.create({
+      model: "tts-1",
+      voice: "nova",
+      input: readableAnalysis,
+    });
 
-     if (!media) {
-      throw new Error('TTS generation failed after multiple attempts.');
-    }
-    
-    const audioDataUri = media.url;
+    const buffer = Buffer.from(await mp3.arrayBuffer());
+    const audioDataUri = `data:audio/mp3;base64,${buffer.toString('base64')}`;
 
     return {
       ...analysisOutput,
       audioDataUri,
     };
+
+  } catch (error: any) {
+    console.error('Error in getTasksAnalysis:', error);
+    return {
+      summary: "Unable to analyze tasks.",
+      priorityTask: { title: "", reasoning: "" },
+      risk: { hasRisk: false, description: "" },
+      suggestions: [],
+      audioDataUri: "",
+    };
   }
-);
+}
