@@ -1,4 +1,3 @@
-
 'use client';
 
 import React from 'react';
@@ -136,7 +135,7 @@ export function LandingPage() {
               </Button>
               <Button size="lg" variant="outline" className="h-16 px-12 rounded-full text-xl font-bold glass hover:bg-white/10 border-white/10" asChild>
                 <Link href="/learn-more">
-                  Explore Demo
+                  Learn More
                 </Link>
               </Button>
             </motion.div>
