@@ -77,10 +77,10 @@ export default function LearnMorePage() {
         </div>
       </header>
 
-      <main className="flex-1 pt-20">
+      <main className="flex-1 pt-20 flex flex-col items-center w-full">
         {/* Hero Section */}
-        <section className="relative min-h-[60vh] flex items-center justify-center py-24 overflow-hidden border-b border-border/40">
-            <div className="container mx-auto px-4 text-center">
+        <section className="relative min-h-[70vh] w-full flex items-center justify-center py-24 overflow-hidden border-b border-border/40">
+            <div className="max-w-7xl mx-auto px-4 text-center z-10 w-full">
                 <motion.div
                   {...fadeIn}
                   className="inline-flex items-center gap-2 px-4 py-2 glass rounded-full text-[10px] font-bold tracking-[0.2em] uppercase mb-10 border border-border/50"
@@ -113,8 +113,8 @@ export default function LearnMorePage() {
         </section>
 
         {/* Features Grid */}
-        <section id="features" className="py-40 relative">
-          <div className="container mx-auto px-4">
+        <section id="features" className="py-40 relative w-full flex justify-center">
+          <div className="max-w-7xl mx-auto px-4 w-full">
             <div className="text-center max-w-4xl mx-auto mb-32">
               <motion.div 
                 initial={{ opacity: 0 }}
@@ -169,8 +169,8 @@ export default function LearnMorePage() {
         </section>
 
         {/* Integrations Section */}
-        <section id="integrations" className="py-40 bg-muted/10 border-y border-border relative overflow-hidden">
-            <div className="container mx-auto px-4 relative z-10 text-center">
+        <section id="integrations" className="py-40 bg-muted/10 border-y border-border relative overflow-hidden w-full flex justify-center">
+            <div className="max-w-7xl mx-auto px-4 relative z-10 text-center w-full">
                 <motion.div 
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
@@ -206,8 +206,8 @@ export default function LearnMorePage() {
         </section>
 
         {/* Companions & Managers */}
-        <section className="py-40 relative">
-            <div className="container mx-auto px-4">
+        <section className="py-40 relative w-full flex justify-center">
+            <div className="max-w-7xl mx-auto px-4 w-full">
                 <div className="text-center mb-32">
                     <h2 className="text-5xl md:text-7xl font-black tracking-tighter">AI Management Layer</h2>
                 </div>
@@ -270,8 +270,8 @@ export default function LearnMorePage() {
         </section>
 
         {/* CTA */}
-        <section className="py-48 relative">
-          <div className="container mx-auto px-4 text-center">
+        <section className="py-48 relative w-full flex justify-center">
+          <div className="max-w-7xl mx-auto px-4 text-center w-full">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               whileInView={{ opacity: 1, scale: 1 }}
