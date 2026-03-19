@@ -18,15 +18,20 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="flex h-screen w-full items-center justify-center">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      <div className="flex h-screen w-full items-center justify-center bg-[#000005]">
+        <div className="relative">
+          <div className="h-16 w-16 rounded-full border-t-2 border-primary animate-spin" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+          </div>
+        </div>
       </div>
     );
   }
 
   if (user) {
     return (
-        <div className="flex h-screen w-full items-center justify-center">
+        <div className="flex h-screen w-full items-center justify-center bg-[#000005]">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
         </div>
     );
