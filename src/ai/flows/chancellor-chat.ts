@@ -15,13 +15,19 @@
 import OpenAI from 'openai';
 import { Pinecone } from '@pinecone-database/pinecone';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY || process.env.OPEN_AI_API_KEY,
-});
+function getOpenAI() {
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY || process.env.OPEN_AI_API_KEY,
+  });
+}
 
-const pinecone = new Pinecone({
-  apiKey: process.env.PINECONE_API_KEY!,
-});
+function getPinecone() {
+  const apiKey = process.env.PINECONE_API_KEY;
+  if (!apiKey) {
+    throw new Error('Pinecone API key is missing. Ensure PINECONE_API_KEY is configured in your environment variables.');
+  }
+  return new Pinecone({ apiKey });
+}
 
 const EMBEDDING_MODEL = 'text-embedding-3-small';
 const CHAT_MODEL = 'gpt-5.4';
@@ -92,6 +98,9 @@ export interface ChancellorChatOutput {
 
 async function retrieveContext(query: string): Promise<{ text: string; sources: string[] }> {
   try {
+    const pinecone = getPinecone();
+    const openai = getOpenAI();
+
     const index = pinecone.Index(
       process.env.PINECONE_INDEX_NAME || 'memoiq',
       process.env.PINECONE_HOST
@@ -216,6 +225,7 @@ export async function chancellorChat(
   // 6. Generate response from GPT-5.4
   let responseText = '';
   try {
+    const openai = getOpenAI();
     const response = await openai.chat.completions.create({
       model: CHAT_MODEL,
       messages,
@@ -232,6 +242,7 @@ export async function chancellorChat(
   let audioDataUri: string | undefined;
   if (voiceResponse) {
     try {
+      const openai = getOpenAI();
       const mp3 = await openai.audio.speech.create({
         model: 'tts-1',
         voice: 'onyx', // Deep, confident voice for Chancellor
