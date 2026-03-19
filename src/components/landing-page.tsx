@@ -237,8 +237,8 @@ export function LandingPage() {
               >
                 <h2 className="text-5xl md:text-7xl font-black mb-10 tracking-tighter leading-[1]">Fluid Ecosystem Integration.</h2>
                 <p className="text-2xl text-muted-foreground leading-relaxed mb-12 font-medium">
-                  MemoIQ breathes with your existing tools. Seamless Google sync is just the beginning. 
-                  M365 compatibility is evolving, bringing your entire digital life into one high-resolution focus.
+                  MemoIQ breathes with your existing tools. Google and Microsoft 365 are now fully integrated, 
+                  bringing your entire professional life into one high-resolution focus.
                 </p>
                 <ul className="space-y-8">
                   <li className="flex items-center gap-6 text-xl font-semibold">
@@ -247,11 +247,16 @@ export function LandingPage() {
                     </div>
                     Real-time Google Calendar & Contacts Sync
                   </li>
-                  <li className="flex items-center gap-6 text-xl font-semibold opacity-40">
-                    <div className="h-14 w-14 glass rounded-2xl flex items-center justify-center border-border">
-                      <Layers className="h-7 w-7" />
+                  <li className="flex items-center gap-6 text-xl font-semibold">
+                    <div className="h-14 w-14 glass rounded-2xl flex items-center justify-center border-border shadow-inner">
+                        <svg className="h-7 w-7" viewBox="0 0 23 23" xmlns="http://www.w3.org/2000/svg">
+                            <path fill="#f35325" d="M1 1h10v10H1z"/>
+                            <path fill="#81bc06" d="M12 1h10v10H12z"/>
+                            <path fill="#05a6f0" d="M1 12h10v10H1z"/>
+                            <path fill="#ffba08" d="M12 12h10v10H12z"/>
+                        </svg>
                     </div>
-                    Microsoft 365 Architecture (In Development)
+                    Microsoft 365 Bidirectional Sync & MFA Support
                   </li>
                 </ul>
               </motion.div>
