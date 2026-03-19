@@ -17,10 +17,13 @@ import {
   Shield, 
   Globe,
   Waves,
-  Sparkles
+  Sparkles,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { Logo } from './logo';
 import placeholderData from '@/app/lib/placeholder-images.json';
+import { useTheme } from 'next-themes';
 
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
@@ -44,7 +47,7 @@ const FeatureBlock = ({
     whileInView={{ opacity: 1, y: 0 }}
     viewport={{ once: true }}
     transition={{ duration: 0.8, delay, ease: [0.16, 1, 0.3, 1] }}
-    className="group relative p-8 glass rounded-3xl ai-glow hover:bg-white/10 transition-all border border-white/5"
+    className="group relative p-8 glass rounded-3xl ai-glow hover:bg-muted/50 transition-all border border-border/50"
   >
     <div className="flex items-center justify-center h-14 w-14 rounded-2xl bg-primary/10 text-primary mb-6 group-hover:scale-110 transition-transform">
       <Icon className="h-7 w-7" />
@@ -58,22 +61,33 @@ const FeatureBlock = ({
 );
 
 export function LandingPage() {
+  const { theme, setTheme } = useTheme();
+
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground selection:bg-primary/30 overflow-x-hidden">
+    <div className="flex flex-col min-h-screen bg-background text-foreground selection:bg-primary/30 overflow-x-hidden transition-colors duration-500">
       {/* Navigation */}
-      <header className="fixed top-0 z-[100] w-full border-b border-white/5 bg-background/60 backdrop-blur-2xl">
+      <header className="fixed top-0 z-[100] w-full border-b border-border/40 bg-background/60 backdrop-blur-2xl">
         <div className="container mx-auto flex h-20 items-center justify-between px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-3">
             <Logo className="h-8 w-8 text-primary" />
             <span className="text-2xl font-bold tracking-tighter">MemoIQ</span>
           </Link>
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4 sm:gap-6">
             <nav className="hidden md:flex gap-8 text-sm font-medium text-muted-foreground">
               <Link href="#features" className="hover:text-primary transition-colors">Intelligence</Link>
               <Link href="#integrations" className="hover:text-primary transition-colors">Ecosystem</Link>
               <Link href="/learn-more" className="hover:text-primary transition-colors">Vision</Link>
             </nav>
             <div className="flex items-center gap-3">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                className="rounded-full"
+              >
+                <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+              </Button>
               <Button variant="ghost" className="hidden sm:inline-flex text-muted-foreground hover:text-primary" asChild>
                 <Link href="/auth">Sign In</Link>
               </Button>
@@ -88,14 +102,14 @@ export function LandingPage() {
       <main className="flex-1 pt-20">
         {/* Hero Section — Cinematic Experience */}
         <section className="relative min-h-[100vh] flex items-center justify-center overflow-hidden py-24">
-          <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.15),transparent_70%)]" />
-          <div className="absolute top-1/4 left-1/4 -z-10 h-96 w-96 bg-violet-600/10 blur-[120px] rounded-full animate-slow-fade" />
-          <div className="absolute bottom-1/4 right-1/4 -z-10 h-96 w-96 bg-blue-600/10 blur-[120px] rounded-full animate-slow-fade [animation-delay:2s]" />
+          <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.1),transparent_70%)]" />
+          <div className="absolute top-1/4 left-1/4 -z-10 h-96 w-96 bg-violet-600/5 blur-[120px] rounded-full animate-slow-fade" />
+          <div className="absolute bottom-1/4 right-1/4 -z-10 h-96 w-96 bg-blue-600/5 blur-[120px] rounded-full animate-slow-fade [animation-delay:2s]" />
           
           <div className="container mx-auto relative z-10 px-4 text-center">
             <motion.div
               {...fadeIn}
-              className="inline-flex items-center gap-2 px-4 py-2 glass rounded-full text-[10px] font-bold tracking-[0.2em] uppercase mb-10 border border-white/10"
+              className="inline-flex items-center gap-2 px-4 py-2 glass rounded-full text-[10px] font-bold tracking-[0.2em] uppercase mb-10 border border-border/50"
             >
               <Sparkles className="h-3 w-3 text-primary" />
               AI-Native Intelligence
@@ -133,25 +147,25 @@ export function LandingPage() {
                   <ArrowRight className="ml-2 h-6 w-6 group-hover:translate-x-1 transition-transform" />
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" className="h-16 px-12 rounded-full text-xl font-bold glass hover:bg-white/10 border-white/10" asChild>
+              <Button size="lg" variant="outline" className="h-16 px-12 rounded-full text-xl font-bold glass hover:bg-muted border-border/50" asChild>
                 <Link href="/learn-more">
                   Learn More
                 </Link>
               </Button>
             </motion.div>
 
-            {/* Cinematic Focal Point - Simulating VEO 3 / Flow Flow */}
+            {/* Cinematic Focal Point - Sun-drenched loft visuals */}
             <motion.div
               initial={{ opacity: 0, y: 100 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1.5, delay: 0.6, ease: [0.16, 1, 0.3, 1] }}
-              className="mt-24 relative max-w-7xl mx-auto aspect-[21/9] rounded-[48px] overflow-hidden border border-white/10 glass float shadow-[0_0_120px_rgba(0,0,0,0.6)]"
+              className="mt-24 relative max-w-7xl mx-auto aspect-[21/9] rounded-[48px] overflow-hidden border border-border glass float shadow-[0_0_120px_rgba(0,0,0,0.1)] dark:shadow-[0_0_120px_rgba(0,0,0,0.6)]"
             >
               <Image 
                 src={placeholderData.hero.url} 
                 alt="Cinematic Interface in a sun-drenched loft"
                 fill
-                className="object-cover opacity-60 mix-blend-screen transition-all duration-1000 scale-105 hover:scale-100"
+                className="object-cover opacity-40 dark:opacity-60 transition-all duration-1000 scale-105 hover:scale-100"
                 data-ai-hint={placeholderData.hero.hint}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-80" />
@@ -164,10 +178,10 @@ export function LandingPage() {
               </div>
               
               {/* Holographic Interface elements overlay */}
-              <div className="absolute top-12 left-12 p-6 glass rounded-2xl hidden lg:block border-white/5 ai-glow animate-pulse">
+              <div className="absolute top-12 left-12 p-6 glass rounded-2xl hidden lg:block border-border/20 ai-glow animate-pulse">
                 <CalendarCheck className="h-6 w-6 text-primary/60" />
               </div>
-              <div className="absolute bottom-12 right-12 p-6 glass rounded-2xl hidden lg:block border-white/5 ai-glow animate-pulse [animation-delay:1s]">
+              <div className="absolute bottom-12 right-12 p-6 glass rounded-2xl hidden lg:block border-border/20 ai-glow animate-pulse [animation-delay:1s]">
                 <Bot className="h-6 w-6 text-primary/60" />
               </div>
             </motion.div>
@@ -226,7 +240,7 @@ export function LandingPage() {
               <FeatureBlock
                 icon={Shield}
                 title="Privacy First"
-                description="Ultra-secure, edge-computed intelligence ensures your data is yours alone. Apple-level precision encryption."
+                description="Ultra-secure, edge-computed intelligence ensures your data is yours alone. Enterprise-level precision encryption."
                 delay={0.6}
               />
             </div>
@@ -234,7 +248,7 @@ export function LandingPage() {
         </section>
 
         {/* Integration Ecosystem */}
-        <section id="integrations" className="py-40 bg-white/[0.01] border-y border-white/5 relative overflow-hidden">
+        <section id="integrations" className="py-40 bg-muted/10 border-y border-border relative overflow-hidden">
           <div className="container mx-auto px-4 relative z-10">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
               <motion.div 
@@ -249,13 +263,13 @@ export function LandingPage() {
                 </p>
                 <ul className="space-y-8">
                   <li className="flex items-center gap-6 text-xl font-semibold">
-                    <div className="h-14 w-14 glass rounded-2xl flex items-center justify-center border-white/5 shadow-inner">
+                    <div className="h-14 w-14 glass rounded-2xl flex items-center justify-center border-border shadow-inner">
                       <Globe className="h-7 w-7 text-blue-400" />
                     </div>
                     Real-time Google Calendar & Contacts Sync
                   </li>
                   <li className="flex items-center gap-6 text-xl font-semibold opacity-40">
-                    <div className="h-14 w-14 glass rounded-2xl flex items-center justify-center border-white/5">
+                    <div className="h-14 w-14 glass rounded-2xl flex items-center justify-center border-border">
                       <Layers className="h-7 w-7" />
                     </div>
                     Microsoft 365 Architecture (In Development)
@@ -263,7 +277,7 @@ export function LandingPage() {
                 </ul>
               </motion.div>
               
-              <div className="relative aspect-square glass rounded-[80px] flex items-center justify-center overflow-hidden border-white/5">
+              <div className="relative aspect-square glass rounded-[80px] flex items-center justify-center overflow-hidden border-border">
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="w-[85%] h-[85%] border-2 border-dashed border-primary/20 rounded-full animate-[spin_25s_linear_infinite]" />
                   <div className="absolute w-[65%] h-[65%] border border-dashed border-primary/10 rounded-full animate-[spin_18s_linear_infinite_reverse]" />
@@ -271,7 +285,7 @@ export function LandingPage() {
                 <motion.div 
                   animate={{ scale: [1, 1.08, 1], rotate: [0, 5, -5, 0] }} 
                   transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
-                  className="h-40 w-40 glass rounded-[40px] flex items-center justify-center ai-glow border-white/10"
+                  className="h-40 w-40 glass rounded-[40px] flex items-center justify-center ai-glow border-border"
                 >
                   <Logo className="h-20 w-20 text-primary" />
                 </motion.div>
@@ -319,7 +333,7 @@ export function LandingPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               whileInView={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.8 }}
-              className="max-w-5xl mx-auto glass p-20 rounded-[80px] ai-glow border-white/5"
+              className="max-w-5xl mx-auto glass p-20 rounded-[80px] ai-glow border-border"
             >
               <h2 className="text-6xl md:text-8xl font-black mb-10 tracking-tighter leading-[0.9]">Ready to <br /> Own Your Time?</h2>
               <p className="text-2xl text-muted-foreground mb-16 max-w-2xl mx-auto font-medium leading-relaxed">
@@ -339,7 +353,7 @@ export function LandingPage() {
       </main>
 
       {/* Futuristic Footer */}
-      <footer className="border-t border-white/5 py-24 bg-black/60 backdrop-blur-3xl">
+      <footer className="border-t border-border py-24 bg-muted/30 backdrop-blur-3xl">
         <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-16 mb-24">
             <div className="col-span-1 md:col-span-2">
@@ -369,7 +383,7 @@ export function LandingPage() {
               </ul>
             </div>
           </div>
-          <div className="pt-16 border-t border-white/5 text-center text-muted-foreground/40 text-[10px] font-mono tracking-[0.5em] font-bold">
+          <div className="pt-16 border-t border-border text-center text-muted-foreground/40 text-[10px] font-mono tracking-[0.5em] font-bold">
             <p>© 2026 MEMOIQ SYSTEMS — OPERATING AT THE SPEED OF THOUGHT</p>
             <p className="mt-4 tracking-[0.2em] font-sans">ChanceTEK // iChanceTEK Engineering</p>
           </div>
