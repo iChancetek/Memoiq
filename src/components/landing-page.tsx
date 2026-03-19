@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -64,7 +65,18 @@ export function LandingPage() {
   const { theme, setTheme } = useTheme();
 
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground selection:bg-primary/30 overflow-x-hidden transition-colors duration-500">
+    <div className="relative flex flex-col min-h-screen bg-background text-foreground selection:bg-primary/30 overflow-x-hidden transition-colors duration-500">
+      {/* Global Cinematic Background Video */}
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="fixed inset-0 -z-20 object-cover w-full h-full pointer-events-none opacity-40 dark:opacity-60"
+      >
+        <source src="/memoiq.mp4" type="video/mp4" />
+      </video>
+
       {/* Navigation */}
       <header className="fixed top-0 z-[100] w-full border-b border-border/40 bg-background/60 backdrop-blur-2xl">
         <div className="container mx-auto flex h-20 items-center justify-between px-4 sm:px-6">
@@ -102,17 +114,6 @@ export function LandingPage() {
       <main className="flex-1 pt-20">
         {/* Hero Section — Cinematic Experience */}
         <section className="relative min-h-[100vh] flex items-center justify-center overflow-hidden py-24">
-          {/* Cinematic Background Video */}
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="absolute inset-0 -z-20 object-cover w-full h-full"
-          >
-            <source src="/memoiq.mp4" type="video/mp4" />
-          </video>
-
           {/* Overlays for readability and atmosphere */}
           <div className="absolute inset-0 -z-10 bg-background/40 backdrop-blur-[2px]" />
           <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_50%,rgba(59,130,246,0.15),transparent_70%)]" />
@@ -167,7 +168,7 @@ export function LandingPage() {
               </Button>
             </motion.div>
 
-            {/* Cinematic Focal Point - Sun-drenched loft visuals */}
+            {/* Cinematic Focal Point */}
             <motion.div
               initial={{ opacity: 0, y: 100 }}
               animate={{ opacity: 1, y: 0 }}
@@ -308,7 +309,7 @@ export function LandingPage() {
         </section>
         
         {/* PWA Section */}
-        <section className="py-40 bg-background relative overflow-hidden">
+        <section className="py-40 bg-background/20 relative overflow-hidden">
           <div className="container mx-auto px-4 text-center">
             <motion.div 
               initial={{ opacity: 0, y: 50 }}

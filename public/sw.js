@@ -1,14 +1,11 @@
 
+// Service Worker for MemoIQ PWA
 const CACHE_NAME = 'memoiq-v1';
 const ASSETS_TO_CACHE = [
   '/',
-  '/dashboard',
-  '/memos',
-  '/tasks',
-  '/calendar',
-  '/contacts',
-  '/emails',
-  '/settings'
+  '/manifest.json',
+  '/icon.svg',
+  '/memoiq.mp4'
 ];
 
 self.addEventListener('install', (event) => {

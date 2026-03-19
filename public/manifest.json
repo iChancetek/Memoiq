@@ -1,3 +1,4 @@
+
 {
   "name": "MemoIQ",
   "short_name": "MemoIQ",
@@ -11,13 +12,12 @@
       "src": "/icon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any"
+      "purpose": "any maskable"
     },
     {
       "src": "/icon",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
+      "type": "image/png"
     }
   ],
   "shortcuts": [

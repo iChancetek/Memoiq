@@ -1,15 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 24 24" fill="none" stroke="#E6E6FA" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+  <rect width="24" height="24" rx="6" fill="url(#grad)" stroke="none"/>
+  <circle cx="12" cy="12" r="10" stroke-opacity="0.2" />
+  <path d="M12 2a10 10 0 0 1 10 10" />
+  <path d="M12 7v5l3 3" />
   <defs>
     <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#000005;stop-opacity:1" />
       <stop offset="100%" style="stop-color:#000080;stop-opacity:1" />
     </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="120" fill="url(#grad)"/>
-  <circle cx="256" cy="256" r="200" stroke="#E6E6FA" stroke-width="10" stroke-opacity="0.2" fill="none"/>
-  <path d="M256 100 A156 156 0 0 1 412 256" stroke="#E6E6FA" stroke-width="25" stroke-linecap="round" fill="none"/>
-  <path d="M256 200 v112 l64 64" stroke="#E6E6FA" stroke-width="25" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-  <circle cx="256" cy="256" r="20" fill="#E6E6FA">
-    <animate attributeName="opacity" values="1;0.3;1" dur="3s" repeatCount="indefinite" />
-  </circle>
 </svg>
