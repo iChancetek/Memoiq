@@ -204,31 +204,32 @@ const styles = `
     padding: 12px 16px;
     font-size: 14.5px;
     line-height: 1.6;
-    font-weight: 500;
-    letter-spacing: 0.02em;
+    font-weight: 600;
+    letter-spacing: 0.03em;
     white-space: pre-line;
+    text-shadow: 0px 1px 2px rgba(0, 0, 0, 0.5); /* Enhances readability against backgrounds */
   }
 
   /* 🤖 ASSISTANT BUBBLE (HOLO PANEL) */
   .assistant .msg-bubble {
     background: rgba(0, 242, 254, 0.02);
-    color: #e0f2fe;
+    color: #ffffff; /* Bright, pure white */
     border: 1px solid rgba(0, 242, 254, 0.18);
     border-left: 2px solid rgba(0, 242, 254, 0.7);
     border-radius: 4px 12px 12px 12px;
     backdrop-filter: blur(2px);
-    box-shadow: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
     position: relative;
   }
 
   .user .msg-bubble {
     background: rgba(139, 92, 246, 0.06);
-    color: #f3e8ff;
+    color: #ffffff; /* Bright, pure white */
     border: 1px solid rgba(139, 92, 246, 0.2);
     border-right: 2px solid rgba(167, 139, 250, 0.7);
     border-radius: 12px 4px 12px 12px;
     backdrop-filter: blur(2px);
-    box-shadow: none;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   }
 
   .msg-avatar {
@@ -466,7 +467,7 @@ export default function ChancellorAssistant() {
     }
   }, [isOpen, messages.length]);
 
-  const sendMessage = useCallback(async (content: string) => {
+  const sendMessage = useCallback(async (content: string, voiceResponse: boolean = false) => {
     if (!content.trim() || isLoading) return;
 
     const userMsg: Message = {
@@ -490,6 +491,7 @@ export default function ChancellorAssistant() {
           message: content.trim(),
           history,
           currentPage: pathname,
+          voiceResponse
         }),
       });
 
@@ -560,7 +562,7 @@ export default function ChancellorAssistant() {
             });
             const { text } = await res.json();
             if (text?.trim()) {
-              sendMessage(text.trim());
+              sendMessage(text.trim(), true); // Request voice response back
             }
           } catch {
             console.error('Transcription failed');
