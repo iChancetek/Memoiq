@@ -11,7 +11,6 @@ import {
 } from 'firebase/firestore';
 import { useFirebase } from '@/firebase';
 import type { Email as EmailType } from '@/lib/data';
-import { sendMicrosoftEmail } from '@/services/microsoft-sync';
 import { useToast } from '@/hooks/use-toast';
 
 export type Email = EmailType;

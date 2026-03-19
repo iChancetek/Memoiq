@@ -8,6 +8,27 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+
+  // Prevent webpack from bundling these server-only Node.js packages
+  // into the browser bundle. They use native Node modules (net, tls, dns)
+  // which don't exist in the browser.
+  serverExternalPackages: [
+    'firebase-admin',
+    '@google-cloud/firestore',
+    '@google-cloud/storage',
+    'google-auth-library',
+    'google-gax',
+    'gaxios',
+    'https-proxy-agent',
+    'agent-base',
+    '@langchain/openai',
+    '@langchain/langgraph',
+    '@langchain/core',
+    '@pinecone-database/pinecone',
+    'node-fetch',
+    'cheerio',
+  ],
+
   images: {
     remotePatterns: [
       {
@@ -25,5 +46,6 @@ const nextConfig: NextConfig = {
     ],
   },
 };
+
 
 export default nextConfig;

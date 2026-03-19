@@ -49,6 +49,9 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { useLanguage } from '@/contexts/language-context';
 import { useTheme } from 'next-themes';
+import dynamic from 'next/dynamic';
+
+const ChancellorAssistant = dynamic(() => import('./chancellor-assistant'), { ssr: false });
 
 export function MainLayout({children}: {children: React.ReactNode}) {
   const pathname = usePathname();
@@ -347,6 +350,7 @@ export function MainLayout({children}: {children: React.ReactNode}) {
             {children}
           </div>
         </main>
+        <ChancellorAssistant />
       </SidebarInset>
     </SidebarProvider>
   );

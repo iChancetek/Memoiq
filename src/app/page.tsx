@@ -5,6 +5,9 @@ import { LandingPage } from '@/components/landing-page';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
+import dynamic from 'next/dynamic';
+
+const ChancellorAssistant = dynamic(() => import('@/components/chancellor-assistant'), { ssr: false });
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -37,5 +40,10 @@ export default function Home() {
     );
   }
 
-  return <LandingPage />;
+  return (
+    <>
+      <LandingPage />
+      <ChancellorAssistant />
+    </>
+  );
 }

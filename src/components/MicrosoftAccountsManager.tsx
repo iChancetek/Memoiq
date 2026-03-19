@@ -7,8 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Loader2, Plus, Mail, Trash2, RefreshCw, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { getMicrosoftAuthUrl } from '@/services/microsoft-oauth';
-import { syncMicrosoftAccount } from '@/services/microsoft-sync';
 
 export default function MicrosoftAccountsManager() {
     const { user, removeMicrosoftAccount, addMicrosoftAccount } = useAuth();
@@ -45,16 +43,17 @@ export default function MicrosoftAccountsManager() {
         return () => window.removeEventListener('message', handleMessage);
     }, [toast]);
 
-    const handleAddAccount = () => {
+    const handleAddAccount = async () => {
         if (!user) return;
         setIsAdding(true);
         const state = user.uid;
-        const url = getMicrosoftAuthUrl(state);
+        // Fetch the OAuth URL from the server-side API route
+        const res = await fetch(`/api/microsoft/auth-url?state=${encodeURIComponent(state)}`);
+        const { url } = await res.json();
         const width = 600;
         const height = 700;
         const left = window.screenX + (window.outerWidth - width) / 2;
         const top = window.screenY + (window.outerHeight - height) / 2;
-        
         window.open(
             url,
             'microsoft-oauth',
@@ -66,7 +65,12 @@ export default function MicrosoftAccountsManager() {
         if (!user) return;
         setSyncingAccounts(prev => ({ ...prev, [email]: true }));
         try {
-            const result = await syncMicrosoftAccount(user.uid, email);
+            const res = await fetch('/api/microsoft/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: user.uid, email }),
+            });
+            const result = await res.json();
             
             if (result.success) {
                 toast({

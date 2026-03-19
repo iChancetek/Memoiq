@@ -9,7 +9,11 @@ import { getServerFirebase } from "@/firebase/server";
 import { sendGoogleEmail, createGoogleEvent } from "@/services/google-sync";
 import { sendMicrosoftEmail, createMicrosoftEvent } from "@/services/microsoft-sync";
 
-const { firestore: db } = getServerFirebase();
+// db is lazily initialized inside each tool func to avoid module-level side effects
+function getDb() {
+  const { firestore } = getServerFirebase();
+  return firestore;
+}
 
 // --- TOOLS DEFINITION ---
 
@@ -21,6 +25,7 @@ export const getTasksTool = new DynamicStructuredTool({
         status: z.enum(['completed', 'pending']).optional().describe('The status of tasks to retrieve.'),
     }),
     func: async ({ userId, status }) => {
+        const db = getDb();
         let q: any = db.collection(`users/${userId}/tasks`);
         if (status) {
             q = q.where('completed', '==', status === 'completed');
@@ -39,6 +44,7 @@ export const getCalendarEventsTool = new DynamicStructuredTool({
         endDate: z.string().optional().describe("End date in YYYY-MM-DD format."),
     }),
     func: async ({ userId, startDate, endDate }) => {
+        const db = getDb();
         const start = startDate ? new Date(startDate) : new Date();
         start.setHours(0, 0, 0, 0);
         const end = endDate ? new Date(endDate) : new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
@@ -69,6 +75,7 @@ export const getEmailsTool = new DynamicStructuredTool({
         count: z.number().optional().default(10).describe('The number of emails to retrieve.'),
     }),
     func: async ({ userId, count }) => {
+        const db = getDb();
         const snapshot = await db.collection(`users/${userId}/emails`)
             .orderBy('receivedAt', 'desc')
             .limit(count || 10)
@@ -98,6 +105,7 @@ export const createTaskTool = new DynamicStructuredTool({
         priority: z.enum(['low', 'medium', 'high']).optional().default('medium'),
     }),
     func: async ({ userId, title, dueDate, priority }) => {
+        const db = getDb();
         const taskRef = db.collection(`users/${userId}/tasks`).doc();
         const taskData = {
             title,
@@ -179,6 +187,7 @@ export const searchContactsTool = new DynamicStructuredTool({
         query: z.string().describe("The name or email to search for."),
     }),
     func: async ({ userId, query }) => {
+        const db = getDb();
         const snapshot = await db.collection(`users/${userId}/contacts`)
             .get();
         const contacts = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));

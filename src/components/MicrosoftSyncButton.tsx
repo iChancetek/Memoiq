@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { syncMicrosoftContacts, syncMicrosoftCalendar, syncMicrosoftEmails } from '@/services/microsoft-sync';
+// microsoft-sync functions are called via /api/microsoft/sync route (server actions)
 import { Button } from './ui/button';
 import { Loader2, Mail, Calendar, Users, CheckCircle2, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
