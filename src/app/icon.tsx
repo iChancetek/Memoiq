@@ -39,8 +39,10 @@ export default function Icon() {
           strokeLinecap="round"
           strokeLinejoin="round"
         >
+          {/* Minimalist IQ pulse circle */}
           <circle cx="12" cy="12" r="10" stroke-opacity="0.2" />
           <path d="M12 2a10 10 0 0 1 10 10" />
+          {/* Central 'intelligence' node */}
           <path d="M12 7v5l3 3" />
         </svg>
       </div>
