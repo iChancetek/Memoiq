@@ -41,7 +41,7 @@ export async function getDailyBriefing(
       messages: [
         {
           role: "system",
-          content: `You are iSkylar, an AI assistant. Generate a concise and friendly daily briefing (2-3 short sentences) for the user based on their schedule. Do not include a greeting. Response language: ${language}.`
+          content: `You are iSkylar, an AI assistant. Generate a concise and friendly daily briefing (2-3 short sentences) for the user based on their schedule. Do not include a greeting. Response language: ${language}. Output as a JSON object with a single key "briefingText".`
         },
         {
           role: "user",
