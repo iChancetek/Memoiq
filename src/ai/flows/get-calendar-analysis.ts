@@ -1,3 +1,4 @@
+'use server';
 import { openai } from '@/ai/openai-client';
 import { z } from 'zod';
 
@@ -38,9 +39,18 @@ export async function getCalendarAnalysis(
     });
 
     const parsed = JSON.parse(response.choices[0].message.content || '{}');
-    const summary = parsed.summary || "Your schedule looks manageable.";
-    const busyPeriods = parsed.busyPeriods || [];
-    const suggestions = parsed.suggestions || [];
+    
+    // Safety casts for React minified errors
+    const summary = typeof parsed.summary === 'string' ? parsed.summary 
+      : typeof parsed.summary === 'object' ? JSON.stringify(parsed.summary) : "Your schedule looks manageable.";
+      
+    const busyPeriods = Array.isArray(parsed.busyPeriods) 
+      ? parsed.busyPeriods.map((p: any) => typeof p === 'object' ? JSON.stringify(p) : String(p))
+      : [];
+      
+    const suggestions = Array.isArray(parsed.suggestions)
+      ? parsed.suggestions.map((s: any) => typeof s === 'object' ? JSON.stringify(s) : String(s))
+      : [];
 
     const readableAnalysis = `Here is your calendar analysis. Summary: ${summary}. Busy periods: ${busyPeriods.join(', ') || 'None'}. Suggestions: ${suggestions.join('. ')}.`;
 

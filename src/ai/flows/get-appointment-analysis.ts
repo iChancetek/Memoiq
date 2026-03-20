@@ -48,9 +48,17 @@ export async function getAppointmentAnalysis(
     });
 
     const parsed = JSON.parse(response.choices[0].message.content || '{}');
-    const summary = parsed.summary || "No appointments found.";
-    const schedulingRisks = parsed.schedulingRisks || [];
-    const proactiveSuggestions = parsed.proactiveSuggestions || [];
+    
+    const summary = typeof parsed.summary === 'string' ? parsed.summary 
+      : typeof parsed.summary === 'object' ? JSON.stringify(parsed.summary) : "No appointments found.";
+      
+    const schedulingRisks = Array.isArray(parsed.schedulingRisks)
+      ? parsed.schedulingRisks.map((r: any) => typeof r === 'object' ? JSON.stringify(r) : String(r))
+      : [];
+      
+    const proactiveSuggestions = Array.isArray(parsed.proactiveSuggestions)
+      ? parsed.proactiveSuggestions.map((s: any) => typeof s === 'object' ? JSON.stringify(s) : String(s))
+      : [];
 
     const readableAnalysis = `Here is your appointment analysis. Summary: ${summary}. Risks: ${schedulingRisks.join(', ') || 'None'}. Suggestions: ${proactiveSuggestions.join('. ')}.`;
 

@@ -72,7 +72,7 @@ export function CalendarProvider({ children }: { children: React.ReactNode }) {
     addDocumentNonBlocking(collectionRef, {
       ...event,
       provider: provider,
-      accountEmail: accountEmail,
+      accountEmail: accountEmail || null,
       userId: user.uid,
       createdAt: serverTimestamp(),
     });
